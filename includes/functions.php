@@ -1,0 +1,374 @@
+<?php
+// Arquivo: includes/functions.php
+// Este arquivo DEVE ser incluído APÓS o config.php
+
+// ----------------------------------------------------
+// 1. FUNÇÃO: CONEXÃO COM O BANCO DE DADOS (PDO)
+// ----------------------------------------------------
+/**
+ * Retorna uma nova instância de conexão PDO com o banco de dados.
+ * Depende das constantes definidas em config.php.
+ * @return PDO A conexão PDO ativa.
+ */
+function getDbConnection(): PDO {
+    // Variáveis definidas em config.php
+    $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
+    $options = [
+        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES   => false,
+    ];
+
+    try {
+        $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
+        return $pdo;
+    } catch (\PDOException $e) {
+        // Exibe erro de conexão e encerra o script
+        die("Erro de Conexão com o Banco de Dados: " . $e->getMessage());
+    }
+}
+
+// ----------------------------------------------------
+// 2. FUNÇÃO: INSERIR REGISTRO SIMPLES (CREATE)
+// ----------------------------------------------------
+/**
+ * Insere um novo registro em uma tabela simples (que recebe apenas um campo de texto/nome).
+ * @param PDO $pdo A conexão PDO ativa.
+ * @param string $tableName O nome da tabela (ex: 'escolaridades').
+ * @param string $columnName O nome da coluna a ser preenchida (ex: 'escolaridadeTitulo').
+ * @param string $value O valor a ser inserido.
+ * @return bool True em caso de sucesso, false em caso de falha.
+ */
+function insertSimpleRecord(PDO $pdo, string $tableName, string $columnName, string $value): bool
+{
+    // Validação básica para evitar injeção SQL no nome da tabela/coluna
+    if (!preg_match('/^[a-zA-Z0-9_]+$/', $tableName) || !preg_match('/^[a-zA-Z0-9_]+$/', $columnName)) {
+        return false;
+    }
+    
+    // Usa Prepared Statement para o valor ($value)
+    $sql = "INSERT INTO {$tableName} ({$columnName}) VALUES (?)";
+    
+    try {
+        $stmt = $pdo->prepare($sql);
+        return $stmt->execute([$value]);
+    } catch (PDOException $e) {
+        return false;
+    }
+}
+
+// ----------------------------------------------------
+// 3. FUNÇÃO: LISTAR REGISTROS COM FILTRO E ORDENAÇÃO (READ)
+// ----------------------------------------------------
+/**
+ * Retorna todos os registros de uma tabela, aplicando filtros e ordenação.
+ * @param PDO $pdo A conexão PDO ativa.
+ * @param string $tableName O nome da tabela.
+ * @param string $idColumn O nome da coluna ID (PK).
+ * @param string $nameColumn O nome da coluna de texto principal (para filtro/ordem).
+ * @param array $params Parâmetros de filtro e ordenação (term, order_by, sort_dir).
+ * @return array Uma lista de registros.
+ */
+function getRecords(PDO $pdo, string $tableName, string $idColumn, string $nameColumn, array $params): array
+{
+    $term = $params['term'] ?? '';
+    $orderBy = $params['order_by'] ?? $idColumn;
+    $sortDir = $params['sort_dir'] ?? 'ASC';
+
+    // 1. Validar e sanitizar a ordenação
+    $validDirs = ['ASC', 'DESC'];
+    $sortDir = in_array(strtoupper($sortDir), $validDirs) ? strtoupper($sortDir) : 'ASC';
+    
+    // 2. Definir colunas válidas (para ordenação segura)
+    $validColumns = [$idColumn, $nameColumn, $idColumn.'DataCadastro', $idColumn.'DataAtualizacao', 'recursoDescricao', 'nome', 'email', 'ativo'];
+    
+    if (!in_array($orderBy, $validColumns)) {
+        $orderBy = $idColumn;
+    }
+    
+    // 3. Montar a query com o filtro
+    $sql = "SELECT * FROM {$tableName}";
+    $bindings = [];
+    
+    if (!empty($term)) {
+        $sql .= " WHERE {$nameColumn} LIKE ?";
+        // Se a tabela for 'usuarios', adiciona filtro por e-mail também
+        if ($tableName === 'usuarios') {
+            $sql .= " OR email LIKE ?";
+            $bindings[] = "%{$term}%";
+        }
+        $bindings[] = "%{$term}%";
+    }
+    
+    // Conclui a ordenação
+    $sql .= " ORDER BY {$orderBy} {$sortDir}";
+
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($bindings);
+        return $stmt->fetchAll();
+    } catch (PDOException $e) {
+        error_log("Erro na query de {$tableName}: " . $e->getMessage() . " SQL: " . $sql);
+        return [];
+    }
+}
+
+// ----------------------------------------------------
+// 4. FUNÇÃO: EXCLUIR REGISTRO (DELETE)
+// ----------------------------------------------------
+/**
+ * Exclui um registro da tabela pelo ID.
+ * @param PDO $pdo A conexão PDO ativa.
+ * @param string $tableName O nome da tabela.
+ * @param string $idColumn O nome da coluna ID.
+ * @param int|string $id O ID do registro a ser excluído.
+ * @return int O número de linhas afetadas (0 ou 1).
+ */
+function deleteRecord(PDO $pdo, string $tableName, string $idColumn, $id): int
+{
+    try {
+        $stmt = $pdo->prepare("DELETE FROM {$tableName} WHERE {$idColumn} = ?");
+        $stmt->execute([$id]);
+        return $stmt->rowCount();
+    } catch (PDOException $e) {
+        // Retorna 0 se houver falha na exclusão (geralmente por causa de FOREIGN KEY)
+        return 0; 
+    }
+}
+
+// ----------------------------------------------------
+// 5. FUNÇÃO: OBTER DADOS PARA LOOKUP/SELECTS (AJUSTADO PARA CONCATENAÇÃO CBO)
+// ----------------------------------------------------
+/**
+ * Retorna todos os registros de uma tabela formatados como array [id => nome/concatenado].
+ * Usado para popular SELECTs.
+ * @return array Um array formatado [id => nome].
+ */
+function getLookupData(PDO $pdo, string $tableName, string $idColumn, string $nameColumn, string $concatColumn = null): array
+{
+    try {
+        $selectFields = $idColumn . ', ' . $nameColumn;
+        
+        // Se for a tabela CBO, concatena o código (cboNome) e o título oficial
+        if ($concatColumn && $tableName === 'cbos') {
+            $selectFields = "{$idColumn}, CONCAT({$nameColumn}, ' - ', {$concatColumn}) AS display_name";
+            $nameColumn = 'display_name'; // Usa o alias para o fetch
+        }
+
+        $stmt = $pdo->query("SELECT {$selectFields} FROM {$tableName} ORDER BY {$nameColumn} ASC");
+        
+        // Se a query foi alterada para concatenação, busca pelo alias 'display_name'
+        if ($concatColumn && $tableName === 'cbos') {
+            $results = [];
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $results[$row[$idColumn]] = $row['display_name'];
+            }
+            return $results;
+        }
+
+        return $stmt->fetchAll(PDO::FETCH_KEY_PAIR); // Retorna array formatado [id => nome]
+
+    } catch (PDOException $e) {
+        error_log("Erro no Lookup da tabela {$tableName}: " . $e->getMessage());
+        return [];
+    }
+}
+
+// ----------------------------------------------------
+// 6. FUNÇÃO: OBTER OPÇÕES ENUM (Para a tabela 'riscos' e 'habilidades')
+// ----------------------------------------------------
+/**
+ * Retorna as opções válidas para um campo ENUM do MySQL.
+ * @return array Uma lista de strings com os valores ENUM.
+ */
+function getEnumOptions(PDO $pdo, string $tableName, string $columnName): array
+{
+    try {
+        $stmt = $pdo->query("SHOW COLUMNS FROM {$tableName} LIKE '{$columnName}'");
+        $row = $stmt->fetch();
+
+        if (isset($row['Type']) && strpos($row['Type'], 'enum') !== false) {
+            $enum_string = $row['Type'];
+            $matches = [];
+            preg_match_all('/\'([^\']+)\'/', $enum_string, $matches);
+            return $matches[1];
+        }
+    } catch (PDOException $e) {
+        // Falha silenciosa
+    }
+    return [];
+}
+
+
+// ----------------------------------------------------
+// 7. FUNÇÕES DE AUTENTICAÇÃO E SESSÃO (USANDO TABELA USUARIOS)
+// ----------------------------------------------------
+/**
+ * Inicia a sessão se ainda não estiver ativa.
+ */
+function startSession() {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+}
+
+/**
+ * Autentica o usuário usando email e verifica o hash da senha no banco de dados.
+ * @param string $email O email/username fornecido.
+ * @param string $password A senha bruta fornecida.
+ * @return bool True se o login for bem-sucedido.
+ */
+function authenticateUser($email, $password) {
+    startSession();
+
+    try {
+        $pdo = getDbConnection();
+        // A query busca o usuário por email e garante que ele esteja ativo
+        $stmt = $pdo->prepare("SELECT usuarioId, nome, email, senha, ativo FROM usuarios WHERE email = ? AND ativo = TRUE");
+        $stmt->execute([$email]);
+        $user = $stmt->fetch();
+    } catch (PDOException $e) {
+        return false;
+    }
+
+    // Verifica se o usuário existe e se a senha corresponde ao hash armazenado
+    if ($user && password_verify($password, $user['senha'])) {
+        $_SESSION['logged_in'] = true;
+        $_SESSION['user_id'] = $user['usuarioId'];
+        $_SESSION['username'] = $user['nome']; 
+        $_SESSION['user_email'] = $user['email'];
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Verifica se o usuário está logado.
+ * @return bool
+ */
+function isUserLoggedIn() {
+    startSession();
+    return isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true;
+}
+
+// ----------------------------------------------------
+// 8. FUNÇÃO AUXILIAR DE ORDENAÇÃO (para as views)
+// ----------------------------------------------------
+/**
+ * Alterna a direção da ordenação para um link de coluna na Datagrid.
+ */
+function getSortDirection($current_order, $column, $default_dir = 'ASC') {
+    if ($current_order === $column) {
+        // Pega o sort_dir atual da URL (ou o padrão) e inverte
+        return ($_GET['sort_dir'] ?? $default_dir) === 'ASC' ? 'DESC' : 'ASC';
+    }
+    return $default_dir;
+}
+
+// ----------------------------------------------------
+// 9. FUNÇÃO PARA CARREGAR DADOS COMPLETOS DO CARGO (RELATÓRIOS)
+// ----------------------------------------------------
+/**
+ * Carrega todos os dados de um cargo, incluindo seus relacionamentos N:M, para relatórios.
+ * @param PDO $pdo A conexão PDO ativa.
+ * @param int $cargoId O ID do cargo.
+ * @return array|null Os dados completos do cargo ou null se não encontrado.
+ */
+function getCargoReportData(PDO $pdo, int $cargoId): ?array
+{
+    if ($cargoId <= 0) return null;
+
+    $data = [];
+
+    try {
+        // 1. DADOS BÁSICOS, CBO e ESCOLARIDADE (USANDO LEFT JOIN para robustez)
+        $stmt = $pdo->prepare("
+            SELECT 
+                c.*, 
+                e.escolaridadeTitulo,
+                b.cboNome,
+                b.cboTituloOficial -- NOVO CAMPO
+            FROM cargos c
+            LEFT JOIN escolaridades e ON e.escolaridadeId = c.escolaridadeId
+            LEFT JOIN cbos b ON b.cboId = c.cboId
+            WHERE c.cargoId = ?
+        ");
+        $stmt->execute([$cargoId]);
+        $cargo = $stmt->fetch();
+
+        // Se o Cargo principal não existe, retorna null
+        if (!$cargo) return null;
+        $data['cargo'] = $cargo;
+        
+        // ------------------------------------------------
+        // 2. BUSCA DE RELACIONAMENTOS N:M (BLINDADA POR TRY-CATCH)
+        // ------------------------------------------------
+
+        // 2.1. HABILIDADES
+        try {
+            $stmt_hab = $pdo->prepare("SELECT h.habilidadeNome, h.habilidadeTipo, h.habilidadeDescricao FROM habilidades_cargo hc JOIN habilidades h ON h.habilidadeId = hc.habilidadeId WHERE hc.cargoId = ? ORDER BY h.habilidadeTipo DESC, h.habilidadeNome ASC");
+            $stmt_hab->execute([$cargoId]);
+            $data['habilidades'] = $stmt_hab->fetchAll();
+        } catch (Exception $e) { $data['habilidades'] = []; error_log("Erro em Habilidades para Cargo ID {$cargoId}: " . $e->getMessage()); }
+
+        // 2.2. CARACTERÍSTICAS
+        try {
+            $stmt_car = $pdo->prepare("SELECT c.caracteristicaNome, c.caracteristicaDescricao FROM caracteristicas_cargo cc JOIN caracteristicas c ON c.caracteristicaId = cc.caracteristicaId WHERE cc.cargoId = ? ORDER BY c.caracteristicaNome ASC");
+            $stmt_car->execute([$cargoId]);
+            $data['caracteristicas'] = $stmt_car->fetchAll();
+        } catch (Exception $e) { $data['caracteristicas'] = []; error_log("Erro em Características para Cargo ID {$cargoId}: " . $e->getMessage()); }
+        
+        // 2.3. RISCOS
+        try {
+            $stmt_ris = $pdo->prepare("SELECT r.riscoNome, rc.riscoDescricao FROM riscos_cargo rc JOIN riscos r ON r.riscoId = rc.riscoId WHERE rc.cargoId = ? ORDER BY r.riscoNome ASC");
+            $stmt_ris->execute([$cargoId]);
+            $data['riscos'] = $stmt_ris->fetchAll();
+        } catch (Exception $e) { $data['riscos'] = []; error_log("Erro em Riscos para Cargo ID {$cargoId}: " . $e->getMessage()); }
+        
+        // 2.4. CURSOS
+        try {
+            $stmt_cur = $pdo->prepare("SELECT cur.cursoNome, c_c.cursoCargoObrigatorio, c_c.cursoCargoObs FROM cursos_cargo c_c JOIN cursos cur ON cur.cursoId = c_c.cursoId WHERE c_c.cargoId = ? ORDER BY c_c.cursoCargoObrigatorio DESC, cur.cursoNome ASC");
+            $stmt_cur->execute([$cargoId]);
+            $data['cursos'] = $stmt_cur->fetchAll();
+        } catch (Exception $e) { $data['cursos'] = []; error_log("Erro em Cursos para Cargo ID {$cargoId}: " . $e->getMessage()); }
+
+
+        // 2.5. SINÔNIMOS
+        try {
+            // NOTA: Usa a grafia correta: cargo_sinonimos
+            $stmt_sin = $pdo->prepare("SELECT cargoSinonimoNome FROM cargo_sinonimos WHERE cargoId = ?"); 
+            $stmt_sin->execute([$cargoId]);
+            $data['sinonimos'] = $stmt_sin->fetchAll(PDO::FETCH_COLUMN);
+        } catch (Exception $e) { $data['sinonimos'] = []; error_log("Erro em Sinônimos para Cargo ID {$cargoId}: " . $e->getMessage()); }
+        
+        // 2.6. GRUPOS DE RECURSOS
+        try {
+            $stmt_rec = $pdo->prepare("SELECT rg.recursoGrupoNome FROM recursos_grupos_cargo rcg JOIN recursos_grupos rg ON rg.recursoGrupoId = rcg.recursoGrupoId WHERE rcg.cargoId = ? ORDER BY rg.recursoGrupoNome ASC");
+            $stmt_rec->execute([$cargoId]);
+            $data['recursos_grupos'] = $stmt_rec->fetchAll(PDO::FETCH_COLUMN);
+        } catch (Exception $e) { $data['recursos_grupos'] = []; error_log("Erro em Recursos Grupos para Cargo ID {$cargoId}: " . $e->getMessage()); }
+
+
+        return $data;
+
+    } catch (Exception $e) {
+        // Captura o erro fatal da query principal (se a conexão falhar ou se o SELECT base tiver problema)
+        error_log("Erro fatal na função principal do relatório Cargo ID {$cargoId}: " . $e->getMessage());
+        return null;
+    }
+}
+/**
+ * Mapeia o nome do risco para um ícone Font Awesome com estilo.
+ * @param string $riscoNome
+ * @return string HTML do ícone.
+ */
+function getRiscoIcon(string $riscoNome): string {
+    $map = [
+        'Físico' => '<i class="fas fa-sun" style="color:#f90;"></i>',
+        'Químico' => '<i class="fas fa-flask" style="color:#09f;"></i>',
+        'Ergonômico' => '<i class="fas fa-chair" style="color:#888;"></i>',
+        'Psicossocial' => '<i class="fas fa-brain" style="color:#e66;"></i>',
+        'Acidental' => '<i class="fas fa-exclamation-triangle" style="color:#f00;"></i>'
+    ];
+    return $map[$riscoNome] ?? '<i class="fas fa-dot-circle" style="color:#999;"></i>';
+}
