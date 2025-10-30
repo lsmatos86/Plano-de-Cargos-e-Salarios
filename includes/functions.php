@@ -7,6 +7,9 @@
 const ALLOWED_TABLES = [
     'cargos', 'escolaridades', 'cbos', 'caracteristicas', 'cursos', 'riscos', 
     'habilidades', 'usuarios', 'familia_cbo', 'recursos', 'recursos_grupos',
+    'faixas_salariais', 'areas_atuacao', 'cargos_area',
+    'tipo_hierarquia',                  // <-- NOVA TABELA
+    'nivel_hierarquico',                // <-- NOVA TABELA
     'habilidades_cargo', 'caracteristicas_cargo', 'riscos_cargo', 'cursos_cargo', 
     'cargo_sinonimos', 'recursos_grupos_cargo', 'recurso_grupo_recurso'
 ];
@@ -155,6 +158,7 @@ function countRecordsWithFilter(PDO $pdo, string $tableName, string $nameColumn,
     
     if (!empty($term)) {
         $sql .= " WHERE {$nameColumn} LIKE ?";
+        // Se a tabela for 'usuarios', adiciona filtro por e-mail também
         if ($tableName === 'usuarios') {
             $sql .= " OR email LIKE ?";
             $bindings[] = "%{$term}%";
@@ -216,7 +220,8 @@ function clearCargoRelationships(PDO $pdo, int $cargoId): bool
 {
     $joinTables = [
         'habilidades_cargo', 'caracteristicas_cargo', 'riscos_cargo', 
-        'cargo_sinonimos', 'cursos_cargo', 'recursos_grupos_cargo'
+        'cargo_sinonimos', 'cursos_cargo', 'recursos_grupos_cargo',
+        'cargos_area' // <-- NOVA TABELA DE JUNÇÃO INCLUÍDA
     ];
     $success = true;
 
@@ -299,7 +304,7 @@ function getEnumOptions(PDO $pdo, string $tableName, string $columnName): array
         if (isset($row['Type']) && strpos($row['Type'], 'enum') !== false) {
             $enum_string = $row['Type'];
             $matches = [];
-            preg_match_all('/\'([^\']+)\'/', $enum_string, $matches);
+            preg_match_match_all('/\'([^\']+)\'/', $enum_string, $matches);
             return $matches[1];
         }
     } catch (PDOException $e) {
@@ -375,10 +380,11 @@ function getSortDirection($current_order, $column, $default_dir = 'ASC') {
 }
 
 // ----------------------------------------------------
-// 9. FUNÇÃO PARA CARREGAR DADOS COMPLETOS DO CARGO (RELATÓRIOS)
+// 9. FUNÇÃO PARA CARREGAR DADOS COMPLETOS DO CARGO (RELATÓRIOS) - ATUALIZADA
 // ----------------------------------------------------
 /**
  * Carrega todos os dados de um cargo, incluindo seus relacionamentos N:M, para relatórios.
+ * (Inclui Faixa Salarial, Áreas de Atuação e Hierarquia de Cargos)
  * @param PDO $pdo A conexão PDO ativa.
  * @param int $cargoId O ID do cargo.
  * @return array|null Os dados completos do cargo ou null se não encontrado.
@@ -390,16 +396,26 @@ function getCargoReportData(PDO $pdo, int $cargoId): ?array
     $data = [];
 
     try {
-        // 1. DADOS BÁSICOS, CBO e ESCOLARIDADE (USANDO LEFT JOIN para robustez)
+        // 1. DADOS BÁSICOS, FAIXA SALARIAL, NÍVEL HIERÁRQUICO e SUPERVISOR (NOVOS JOINS)
         $stmt = $pdo->prepare("
             SELECT 
                 c.*, 
                 e.escolaridadeTitulo,
                 b.cboNome,
-                b.cboTituloOficial 
+                b.cboTituloOficial,
+                f.faixaNivel,               
+                f.faixaSalarioMinimo,       
+                f.faixaSalarioMaximo,
+                n.nivelOrdem,                       -- NOVO CAMPO NÍVEL
+                t.tipoNome AS tipoHierarquiaNome,   -- NOVO CAMPO TIPO
+                sup.cargoNome AS cargoSupervisorNome -- NOVO CAMPO SUPERVISOR
             FROM cargos c
             LEFT JOIN escolaridades e ON e.escolaridadeId = c.escolaridadeId
             LEFT JOIN cbos b ON b.cboId = c.cboId
+            LEFT JOIN faixas_salariais f ON f.faixaId = c.faixaId
+            LEFT JOIN nivel_hierarquico n ON n.nivelId = c.nivelHierarquicoId -- NOVO JOIN DE NÍVEL
+            LEFT JOIN tipo_hierarquia t ON t.tipoId = n.tipoId                -- NOVO JOIN DE TIPO
+            LEFT JOIN cargos sup ON sup.cargoId = c.cargoSupervisorId         -- NOVO JOIN DE SUPERVISOR (Autocorrelação)
             WHERE c.cargoId = ?
         ");
         $stmt->execute([$cargoId]);
@@ -410,7 +426,7 @@ function getCargoReportData(PDO $pdo, int $cargoId): ?array
         $data['cargo'] = $cargo;
         
         // ------------------------------------------------
-        // 2. BUSCA DE RELACIONAMENTOS N:M (Continua usando prepared statements para SEGURANÇA)
+        // 2. BUSCA DE RELACIONAMENTOS N:M 
         // ------------------------------------------------
 
         // 2.1. HABILIDADES
@@ -444,7 +460,6 @@ function getCargoReportData(PDO $pdo, int $cargoId): ?array
 
         // 2.5. SINÔNIMOS
         try {
-            // NOTA: Usa a grafia correta: cargo_sinonimos
             $stmt_sin = $pdo->prepare("SELECT cargoSinonimoNome FROM cargo_sinonimos WHERE cargoId = ?"); 
             $stmt_sin->execute([$cargoId]);
             $data['sinonimos'] = $stmt_sin->fetchAll(PDO::FETCH_COLUMN);
@@ -456,6 +471,13 @@ function getCargoReportData(PDO $pdo, int $cargoId): ?array
             $stmt_rec->execute([$cargoId]);
             $data['recursos_grupos'] = $stmt_rec->fetchAll(PDO::FETCH_COLUMN);
         } catch (Exception $e) { $data['recursos_grupos'] = []; error_log("Erro em Recursos Grupos para Cargo ID {$cargoId}: " . $e->getMessage()); }
+        
+        // 2.7. ÁREAS DE ATUAÇÃO
+        try {
+            $stmt_areas = $pdo->prepare("SELECT a.areaNome FROM cargos_area ca JOIN areas_atuacao a ON a.areaId = ca.areaId WHERE ca.cargoId = ? ORDER BY a.areaNome ASC");
+            $stmt_areas->execute([$cargoId]);
+            $data['areas_atuacao'] = $stmt_areas->fetchAll(PDO::FETCH_COLUMN);
+        } catch (Exception $e) { $data['areas_atuacao'] = []; error_log("Erro em Áreas de Atuação para Cargo ID {$cargoId}: " . $e->getMessage()); }
 
 
         return $data;
@@ -480,4 +502,70 @@ function getRiscoIcon(string $riscoNome): string {
         'Acidental' => '<i class="fas fa-exclamation-triangle" style="color:#f00;"></i>'
     ];
     return $map[$riscoNome] ?? '<i class="fas fa-dot-circle" style="color:#999;"></i>';
+}
+
+// ----------------------------------------------------
+// 10. FUNÇÕES AUXILIARES PARA HIERARQUIA DE ÁREAS
+// ----------------------------------------------------
+
+/**
+ * Retorna as áreas para o Lookup de seleção, formatadas para mostrar o caminho hierárquico completo.
+ * @param PDO $pdo A conexão PDO ativa.
+ * @return array Um array formatado [areaId => 'Pai > Filho > Nome da Área'].
+ */
+function getAreaHierarchyLookup(PDO $pdo): array 
+{
+    try {
+        $stmt = $pdo->query("SELECT areaId, areaPaiId, areaNome FROM areas_atuacao");
+        $flatList = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log("Erro ao buscar áreas para lookup: " . $e->getMessage());
+        return [];
+    }
+
+    $lookup = [];
+    $allAreas = array_column($flatList, null, 'areaId');
+
+    // Mapeia para exibir o caminho completo (ex: Diretoria > Financeiro)
+    foreach ($flatList as $area) {
+        $path = [$area['areaNome']];
+        $currentId = $area['areaPaiId'];
+        
+        // Constrói o caminho reverso até a raiz
+        while ($currentId !== null && isset($allAreas[$currentId])) {
+            array_unshift($path, $allAreas[$currentId]['areaNome']);
+            $currentId = $allAreas[$currentId]['areaPaiId'];
+        }
+        
+        $lookup[$area['areaId']] = implode(' > ', $path);
+    }
+    
+    // Ordena pelo caminho completo para exibição no SELECT
+    asort($lookup);
+    return $lookup;
+}
+
+/**
+ * Converte a lista de áreas (com ID Pai) para uma estrutura hierárquica aninhada (Árvore).
+ * Utilizada principalmente para a visualização do Organograma de Áreas.
+ * @param array $flatList Lista de áreas (flat array)
+ * @param int|null $parentId ID da área pai para começar
+ * @return array Árvore hierárquica
+ */
+function buildAreaHierarchy(array $flatList, $parentId = null): array 
+{
+    $branch = [];
+    foreach ($flatList as $area) {
+        // Coerção para garantir comparação correta
+        $areaPaiId = ($area['areaPaiId'] === null) ? null : (int)$area['areaPaiId']; 
+        
+        if ($areaPaiId === $parentId) {
+            $children = buildAreaHierarchy($flatList, (int)$area['areaId']);
+            if ($children) {
+                $area['children'] = $children;
+            }
+            $branch[] = $area;
+        }
+    }
+    return $branch;
 }

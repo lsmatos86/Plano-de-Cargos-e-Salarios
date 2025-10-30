@@ -35,8 +35,7 @@ if ($total_cargos === 0) {
 }
 
 // ----------------------------------------------------
-// 2. FUNÇÃO AUXILIAR PARA RENDERIZAR O HTML DE UM CARGO
-//    (Baseado na estrutura de cargo_individual.php para consistência)
+// 2. FUNÇÃO AUXILIAR PARA RENDERIZAR O HTML DE UM CARGO (AJUSTADA: REMOVENDO CONTADOR)
 // ----------------------------------------------------
 /**
  * Renderiza o HTML completo para um único cargo no formato de relatório.
@@ -58,7 +57,6 @@ function renderSingleCargoHtml(array $data, int $current_index, int $total_cargo
     
         <h1 class="cargo-section-title">
             <span class="cargo-nome-principal"><?php echo htmlspecialchars($cargo['cargoNome']); ?></span>
-            <span class="cargo-progress">(Cargo <?php echo $current_index; ?> de <?php echo $total_cargos; ?>)</span>
         </h1>
         
         <p class="cbo-detail">
@@ -119,9 +117,9 @@ function renderSingleCargoHtml(array $data, int $current_index, int $total_cargo
                         <span class="habilidade-nome"><?php echo htmlspecialchars($h['habilidadeNome']); ?></span>
                         <?php if (!empty($h_desc)): ?>
                             <p class="habilidade-descricao"> - <?php echo $h_desc; ?></p>
-                        <?php endif; ?>
-                    </li>
-                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </li>
+                    <?php endforeach; ?>
                 </ul>
             </div>
         </div>
@@ -277,7 +275,6 @@ if ($start_generation && $output_format === 'pdf') {
             /* CABEÇALHO E RODAPÉ */
             .report-header-final { text-align: center; margin-bottom: 25px; }
             .cargo-section-title { font-size: 16pt; color: #000; font-weight: bold; display: block; margin-bottom: 5px; text-align: center; }
-            .cargo-progress { font-size: 10pt; color: #198754; font-weight: normal; display: block; margin-top: 5px; }
             .cbo-detail { font-size: 10pt; color: #555; margin-bottom: 20px; text-align: center; } 
             .report-footer { position: fixed; bottom: 0; width: 90%; text-align: right; font-size: 7pt; color: #777; border-top: 1px solid #ccc; padding-top: 5px; }
             
@@ -342,11 +339,12 @@ if ($start_generation && $output_format === 'pdf') {
     // 4. GERAÇÃO DO ARQUIVO PDF E DOWNLOAD
     $filename_final = "Relatorio_Cargos_Consolidado_" . date('YmdHi');
     generatePdfFromHtml($html, $filename_final, true);
+    // O script PHP morre aqui após enviar o PDF ao navegador.
     exit;
 
 } 
 // ----------------------------------------------------
-// 4. LÓGICA DO HTML (MODAL DE CARREGAMENTO) - PRÉ-GERAÇÃO
+// 4. LÓGICA DO HTML (MODAL DE CARREGAMENTO) - PRÉ-GERAÇÃO (AJUSTADO PARA REQUISITO 2)
 // ----------------------------------------------------
 else {
     $pdf_generation_url = '?format=pdf&generate=true';
@@ -385,6 +383,19 @@ else {
             font-weight: bold;
             color: #198754;
         }
+        /* Esconde elementos de loading e exibe a mensagem de conclusão (Requisito 2) */
+        .completed .spinner-border, .completed .loading-info {
+            display: none !important;
+        }
+        .completed .message-complete {
+            display: block !important;
+        }
+        .message-complete {
+            display: none; /* Escondido por padrão */
+        }
+        .loading-info {
+            display: block; /* Visível por padrão */
+        }
     </style>
 </head>
 <body>
@@ -393,25 +404,44 @@ else {
     <div class="spinner-border text-success" role="status">
         <span class="visually-hidden">Loading...</span>
     </div>
-    <div class="progress-text">
-        Preparando para gerar o Relatório Consolidado...
+    <div class="loading-info">
+        <div class="progress-text">
+            Preparando para gerar o Relatório Consolidado...
+        </div>
+        <p class="mt-3 text-muted">Total de Seções a processar: **<?php echo $total_cargos_text; ?>**</p>
+        <p class="text-danger fw-bold">A geração do PDF pode levar alguns minutos. Não feche esta janela.</p>
     </div>
-    <p class="mt-3 text-muted">Total de Seções a processar: **<?php echo $total_cargos_text; ?>**</p>
-    <p class="text-danger fw-bold">A geração do PDF pode levar alguns minutos. Não feche esta janela.</p>
+    
+    <div class="message-complete mt-5">
+        <h2 class="text-success"><i class="fas fa-check-circle"></i> Geração Concluída!</h2>
+        <p class="text-secondary">Seu download do relatório consolidado deve ter iniciado na aba/janela separada.</p>
+        <button class="btn btn-primary mt-3" onclick="window.close();">
+             <i class="fas fa-times-circle"></i> Fechar Janela
+        </button>
+        <p class="mt-3 text-muted small">Se o download não iniciou, verifique se seu navegador bloqueou pop-ups ou downloads automáticos.</p>
+    </div>
 </div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         var modal = document.getElementById('preloaderModal');
+        var pdfGenerationUrl = '<?php echo $pdf_generation_url; ?>';
         var progressText = modal.querySelector('.progress-text');
         
-        progressText.innerHTML = 'Iniciando geração do PDF... (Iremos redirecionar)';
+        progressText.innerHTML = 'Iniciando geração do PDF... (Download na nova aba)';
         
-        // Simula o preloader por 2 segundos antes de iniciar o processo pesado
+        // 1. Abre uma nova janela para o download do PDF
+        var newWindow = window.open(pdfGenerationUrl, '_blank');
+        
+        // 2. Imediatamente, exibe a mensagem de conclusão na janela atual (Requisito 2)
+        // Isso garante que o usuário saiba que o processo foi iniciado e o download será feito no novo tab.
+        // O navegador irá lidar com o download e o fechamento (ou não) da nova aba (newWindow).
+        
+        // Adiciona a classe 'completed' para exibir a mensagem de conclusão
+        // Usamos um pequeno timeout para a UX ficar mais suave
         setTimeout(function() {
-            // Inicia o processo de geração do PDF
-            window.location.href = '<?php echo $pdf_generation_url; ?>';
-        }, 2000); 
+            modal.classList.add('completed');
+        }, 1500); 
     });
 </script>
 
