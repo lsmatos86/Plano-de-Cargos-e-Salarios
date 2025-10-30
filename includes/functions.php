@@ -2,6 +2,22 @@
 // Arquivo: includes/functions.php
 // Este arquivo DEVE ser incluído APÓS o config.php
 
+// Lista de tabelas mestras permitidas para operações genéricas de leitura/exclusão.
+// Usado para evitar injeção SQL no nome da tabela.
+const ALLOWED_TABLES = [
+    'cargos', 'escolaridades', 'cbos', 'caracteristicas', 'cursos', 'riscos', 
+    'habilidades', 'usuarios', 'familia_cbo', 'recursos', 'recursos_grupos',
+    'habilidades_cargo', 'caracteristicas_cargo', 'riscos_cargo', 'cursos_cargo', 
+    'cargo_sinonimos', 'recursos_grupos_cargo', 'recurso_grupo_recurso'
+];
+
+/**
+ * Valida se um nome de tabela é seguro.
+ */
+function isValidTableName(string $tableName): bool {
+    return in_array(strtolower($tableName), ALLOWED_TABLES);
+}
+
 // ----------------------------------------------------
 // 1. FUNÇÃO: CONEXÃO COM O BANCO DE DADOS (PDO)
 // ----------------------------------------------------
@@ -29,7 +45,7 @@ function getDbConnection(): PDO {
 }
 
 // ----------------------------------------------------
-// 2. FUNÇÃO: INSERIR REGISTRO SIMPLES (CREATE)
+// 2. FUNÇÃO: INSERIR REGISTRO SIMPLES (CREATE) - Aprimorada com validação
 // ----------------------------------------------------
 /**
  * Insere um novo registro em uma tabela simples (que recebe apenas um campo de texto/nome).
@@ -41,8 +57,9 @@ function getDbConnection(): PDO {
  */
 function insertSimpleRecord(PDO $pdo, string $tableName, string $columnName, string $value): bool
 {
-    // Validação básica para evitar injeção SQL no nome da tabela/coluna
-    if (!preg_match('/^[a-zA-Z0-9_]+$/', $tableName) || !preg_match('/^[a-zA-Z0-9_]+$/', $columnName)) {
+    // Validação de nomes de tabela e coluna via Whitelist ou Regex
+    if (!isValidTableName($tableName) || !preg_match('/^[a-zA-Z0-9_]+$/', $columnName)) {
+        error_log("Tentativa de insert em tabela ou coluna inválida: {$tableName}.{$columnName}");
         return false;
     }
     
@@ -53,33 +70,41 @@ function insertSimpleRecord(PDO $pdo, string $tableName, string $columnName, str
         $stmt = $pdo->prepare($sql);
         return $stmt->execute([$value]);
     } catch (PDOException $e) {
+        error_log("Erro de INSERT em {$tableName}: " . $e->getMessage());
         return false;
     }
 }
 
 // ----------------------------------------------------
-// 3. FUNÇÃO: LISTAR REGISTROS COM FILTRO E ORDENAÇÃO (READ)
+// 3. FUNÇÃO: LISTAR REGISTROS COM FILTRO, ORDENAÇÃO E PAGINAÇÃO (READ)
 // ----------------------------------------------------
 /**
- * Retorna todos os registros de uma tabela, aplicando filtros e ordenação.
+ * Retorna todos os registros de uma tabela, aplicando filtros, ordenação e limites.
  * @param PDO $pdo A conexão PDO ativa.
  * @param string $tableName O nome da tabela.
  * @param string $idColumn O nome da coluna ID (PK).
  * @param string $nameColumn O nome da coluna de texto principal (para filtro/ordem).
- * @param array $params Parâmetros de filtro e ordenação (term, order_by, sort_dir).
+ * @param array $params Parâmetros (term, order_by, sort_dir, limit, offset).
  * @return array Uma lista de registros.
  */
 function getRecords(PDO $pdo, string $tableName, string $idColumn, string $nameColumn, array $params): array
 {
+    if (!isValidTableName($tableName)) {
+        error_log("Tentativa de SELECT em tabela inválida: {$tableName}");
+        return [];
+    }
+
     $term = $params['term'] ?? '';
     $orderBy = $params['order_by'] ?? $idColumn;
     $sortDir = $params['sort_dir'] ?? 'ASC';
+    $limit = (int)($params['limit'] ?? 0);
+    $offset = (int)($params['offset'] ?? 0);
 
     // 1. Validar e sanitizar a ordenação
     $validDirs = ['ASC', 'DESC'];
     $sortDir = in_array(strtoupper($sortDir), $validDirs) ? strtoupper($sortDir) : 'ASC';
     
-    // 2. Definir colunas válidas (para ordenação segura)
+    // 2. Definir colunas válidas (aprimorado para segurança)
     $validColumns = [$idColumn, $nameColumn, $idColumn.'DataCadastro', $idColumn.'DataAtualizacao', 'recursoDescricao', 'nome', 'email', 'ativo'];
     
     if (!in_array($orderBy, $validColumns)) {
@@ -100,8 +125,12 @@ function getRecords(PDO $pdo, string $tableName, string $idColumn, string $nameC
         $bindings[] = "%{$term}%";
     }
     
-    // Conclui a ordenação
+    // 4. Conclui a ordenação e PAGINAÇÃO
     $sql .= " ORDER BY {$orderBy} {$sortDir}";
+
+    if ($limit > 0) {
+        $sql .= " LIMIT {$limit} OFFSET {$offset}";
+    }
 
     try {
         $stmt = $pdo->prepare($sql);
@@ -113,11 +142,41 @@ function getRecords(PDO $pdo, string $tableName, string $idColumn, string $nameC
     }
 }
 
+/**
+ * Retorna a contagem total de registros de uma tabela, aplicando filtro se houver.
+ */
+function countRecordsWithFilter(PDO $pdo, string $tableName, string $nameColumn, string $term = ''): int {
+    if (!isValidTableName($tableName)) {
+        return 0;
+    }
+    
+    $sql = "SELECT COUNT(*) FROM {$tableName}";
+    $bindings = [];
+    
+    if (!empty($term)) {
+        $sql .= " WHERE {$nameColumn} LIKE ?";
+        if ($tableName === 'usuarios') {
+            $sql .= " OR email LIKE ?";
+            $bindings[] = "%{$term}%";
+        }
+        $bindings[] = "%{$term}%";
+    }
+
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($bindings);
+        return (int)$stmt->fetchColumn();
+    } catch (Exception $e) {
+        return 0;
+    }
+}
+
+
 // ----------------------------------------------------
-// 4. FUNÇÃO: EXCLUIR REGISTRO (DELETE)
+// 4. FUNÇÃO: EXCLUIR REGISTRO (DELETE) - Aprimorada com validação
 // ----------------------------------------------------
 /**
- * Exclui um registro da tabela pelo ID.
+ * Exclui um registro da tabela pelo ID, com segurança de nome de tabela.
  * @param PDO $pdo A conexão PDO ativa.
  * @param string $tableName O nome da tabela.
  * @param string $idColumn O nome da coluna ID.
@@ -126,7 +185,14 @@ function getRecords(PDO $pdo, string $tableName, string $idColumn, string $nameC
  */
 function deleteRecord(PDO $pdo, string $tableName, string $idColumn, $id): int
 {
+    // 1. Validação de nome de tabela e coluna
+    if (!isValidTableName($tableName) || !preg_match('/^[a-zA-Z0-9_]+$/', $idColumn)) {
+        error_log("Tentativa de DELETE em tabela ou coluna inválida: {$tableName}.{$idColumn}");
+        return 0;
+    }
+
     try {
+        // 2. Uso de Prepared Statement para o valor do ID
         $stmt = $pdo->prepare("DELETE FROM {$tableName} WHERE {$idColumn} = ?");
         $stmt->execute([$id]);
         return $stmt->rowCount();
@@ -134,6 +200,37 @@ function deleteRecord(PDO $pdo, string $tableName, string $idColumn, $id): int
         // Retorna 0 se houver falha na exclusão (geralmente por causa de FOREIGN KEY)
         return 0; 
     }
+}
+
+// ----------------------------------------------------
+// NOVO: FUNÇÃO PARA LIMPAR RELACIONAMENTOS N:M DE CARGO (Melhoria na Exclusão)
+// ----------------------------------------------------
+/**
+ * Remove todas as referências de um Cargo em suas tabelas de junção N:M.
+ * Uso obrigatório em operações de exclusão de cargo.
+ * @param PDO $pdo A conexão PDO ativa.
+ * @param int $cargoId O ID do cargo.
+ * @return bool True se a limpeza for bem-sucedida, false caso contrário.
+ */
+function clearCargoRelationships(PDO $pdo, int $cargoId): bool
+{
+    $joinTables = [
+        'habilidades_cargo', 'caracteristicas_cargo', 'riscos_cargo', 
+        'cargo_sinonimos', 'cursos_cargo', 'recursos_grupos_cargo'
+    ];
+    $success = true;
+
+    foreach ($joinTables as $table) {
+        try {
+            // Usa prepared statement para garantir segurança e tratar o cargoId
+            $stmt = $pdo->prepare("DELETE FROM {$table} WHERE cargoId = ?");
+            $stmt->execute([$cargoId]);
+        } catch (PDOException $e) {
+            error_log("Falha ao limpar relacionamento N:M na tabela {$table} para Cargo ID {$cargoId}: " . $e->getMessage());
+            $success = false;
+        }
+    }
+    return $success;
 }
 
 // ----------------------------------------------------
@@ -146,6 +243,11 @@ function deleteRecord(PDO $pdo, string $tableName, string $idColumn, $id): int
  */
 function getLookupData(PDO $pdo, string $tableName, string $idColumn, string $nameColumn, string $concatColumn = null): array
 {
+    if (!isValidTableName($tableName)) {
+        error_log("Tentativa de Lookup em tabela inválida: {$tableName}");
+        return [];
+    }
+
     try {
         $selectFields = $idColumn . ', ' . $nameColumn;
         
@@ -179,10 +281,17 @@ function getLookupData(PDO $pdo, string $tableName, string $idColumn, string $na
 // ----------------------------------------------------
 /**
  * Retorna as opções válidas para um campo ENUM do MySQL.
+ * @param PDO $pdo A conexão PDO ativa.
+ * @param string $tableName O nome da tabela.
+ * @param string $columnName O nome da coluna ENUM.
  * @return array Uma lista de strings com os valores ENUM.
  */
 function getEnumOptions(PDO $pdo, string $tableName, string $columnName): array
 {
+    if (!isValidTableName($tableName)) {
+        return [];
+    }
+
     try {
         $stmt = $pdo->query("SHOW COLUMNS FROM {$tableName} LIKE '{$columnName}'");
         $row = $stmt->fetch();
@@ -287,7 +396,7 @@ function getCargoReportData(PDO $pdo, int $cargoId): ?array
                 c.*, 
                 e.escolaridadeTitulo,
                 b.cboNome,
-                b.cboTituloOficial -- NOVO CAMPO
+                b.cboTituloOficial 
             FROM cargos c
             LEFT JOIN escolaridades e ON e.escolaridadeId = c.escolaridadeId
             LEFT JOIN cbos b ON b.cboId = c.cboId
@@ -301,7 +410,7 @@ function getCargoReportData(PDO $pdo, int $cargoId): ?array
         $data['cargo'] = $cargo;
         
         // ------------------------------------------------
-        // 2. BUSCA DE RELACIONAMENTOS N:M (BLINDADA POR TRY-CATCH)
+        // 2. BUSCA DE RELACIONAMENTOS N:M (Continua usando prepared statements para SEGURANÇA)
         // ------------------------------------------------
 
         // 2.1. HABILIDADES

@@ -18,7 +18,7 @@ $id_column = 'cargoId';
 $name_column = 'cargoNome';
 
 // ----------------------------------------------------
-// 1. LÓGICA DE EXCLUSÃO (DELETE) - Mantida
+// 1. LÓGICA DE EXCLUSÃO (DELETE) - Aprimorada com função de limpeza
 // ----------------------------------------------------
 if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
     $id = (int)$_GET['id'];
@@ -26,15 +26,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
     try {
         $pdo->beginTransaction();
         
-        // 1. Limpa todas as referências nas tabelas de junção
-        $pdo->exec("DELETE FROM habilidades_cargo WHERE cargoId = {$id}");
-        $pdo->exec("DELETE FROM caracteristicas_cargo WHERE cargoId = {$id}");
-        $pdo->exec("DELETE FROM riscos_cargo WHERE cargoId = {$id}");
-        $pdo->exec("DELETE FROM cargo_sinonimos WHERE cargoId = {$id}");
-        $pdo->exec("DELETE FROM cursos_cargo WHERE cargoId = {$id}");
-        $pdo->exec("DELETE FROM recursos_grupos_cargo WHERE cargoId = {$id}");
+        // 1. Limpa todas as referências nas tabelas de junção usando a nova função
+        $cleaned = clearCargoRelationships($pdo, $id);
 
-        // 2. Exclui o cargo principal
+        if (!$cleaned) {
+             throw new Exception("Falha ao limpar relacionamentos N:M.");
+        }
+
+        // 2. Exclui o cargo principal (a função deleteRecord agora valida o nome da tabela)
         $deleted = deleteRecord($pdo, $table_name, $id_column, $id);
         
         $pdo->commit();
@@ -59,15 +58,56 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 }
 
 // ----------------------------------------------------
-// 2. LÓGICA DE LEITURA E FILTRO (READ All) - Mantida
+// 2. LÓGICA DE LEITURA, FILTRO E PAGINAÇÃO (READ All) - Aprimorada
 // ----------------------------------------------------
+// 2.1. Configuração da Paginação
+$itemsPerPage = 10;
+$currentPage = (int)($_GET['page'] ?? 1);
+$currentPage = max(1, $currentPage); // Garante que a página seja no mínimo 1
+$offset = ($currentPage - 1) * $itemsPerPage;
+
+// 2.2. Parâmetros de Filtro e Ordenação
 $params = [
     'term' => $_GET['term'] ?? '',
     'order_by' => $_GET['order_by'] ?? $id_column,
     'sort_dir' => $_GET['sort_dir'] ?? 'ASC'
 ];
 
-// Query com JOINs para dados mestres
+// 2.3. Query para Contagem Total (para Paginação)
+$count_sql = "
+    SELECT COUNT(c.cargoId)
+    FROM cargos c
+    LEFT JOIN escolaridades e ON e.escolaridadeId = c.escolaridadeId
+    LEFT JOIN cbos b ON b.cboId = c.cboId
+";
+$count_bindings = [];
+
+if (!empty($params['term'])) {
+    $count_sql .= " WHERE c.cargoNome LIKE ? OR c.cargoResumo LIKE ?";
+    $count_bindings[] = "%{$params['term']}%";
+    $count_bindings[] = "%{$params['term']}%";
+}
+
+try {
+    $count_stmt = $pdo->prepare($count_sql);
+    $count_stmt->execute($count_bindings);
+    $totalRecords = (int)$count_stmt->fetchColumn();
+} catch (\PDOException $e) {
+    $totalRecords = 0;
+}
+
+$totalPages = ceil($totalRecords / $itemsPerPage);
+// Garante que o offset é válido mesmo se a URL for manipulada
+if ($currentPage > $totalPages && $totalPages > 0) {
+    $currentPage = $totalPages;
+    $offset = ($currentPage - 1) * $itemsPerPage;
+} elseif ($totalRecords === 0) {
+    $currentPage = 1;
+    $offset = 0;
+}
+
+
+// 2.4. Query Principal com JOINs, Filtro, Ordenação e PAGINAÇÃO
 $sql = "
     SELECT 
         c.cargoId, c.cargoNome, c.cargoResumo, c.cargoDataAtualizacao,
@@ -85,15 +125,28 @@ if (!empty($params['term'])) {
     $bindings[] = "%{$params['term']}%";
 }
 
+// 2.5. Validação de Colunas (Mantida para segurança na ordenação)
 $validColumns = ['c.cargoId', 'c.cargoNome', 'e.escolaridadeTitulo', 'b.cboNome', 'c.cargoDataAtualizacao'];
 $orderBy = in_array($params['order_by'], $validColumns) ? $params['order_by'] : 'c.cargoId';
 $sortDir = in_array(strtoupper($params['sort_dir']), ['ASC', 'DESC']) ? $params['sort_dir'] : 'ASC';
 
 $sql .= " ORDER BY {$orderBy} {$sortDir}";
+$sql .= " LIMIT :limit OFFSET :offset"; // Adiciona LIMIT e OFFSET
 
 try {
     $stmt = $pdo->prepare($sql);
-    $stmt->execute($bindings);
+    
+    // Vincula os parâmetros de filtro (se existirem)
+    $bindIndex = 1;
+    foreach ($bindings as $value) {
+        $stmt->bindValue($bindIndex++, $value);
+    }
+
+    // Vincula os parâmetros de paginação (usando nomeclatura para segurança)
+    $stmt->bindValue(':limit', $itemsPerPage, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    
+    $stmt->execute();
     $registros = $stmt->fetchAll();
 } catch (\PDOException $e) {
     $registros = [];
@@ -119,7 +172,7 @@ if (isset($_GET['message'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style>
         .short-text { max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .action-cell { width: 220px; } /* Ajuste de largura para a coluna de ações para caber 4 botões + espaço */
+        .action-cell { width: 220px; } 
     </style>
 </head>
 <body>
@@ -165,6 +218,9 @@ if (isset($_GET['message'])) {
         <div class="col-md-8">
             <form method="GET" class="d-flex">
                 <input type="search" name="term" class="form-control me-2" placeholder="Filtrar por Nome ou Resumo do Cargo" value="<?php echo htmlspecialchars($params['term']); ?>">
+                <input type="hidden" name="order_by" value="<?php echo htmlspecialchars($params['order_by']); ?>">
+                <input type="hidden" name="sort_dir" value="<?php echo htmlspecialchars($params['sort_dir']); ?>">
+                
                 <button class="btn btn-outline-secondary" type="submit">Buscar</button>
                 <?php if (!empty($params['term'])): ?>
                     <a href="cargos.php" class="btn btn-outline-danger ms-2" title="Limpar Filtro"><i class="fas fa-times"></i> Limpar</a>
@@ -175,16 +231,29 @@ if (isset($_GET['message'])) {
 
     <div class="card">
         <div class="card-header bg-light">
-            <span class="fw-bold">Cargos Encontrados: </span> <?php echo count($registros); ?>
+            <span class="fw-bold">Cargos Encontrados: </span> <?php echo $totalRecords; ?> (Página <?php echo $currentPage; ?> de <?php echo $totalPages; ?>)
         </div>
         <div class="card-body p-0">
             <table class="table table-striped table-hover table-sm mb-0">
                 <thead class="bg-light">
                     <tr>
-                        <th><a href="?order_by=c.cargoId" class="text-decoration-none text-dark"><i class="fas fa-hashtag me-1"></i> ID</a></th>
-                        <th><a href="?order_by=c.cargoNome" class="text-decoration-none text-dark"><i class="fas fa-briefcase me-1"></i> Cargo</a></th>
-                        <th><i class="fas fa-tag me-1"></i> CBO</th>
-                        <th><a href="?order_by=e.escolaridadeTitulo" class="text-decoration-none text-dark"><i class="fas fa-graduation-cap me-1"></i> Escolaridade</a></th>
+                        <?php 
+                        // Função auxiliar para criar o link de ordenação
+                        function createSortLink($column, $text, $params) {
+                            $new_dir = getSortDirection($params['order_by'], $column);
+                            $icon = 'fa-sort';
+                            if ($params['order_by'] === $column) {
+                                $icon = $new_dir === 'ASC' ? 'fa-sort-up' : 'fa-sort-down';
+                            }
+                            // Mantém o filtro 'term' e define a página como 1 ao ordenar
+                            $query_params = http_build_query(array_merge($params, ['order_by' => $column, 'sort_dir' => $new_dir, 'page' => 1]));
+                            return '<a href="?' . $query_params . '" class="text-decoration-none text-dark"><i class="fas ' . $icon . ' me-1"></i> ' . $text . '</a>';
+                        }
+                        ?>
+                        <th><?php echo createSortLink('c.cargoId', 'ID', $params); ?></th>
+                        <th><?php echo createSortLink('c.cargoNome', 'Cargo', $params); ?></th>
+                        <th><?php echo createSortLink('b.cboNome', 'CBO', $params); ?></th>
+                        <th><?php echo createSortLink('e.escolaridadeTitulo', 'Escolaridade', $params); ?></th>
                         <th>Resumo</th>
                         <th class="action-cell text-center">Ações</th>
                     </tr>
@@ -194,7 +263,8 @@ if (isset($_GET['message'])) {
                         <?php foreach ($registros as $row): ?>
                             <tr>
                                 <td><?php echo htmlspecialchars($row['cargoId']); ?></td>
-                                <td><strong class="text-primary"><?php echo htmlspecialchars($row['cargoNome']); ?></strong></td> <td><?php echo htmlspecialchars($row['cboNome'] ?? 'N/A'); ?></td>
+                                <td><strong class="text-primary"><?php echo htmlspecialchars($row['cargoNome']); ?></strong></td> 
+                                <td><?php echo htmlspecialchars($row['cboNome'] ?? 'N/A'); ?></td>
                                 <td><?php echo htmlspecialchars($row['escolaridadeTitulo'] ?? 'N/A'); ?></td>
                                 <td><div class="short-text" title="<?php echo htmlspecialchars($row['cargoResumo']); ?>"><?php echo htmlspecialchars($row['cargoResumo']); ?></div></td>
                                 <td class="action-cell text-center">
@@ -239,6 +309,45 @@ if (isset($_GET['message'])) {
             </table>
         </div>
     </div>
+    
+    <?php if ($totalPages > 1): ?>
+    <nav aria-label="Navegação de página" class="mt-4">
+        <ul class="pagination justify-content-center">
+            
+            <li class="page-item <?php echo ($currentPage <= 1) ? 'disabled' : ''; ?>">
+                <?php $prev_query = http_build_query(array_merge($params, ['page' => $currentPage - 1])); ?>
+                <a class="page-link" href="?<?php echo $prev_query; ?>">Anterior</a>
+            </li>
+
+            <?php 
+            // Lógica para mostrar no máximo 5 botões de página
+            $startPage = max(1, $currentPage - 2);
+            $endPage = min($totalPages, $currentPage + 2);
+
+            // Ajusta o intervalo para garantir 5 páginas se possível
+            if ($endPage - $startPage < 4) {
+                $startPage = max(1, $endPage - 4);
+            }
+            if ($endPage - $startPage < 4) {
+                $endPage = min($totalPages, $startPage + 4);
+            }
+
+            for ($i = $startPage; $i <= $endPage; $i++): 
+                $page_query = http_build_query(array_merge($params, ['page' => $i]));
+            ?>
+                <li class="page-item <?php echo ($i === $currentPage) ? 'active' : ''; ?>">
+                    <a class="page-link" href="?<?php echo $page_query; ?>"><?php echo $i; ?></a>
+                </li>
+            <?php endfor; ?>
+
+            <li class="page-item <?php echo ($currentPage >= $totalPages) ? 'disabled' : ''; ?>">
+                <?php $next_query = http_build_query(array_merge($params, ['page' => $currentPage + 1])); ?>
+                <a class="page-link" href="?<?php echo $next_query; ?>">Próxima</a>
+            </li>
+        </ul>
+    </nav>
+    <?php endif; ?>
+
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
