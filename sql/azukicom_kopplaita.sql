@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Tempo de geração: 31/10/2025 às 02:33
+-- Tempo de geração: 31/10/2025 às 05:25
 -- Versão do servidor: 10.4.32-MariaDB
 -- Versão do PHP: 8.2.12
 
@@ -119,7 +119,7 @@ CREATE TABLE `cargo_sinonimos` (
 CREATE TABLE `cbos` (
   `cboId` int(5) NOT NULL,
   `familiaCboId` int(5) NOT NULL,
-  `cboNome` varchar(64) NOT NULL,
+  `cboCod` varchar(64) NOT NULL,
   `cboTituloOficial` varchar(255) DEFAULT NULL,
   `cboDataCadastro` timestamp NOT NULL DEFAULT current_timestamp(),
   `cboDataAtualizacao` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
