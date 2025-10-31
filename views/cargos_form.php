@@ -32,10 +32,9 @@ $page_title = $isDuplicating ? 'Duplicar Cargo (Novo Registro)' : ($isEditing ? 
 // ----------------------------------------------------
 $cbos = getLookupData($pdo, 'cbos', 'cboId', 'cboNome', 'cboTituloOficial');
 $escolaridades = getLookupData($pdo, 'escolaridades', 'escolaridadeId', 'escolaridadeTitulo');
-// NOVO: Habilidades agrupadas para o OPTGROUP
+// Habilidades agrupadas e simples (para select e lookup)
 $habilidadesAgrupadas = getHabilidadesGrouped($pdo);
-// Lookups simples (ID => Nome) para outros grids
-$habilidades = getLookupData($pdo, 'habilidades', 'habilidadeId', 'habilidadeNome'); // Lista plana para uso interno
+$habilidades = getLookupData($pdo, 'habilidades', 'habilidadeId', 'habilidadeNome'); 
 $caracteristicas = getLookupData($pdo, 'caracteristicas', 'caracteristicaId', 'caracteristicaNome');
 $riscos = getLookupData($pdo, 'riscos', 'riscoId', 'riscoNome'); 
 $cursos = getLookupData($pdo, 'cursos', 'cursoId', 'cursoNome');
@@ -54,76 +53,78 @@ $cargoCaracteristicas = [];
 $cargoRiscos = []; 
 $cargoCursos = [];
 $cargoRecursosGrupos = [];
+$cargoSinonimos = []; // NOVO: Sinônimos
 
 
 // ----------------------------------------------------
-// 2. BUSCA DADOS PARA EDIÇÃO OU DUPLICAÇÃO
+// 2. BUSCA DADOS PARA EDIÇÃO OU DUPLICAÇÃO (Adaptado para o novo formato)
 // ----------------------------------------------------
 if ($isEditing || $isDuplicating) {
     try {
-        // 2.1 Busca dados principais do cargo
         $stmt = $pdo->prepare("SELECT * FROM cargos WHERE cargoId = ?");
         $stmt->execute([$cargoId]); 
         $cargo = $stmt->fetch();
 
-        if (!$cargo) {
+        if ($cargo) {
+            
+            // SINÔNIMOS (Livre texto)
+            $stmt = $pdo->prepare("SELECT cargoSinonimoId AS id, cargoSinonimoNome AS nome FROM cargo_sinonimos WHERE cargoId = ?");
+            $stmt->execute([$cargoId]);
+            $cargoSinonimos = $stmt->fetchAll(PDO::FETCH_ASSOC); 
+
+            // RISCOS (COMPLEX N:M): Busca ID, Descricao
+            $stmt = $pdo->prepare("SELECT rc.riscoId AS id, r.riscoNome AS nome, rc.riscoDescricao AS descricao FROM riscos_cargo rc JOIN riscos r ON r.riscoId = rc.riscoId WHERE rc.cargoId = ?");
+            $stmt->execute([$cargoId]);
+            $cargoRiscos = $stmt->fetchAll(PDO::FETCH_ASSOC); 
+            
+            // ÁREAS DE ATUAÇÃO (SIMPLE N:M): Busca ID, Nome
+            $stmt = $pdo->prepare("SELECT ca.areaId AS id, a.areaNome AS nome FROM cargos_area ca JOIN areas_atuacao a ON a.areaId = ca.areaId WHERE ca.cargoId = ?");
+            $stmt->execute([$cargoId]);
+            $cargoAreas = $stmt->fetchAll(PDO::FETCH_ASSOC); 
+            
+            // HABILIDADES (SIMPLE N:M): Busca ID, Nome, Tipo
+            $stmt = $pdo->prepare("SELECT hc.habilidadeId AS id, h.habilidadeNome AS nome, h.habilidadeTipo AS tipo FROM habilidades_cargo hc JOIN habilidades h ON h.habilidadeId = hc.habilidadeId WHERE hc.cargoId = ?");
+            $stmt->execute([$cargoId]);
+            $cargoHabilidades = $stmt->fetchAll(PDO::FETCH_ASSOC); 
+            
+            // CARACTERÍSTICAS (SIMPLE N:M): Busca ID, Nome
+            $stmt = $pdo->prepare("SELECT cc.caracteristicaId AS id, c.caracteristicaNome AS nome FROM caracteristicas_cargo cc JOIN caracteristicas c ON c.caracteristicaId = cc.caracteristicaId WHERE cc.cargoId = ?");
+            $stmt->execute([$cargoId]);
+            $cargoCaracteristicas = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // CURSOS (COMPLEX N:M): Busca ID, Nome, Obrigatório, Observação
+            $stmt = $pdo->prepare("SELECT curc.cursoId AS id, cur.cursoNome AS nome, curc.cursoCargoObrigatorio AS obrigatorio, curc.cursoCargoObs AS obs FROM cursos_cargo curc JOIN cursos cur ON cur.cursoId = curc.cursoId WHERE curc.cargoId = ?");
+            $stmt->execute([$cargoId]);
+            // Converte o campo 'obrigatorio' (0/1) para boolean para o JS
+            $cargoCursos = array_map(function($curso) {
+                $curso['obrigatorio'] = (bool)$curso['obrigatorio'];
+                return $curso;
+            }, $stmt->fetchAll(PDO::FETCH_ASSOC));
+            
+            // GRUPOS DE RECURSOS (SIMPLE N:M): Busca ID, Nome
+            $stmt = $pdo->prepare("SELECT rgc.recursoGrupoId AS id, rg.recursoGrupoNome AS nome FROM recursos_grupos_cargo rgc JOIN recursos_grupos rg ON rg.recursoGrupoId = rgc.recursoGrupoId WHERE rgc.cargoId = ?");
+            $stmt->execute([$cargoId]);
+            $cargoRecursosGrupos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            if ($isDuplicating) {
+                $cargo['cargoNome'] = ($cargo['cargoNome'] ?? 'Cargo Duplicado') . ' (CÓPIA)';
+                unset($cargo['cargoId']); 
+            }
+        } else {
             $message = "Cargo não encontrado.";
             $message_type = 'danger';
             $isEditing = false;
         }
 
-        if ($cargo) {
-            // 2.2 Busca Relacionamentos N:M (AGORA BUSCA ID E NOME PARA POPULAR GRIDS)
-            
-            // RISCOS (COMPLEX N:M)
-            $stmt = $pdo->prepare("SELECT rc.riscoId, rc.riscoDescricao FROM riscos_cargo rc WHERE rc.cargoId = ?");
-            $stmt->execute([$cargoId]);
-            $cargoRiscos = $stmt->fetchAll(PDO::FETCH_ASSOC); 
-            
-            // ÁREAS DE ATUAÇÃO (SIMPLE N:M)
-            $stmt = $pdo->prepare("SELECT ca.areaId, a.areaNome FROM cargos_area ca JOIN areas_atuacao a ON a.areaId = ca.areaId WHERE ca.cargoId = ?");
-            $stmt->execute([$cargoId]);
-            $cargoAreas = $stmt->fetchAll(PDO::FETCH_ASSOC); 
-            
-            // HABILIDADES (SIMPLE N:M) - AGORA BUSCA O TIPO PARA AGRUPAMENTO NA GRID
-            $stmt = $pdo->prepare("SELECT hc.habilidadeId, h.habilidadeNome, h.habilidadeTipo FROM habilidades_cargo hc JOIN habilidades h ON h.habilidadeId = hc.habilidadeId WHERE hc.cargoId = ?");
-            $stmt->execute([$cargoId]);
-            $cargoHabilidades = $stmt->fetchAll(PDO::FETCH_ASSOC); 
-            
-            // CARACTERÍSTICAS (SIMPLE N:M)
-            $stmt = $pdo->prepare("SELECT cc.caracteristicaId, c.caracteristicaNome FROM caracteristicas_cargo cc JOIN caracteristicas c ON c.caracteristicaId = cc.caracteristicaId WHERE cc.cargoId = ?");
-            $stmt->execute([$cargoId]);
-            $cargoCaracteristicas = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // CURSOS (SIMPLE N:M)
-            $stmt = $pdo->prepare("SELECT curc.cursoId, cur.cursoNome FROM cursos_cargo curc JOIN cursos cur ON cur.cursoId = curc.cursoId WHERE curc.cargoId = ?");
-            $stmt->execute([$cargoId]);
-            $cargoCursos = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // GRUPOS DE RECURSOS (SIMPLE N:M)
-            $stmt = $pdo->prepare("SELECT rgc.recursoGrupoId, rg.recursoGrupoNome FROM recursos_grupos_cargo rgc JOIN recursos_grupos rg ON rg.recursoGrupoId = rgc.recursoGrupoId WHERE rgc.cargoId = ?");
-            $stmt->execute([$cargoId]);
-            $cargoRecursosGrupos = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            // 2.3 Lógica Específica de DUPLICAÇÃO:
-            if ($isDuplicating) {
-                $cargo['cargoNome'] = ($cargo['cargoNome'] ?? 'Cargo Duplicado') . ' (CÓPIA)';
-                unset($cargo['cargoId']); 
-            }
-        }
-
-
     } catch (PDOException $e) {
-        $message = "Erro ao carregar dados para " . ($isDuplicating ? 'duplicação' : 'edição') . ": " . $e->getMessage();
+        $message = "Erro ao carregar dados: " . $e->getMessage();
         $message_type = 'danger';
-        $isEditing = false;
-        $isDuplicating = false;
     }
 }
 
 
 // ----------------------------------------------------
-// 3. LÓGICA DE SALVAMENTO (POST) - Transacional e Completa
+// 3. LÓGICA DE SALVAMENTO (POST)
 // ----------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cargoNome'])) {
     
@@ -142,26 +143,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cargoNome'])) {
         'cargoSupervisorId' => empty($_POST['cargoSupervisorId']) ? null : (int)$_POST['cargoSupervisorId'],
     ];
 
-    // Relacionamentos N:M SIMPLES (usando a nova estrutura de POST dos Grids)
+    // Relacionamentos N:M SIMPLES
     $relacionamentosSimples = [
         'cargos_area' => ['coluna' => 'areaId', 'valores' => (array)($_POST['areaId'] ?? [])],
         'habilidades_cargo' => ['coluna' => 'habilidadeId', 'valores' => (array)($_POST['habilidadeId'] ?? [])],
         'caracteristicas_cargo' => ['coluna' => 'caracteristicaId', 'valores' => (array)($_POST['caracteristicaId'] ?? [])],
-        'cursos_cargo' => ['coluna' => 'cursoId', 'valores' => (array)($_POST['cursoId'] ?? [])],
         'recursos_grupos_cargo' => ['coluna' => 'recursoGrupoId', 'valores' => (array)($_POST['recursoGrupoId'] ?? [])],
     ];
     
-    // Relacionamentos N:M COMPLEXOS (Riscos)
+    // Relacionamentos N:M COMPLEXOS (Riscos e Cursos)
     $riscosInput = [
         'riscoId' => (array)($_POST['riscoId'] ?? []),
         'riscoDescricao' => (array)($_POST['riscoDescricao'] ?? []),
     ];
     
-    // 3.2 Validação Mínima (omitido para brevidade)
+    $cursosInput = [
+        'cursoId' => (array)($_POST['cursoId'] ?? []),
+        'cursoCargoObrigatorio' => (array)($_POST['cursoCargoObrigatorio'] ?? []), // Array de 0 ou 1
+        'cursoCargoObs' => (array)($_POST['cursoCargoObs'] ?? []),
+    ];
+
+    $sinonimosInput = (array)($_POST['sinonimoNome'] ?? []); // NOVO: Sinônimos
+    
     if (empty($data['cargoNome']) || $data['cboId'] <= 0 || $data['escolaridadeId'] <= 0) {
         $message = "Os campos Nome do Cargo, CBO e Escolaridade são obrigatórios.";
         $message_type = 'danger';
-        // Recarrega os dados do POST para manter os campos preenchidos
         $cargo = array_merge($cargo, $_POST);
         $cargoId = $cargoIdSubmissao;
     } else {
@@ -169,7 +175,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cargoNome'])) {
         try {
             $pdo->beginTransaction();
 
-            // 3.3 PREPARAÇÃO DA QUERY PRINCIPAL (UPDATE/CREATE) (omitido para brevidade)
+            // 3.3 PREPARAÇÃO DA QUERY PRINCIPAL (UPDATE/CREATE)
             $fields = array_keys($data); $bindings = array_values($data);
             if ($isUpdating) {
                 $sql_fields = implode(' = ?, ', $fields) . ' = ?';
@@ -184,44 +190,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cargoNome'])) {
                 $novoCargoId = $pdo->lastInsertId();
             }
             
-            // 3.4 SALVAMENTO DOS RELACIONAMENTOS N:M SIMPLES (Todas as Grades Simples)
+            // 3.4 SALVAMENTO DOS RELACIONAMENTOS N:M SIMPLES
             foreach ($relacionamentosSimples as $tableName => $rel) {
                 $column = $rel['coluna'];
                 $valores = $rel['valores'];
-                
                 $pdo->prepare("DELETE FROM {$tableName} WHERE cargoId = ?")->execute([$novoCargoId]);
-                
                 if (!empty($valores)) {
-                    $placeholders = implode(',', array_fill(0, count($valores), '(?, ?)'));
-                    $insert_sql = "INSERT INTO {$tableName} (cargoId, {$column}) VALUES {$placeholders}";
-                    
-                    $bindings_rel = [];
-                    foreach ($valores as $valorId) {
-                        $bindings_rel[] = $novoCargoId;
-                        $bindings_rel[] = (int)$valorId;
-                    }
-                    
+                    $insert_sql = "INSERT INTO {$tableName} (cargoId, {$column}) VALUES (?, ?)";
                     $stmt_rel = $pdo->prepare($insert_sql);
-                    $stmt_rel->execute($bindings_rel);
+                    foreach ($valores as $valorId) {
+                        $stmt_rel->execute([$novoCargoId, (int)$valorId]);
+                    }
                 }
             }
             
-            // 3.5 SALVAMENTO DOS RELACIONAMENTOS N:M COMPLEXOS (RISCOS)
+            // 3.5 SALVAMENTO DOS RISCOS (COMPLEX)
             $pdo->prepare("DELETE FROM riscos_cargo WHERE cargoId = ?")->execute([$novoCargoId]);
             if (!empty($riscosInput['riscoId'])) {
-                $count_riscos = count($riscosInput['riscoId']);
-                $placeholders = implode(',', array_fill(0, $count_riscos, '(?, ?, ?)'));
-                $sql_risco = "INSERT INTO riscos_cargo (cargoId, riscoId, riscoDescricao) VALUES {$placeholders}";
-                
-                $bindings_risco = [];
-                for ($i = 0; $i < $count_riscos; $i++) {
-                    $bindings_risco[] = $novoCargoId;
-                    $bindings_risco[] = (int)$riscosInput['riscoId'][$i];
-                    $bindings_risco[] = trim($riscosInput['riscoDescricao'][$i] ?? '');
-                }
-                
+                $sql_risco = "INSERT INTO riscos_cargo (cargoId, riscoId, riscoDescricao) VALUES (?, ?, ?)";
                 $stmt_risco = $pdo->prepare($sql_risco);
-                $stmt_risco->execute($bindings_risco);
+                for ($i = 0; $i < count($riscosInput['riscoId']); $i++) {
+                    $stmt_risco->execute([$novoCargoId, (int)$riscosInput['riscoId'][$i], $riscosInput['riscoDescricao'][$i] ?? '']);
+                }
+            }
+
+            // 3.6 SALVAMENTO DOS CURSOS (COMPLEX)
+            $pdo->prepare("DELETE FROM cursos_cargo WHERE cargoId = ?")->execute([$novoCargoId]);
+            if (!empty($cursosInput['cursoId'])) {
+                $sql_curso = "INSERT INTO cursos_cargo (cargoId, cursoId, cursoCargoObrigatorio, cursoCargoObs) VALUES (?, ?, ?, ?)";
+                $stmt_curso = $pdo->prepare($sql_curso);
+                for ($i = 0; $i < count($cursosInput['cursoId']); $i++) {
+                    $obrigatorio = (int)($cursosInput['cursoCargoObrigatorio'][$i] ?? 0);
+                    $obs = $cursosInput['cursoCargoObs'][$i] ?? '';
+                    $stmt_curso->execute([$novoCargoId, (int)$cursosInput['cursoId'][$i], $obrigatorio, $obs]);
+                }
+            }
+            
+            // 3.7 SALVAMENTO DOS SINÔNIMOS (NOVO)
+            $pdo->prepare("DELETE FROM cargo_sinonimos WHERE cargoId = ?")->execute([$novoCargoId]);
+            if (!empty($sinonimosInput)) {
+                $sql_sin = "INSERT INTO cargo_sinonimos (cargoId, cargoSinonimoNome) VALUES (?, ?)";
+                $stmt_sin = $pdo->prepare($sql_sin);
+                foreach ($sinonimosInput as $sinonimoNome) {
+                     $stmt_sin->execute([$novoCargoId, trim($sinonimoNome)]);
+                }
             }
 
             $pdo->commit();
@@ -229,15 +241,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cargoNome'])) {
             $message = "Cargo salvo com sucesso! ID: {$novoCargoId}";
             $message_type = 'success';
             
-            // Redireciona para a versão de edição/visualização do cargo salvo
             header("Location: cargos_form.php?id={$novoCargoId}&message=" . urlencode($message) . "&type={$message_type}");
             exit;
 
         } catch (PDOException $e) {
             $pdo->rollBack();
-            $message = "Erro fatal ao salvar. Verifique se os dados obrigatórios ou chaves estrangeiras estão corretos. Erro: " . $e->getMessage();
+            $message = "Erro fatal ao salvar. Erro: " . $e->getMessage();
             $message_type = 'danger';
-            // Recarrega os dados do POST para manter os campos preenchidos
             $cargo = array_merge($cargo, $_POST); 
             $cargoId = $cargoIdSubmissao; 
         }
@@ -250,18 +260,7 @@ if (isset($_GET['message'])) {
     $message_type = htmlspecialchars($_GET['type'] ?? 'info');
 }
 
-// --- Fim da lógica PHP ---
-// ----------------------------------------------------
-
-// ----------------------------------------------------
-// 4. PREPARAÇÃO DO HTML E BOTÕES
-// ----------------------------------------------------
-// Função auxiliar para pré-seleção
-function isSelected($id, $list) {
-    return in_array((string)$id, $list) ? 'selected' : '';
-}
-
-// Carrega os Níveis Hierárquicos já ordenados 
+// Carrega os Níveis Hierárquicos já ordenados (mantido)
 $niveisOrdenados = [];
 foreach (getLookupData($pdo, 'nivel_hierarquico', 'nivelId', 'nivelOrdem') as $id => $ordem) {
     $stmt = $pdo->prepare("SELECT nivelOrdem, nivelDescricao FROM nivel_hierarquico WHERE nivelId = ?");
@@ -294,6 +293,8 @@ arsort($niveisOrdenados);
         .grid-risco-desc textarea { width: 100%; resize: vertical; min-height: 40px; border: 1px solid #ced4da; padding: 5px; }
         .table-group-separator { background-color: #e9ecef; }
         .grid-container { max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; }
+        /* Estilos para Select2 no modal */
+        .select2-container--bootstrap-5 .select2-dropdown { z-index: 1060; }
     </style>
 </head>
 <body>
@@ -360,6 +361,11 @@ arsort($niveisOrdenados);
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="requisitos-tab" data-bs-toggle="tab" data-bs-target="#requisitos" type="button" role="tab" aria-controls="requisitos" aria-selected="false">
                     <i class="fas fa-list-alt"></i> Requisitos e Riscos
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="sinonimos-tab" data-bs-toggle="tab" data-bs-target="#sinonimos" type="button" role="tab" aria-controls="sinonimos" aria-selected="false">
+                    <i class="fas fa-tags"></i> Sinônimos
                 </button>
             </li>
             <li class="nav-item" role="presentation">
@@ -469,24 +475,9 @@ arsort($niveisOrdenados);
                 <hr>
 
                 <h4 class="mb-3"><i class="fas fa-building"></i> Áreas de Atuação</h4>
-                <div class="row grid-header">
-                    <div class="col-10 mb-3">
-                        <label for="newAreaId" class="form-label">Adicionar Área de Atuação</label>
-                        <select class="form-select searchable-select" id="newAreaId" aria-label="Selecione a Área">
-                            <option value="">--- Selecione uma Área ---</option>
-                            <?php foreach ($areasAtuacao as $id => $nomeHierarquico): ?>
-                                <option value="<?php echo $id; ?>" data-nome="<?php echo htmlspecialchars($nomeHierarquico); ?>">
-                                    <?php echo htmlspecialchars($nomeHierarquico); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="col-2 mb-3 d-flex align-items-end">
-                        <button type="button" class="btn btn-primary w-100" id="addAreaBtn">
-                            <i class="fas fa-plus"></i> Add
-                        </button>
-                    </div>
-                </div>
+                <button type="button" class="btn btn-sm btn-outline-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAssociacaoAreasAtuacao">
+                    <i class="fas fa-plus"></i> Adicionar Área
+                </button>
                 <div class="card p-0 mt-2">
                     <div class="card-body p-0">
                         <table class="table table-sm mb-0">
@@ -527,24 +518,9 @@ arsort($niveisOrdenados);
                 </div>
                 
                 <h4 class="mb-3"><i class="fas fa-user-tag"></i> Características</h4>
-                <div class="row grid-header">
-                    <div class="col-10 mb-3">
-                        <label for="newCaracteristicaId" class="form-label">Adicionar Característica</label>
-                        <select class="form-select searchable-select" id="newCaracteristicaId" aria-label="Selecione a Característica">
-                            <option value="">--- Selecione uma Característica ---</option>
-                            <?php foreach ($caracteristicas as $id => $nome): ?>
-                                <option value="<?php echo $id; ?>" data-nome="<?php echo htmlspecialchars($nome); ?>">
-                                    <?php echo htmlspecialchars($nome); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="col-2 mb-3 d-flex align-items-end">
-                        <button type="button" class="btn btn-primary w-100" id="addCaracteristicaBtn">
-                            <i class="fas fa-plus"></i> Add
-                        </button>
-                    </div>
-                </div>
+                <button type="button" class="btn btn-sm btn-outline-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAssociacaoCaracteristicas">
+                    <i class="fas fa-plus"></i> Adicionar Característica
+                </button>
                 <div class="card p-0 mt-2 mb-4">
                     <div class="card-body p-0">
                         <table class="table table-sm mb-0">
@@ -561,30 +537,16 @@ arsort($niveisOrdenados);
                 </div>
 
                 <h4 class="mb-3"><i class="fas fa-certificate"></i> Cursos</h4>
-                <div class="row grid-header">
-                    <div class="col-10 mb-3">
-                        <label for="newCursoId" class="form-label">Adicionar Curso/Certificação</label>
-                        <select class="form-select searchable-select" id="newCursoId" aria-label="Selecione o Curso">
-                            <option value="">--- Selecione um Curso ---</option>
-                            <?php foreach ($cursos as $id => $nome): ?>
-                                <option value="<?php echo $id; ?>" data-nome="<?php echo htmlspecialchars($nome); ?>">
-                                    <?php echo htmlspecialchars($nome); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="col-2 mb-3 d-flex align-items-end">
-                        <button type="button" class="btn btn-primary w-100" id="addCursoBtn">
-                            <i class="fas fa-plus"></i> Add
-                        </button>
-                    </div>
-                </div>
+                <button type="button" class="btn btn-sm btn-outline-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAssociacaoCursos">
+                    <i class="fas fa-plus"></i> Adicionar Curso
+                </button>
                 <div class="card p-0 mt-2 mb-4">
                     <div class="card-body p-0">
                         <table class="table table-sm mb-0">
                             <thead>
                                 <tr>
-                                    <th>Curso</th>
+                                    <th width="50%">Curso</th>
+                                    <th width="30%">Obrigatoriedade</th>
                                     <th class="grid-action-cell text-center">Ação</th>
                                 </tr>
                             </thead>
@@ -595,24 +557,9 @@ arsort($niveisOrdenados);
                 </div>
                 
                 <h4 class="mb-3"><i class="fas fa-wrench"></i> Grupos de Recursos</h4>
-                <div class="row grid-header">
-                    <div class="col-10 mb-3">
-                        <label for="newRecursoGrupoId" class="form-label">Adicionar Grupo de Recurso</label>
-                        <select class="form-select searchable-select" id="newRecursoGrupoId" aria-label="Selecione o Grupo de Recurso">
-                            <option value="">--- Selecione um Grupo ---</option>
-                            <?php foreach ($recursosGrupos as $id => $nome): ?>
-                                <option value="<?php echo $id; ?>" data-nome="<?php echo htmlspecialchars($nome); ?>">
-                                    <?php echo htmlspecialchars($nome); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="col-2 mb-3 d-flex align-items-end">
-                        <button type="button" class="btn btn-primary w-100" id="addRecursoGrupoBtn">
-                            <i class="fas fa-plus"></i> Add
-                        </button>
-                    </div>
-                </div>
+                <button type="button" class="btn btn-sm btn-outline-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAssociacaoRecursosGrupos">
+                    <i class="fas fa-plus"></i> Adicionar Grupo de Recurso
+                </button>
                 <div class="card p-0 mt-2 mb-4">
                     <div class="card-body p-0">
                         <table class="table table-sm mb-0">
@@ -629,31 +576,15 @@ arsort($niveisOrdenados);
                 </div>
 
                 <h4 class="mb-3"><i class="fas fa-radiation-alt"></i> Riscos de Exposição</h4>
-                <div class="row grid-header mx-0 p-2">
-                    <div class="col-5">
-                        <select class="form-select form-select-sm searchable-select" id="newRiscoId">
-                            <option value="">--- Risco ---</option>
-                            <?php foreach ($riscos as $id => $nome): ?>
-                                <option value="<?php echo $id; ?>" data-name="<?php echo htmlspecialchars($nome); ?>">
-                                    <?php echo htmlspecialchars($nome); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="col-5">
-                        <input type="text" class="form-control form-control-sm" id="newRiscoDescricao" placeholder="Descrição Específica (Ex: Ruído acima de 85dB)">
-                    </div>
-                    <div class="col-2 text-center">
-                        <button type="button" class="btn btn-primary btn-sm w-100" id="addRiscoBtn"><i class="fas fa-plus"></i></button>
-                    </div>
-                </div>
-                
+                <button type="button" class="btn btn-sm btn-outline-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAssociacaoRiscos">
+                    <i class="fas fa-plus"></i> Adicionar Risco
+                </button>
                 <div class="card p-0 mt-2">
                     <div class="card-body p-0">
                         <table class="table table-sm mb-0">
                             <thead>
                                 <tr>
-                                    <th>Tipo</th>
+                                    <th width="30%">Tipo</th>
                                     <th>Descrição Específica</th>
                                     <th class="grid-action-cell text-center">Ação</th>
                                 </tr>
@@ -664,6 +595,37 @@ arsort($niveisOrdenados);
                     </div>
                 </div>
 
+            </div>
+
+            <div class="tab-pane fade" id="sinonimos" role="tabpanel" aria-labelledby="sinonimos-tab">
+                <h4 class="mb-3"><i class="fas fa-tags"></i> Sinônimos e Nomes Alternativos</h4>
+                <p class="text-muted">Inclua nomes alternativos usados para este cargo.</p>
+
+                <div class="row mb-3">
+                    <div class="col-md-9">
+                        <input type="text" class="form-control" id="sinonimoInput" placeholder="Digite um nome alternativo...">
+                    </div>
+                    <div class="col-md-3">
+                        <button type="button" class="btn btn-primary w-100" id="btnAddSinonimo">
+                            <i class="fas fa-plus"></i> Adicionar
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="card p-0 mt-2">
+                    <div class="card-body p-0">
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Nome Alternativo</th>
+                                    <th class="grid-action-cell text-center">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sinonimosGridBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
             
             <div class="tab-pane fade" id="descricoes" role="tabpanel" aria-labelledby="descricoes-tab">
@@ -732,130 +694,277 @@ arsort($niveisOrdenados);
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<div class="modal fade" id="modalAssociacaoCaracteristicas" tabindex="-1" aria-labelledby="modalCaracteristicasLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="modalCaracteristicasLabel">Adicionar Características</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Selecione uma ou mais características (Ctrl/Shift) para incluir na lista do cargo.</p>
+                <div class="mb-3">
+                    <label for="caracteristicaSelect" class="form-label">Selecione a Característica:</label>
+                    <select class="form-select searchable-select" id="caracteristicaSelect" multiple="multiple" size="10" data-placeholder="Buscar Característica..." style="width: 100%;">
+                        <option value=""></option>
+                        <?php foreach ($caracteristicas as $id => $nome): ?>
+                            <option value="<?php echo $id; ?>" data-nome="<?php echo htmlspecialchars($nome); ?>">
+                                <?php echo htmlspecialchars($nome); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-success" id="btnAssociarCaracteristica">Adicionar Selecionados</button>
+            </div>
+        </div>
+    </div>
+</div>
 
+<div class="modal fade" id="modalAssociacaoRiscos" tabindex="-1" aria-labelledby="modalRiscosLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="modalRiscosLabel">Adicionar Risco e Detalhes</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Selecione o tipo de risco e detalhe a exposição do cargo. Adicione um por vez.</p>
+                <div class="mb-3">
+                    <label for="riscoSelect" class="form-label">Tipo de Risco:</label>
+                    <select class="form-select searchable-select" id="riscoSelect" data-placeholder="Buscar Risco..." style="width: 100%;">
+                        <option value="">--- Selecione um Risco ---</option>
+                        <?php foreach ($riscos as $id => $nome): ?>
+                            <option value="<?php echo $id; ?>" data-nome="<?php echo htmlspecialchars($nome); ?>">
+                                <?php echo htmlspecialchars($nome); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                 <div class="mb-3">
+                    <label for="riscoDescricaoInput" class="form-label">Descrição da Exposição Específica</label>
+                    <textarea class="form-control" id="riscoDescricaoInput" rows="3" placeholder="Ex: Exposição prolongada ao sol acima de 30ºC e poeira por deslocamentos." required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-success" id="btnAssociarRisco">Adicionar à Lista</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalAssociacaoCursos" tabindex="-1" aria-labelledby="modalCursosLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="modalCursosLabel">Adicionar Curso e Detalhes</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Selecione um ou mais cursos. Os detalhes de obrigatoriedade e observação serão aplicados a todos os cursos selecionados.</p>
+                <div class="mb-3">
+                    <label for="cursoSelect" class="form-label">Selecione o Curso:</label>
+                    <select class="form-select searchable-select" id="cursoSelect" multiple="multiple" size="8" data-placeholder="Buscar Curso..." style="width: 100%;">
+                        <option value=""></option>
+                        <?php foreach ($cursos as $id => $nome): ?>
+                            <option value="<?php echo $id; ?>" data-nome="<?php echo htmlspecialchars($nome); ?>">
+                                <?php echo htmlspecialchars($nome); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                 <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="1" id="cursoObrigatorioInput">
+                        <label class="form-check-label" for="cursoObrigatorioInput">Curso Obrigatório?</label>
+                    </div>
+                </div>
+                 <div class="mb-3">
+                    <label for="cursoObsInput" class="form-label">Observação (Periodicidade, Requisito)</label>
+                    <textarea class="form-control" id="cursoObsInput" rows="2" placeholder="Ex: Deve ser refeito anualmente; Recomendado para certificação."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-success" id="btnAssociarCurso">Adicionar à Lista</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalAssociacaoRecursosGrupos" tabindex="-1" aria-labelledby="modalRecursosGruposLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="modalRecursosGruposLabel">Adicionar Grupos de Recursos</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Selecione um ou mais grupos de recursos (Ctrl/Shift) utilizados pelo cargo.</p>
+                <div class="mb-3">
+                    <label for="recursosGruposSelect" class="form-label">Grupos de Recursos:</label>
+                    <select class="form-select searchable-select" id="recursosGruposSelect" multiple="multiple" size="8" data-placeholder="Buscar Grupo..." style="width: 100%;">
+                        <option value=""></option>
+                        <?php foreach ($recursosGrupos as $id => $nome): ?>
+                            <option value="<?php echo $id; ?>" data-nome="<?php echo htmlspecialchars($nome); ?>">
+                                <?php echo htmlspecialchars($nome); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-success" id="btnAssociarRecursosGrupos">Adicionar Selecionados</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalAssociacaoAreasAtuacao" tabindex="-1" aria-labelledby="modalAreasAtuacaoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="modalAreasAtuacaoLabel">Adicionar Áreas de Atuação</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Selecione uma ou mais áreas (Ctrl/Shift) em que o cargo atua.</p>
+                <div class="mb-3">
+                    <label for="areasAtuacaoSelect" class="form-label">Áreas:</label>
+                    <select class="form-select searchable-select" id="areasAtuacaoSelect" multiple="multiple" size="8" data-placeholder="Buscar Área..." style="width: 100%;">
+                        <option value=""></option>
+                        <?php foreach ($areasAtuacao as $id => $nomeHierarquico): ?>
+                            <option value="<?php echo $id; ?>" data-nome="<?php echo htmlspecialchars($nomeHierarquico); ?>">
+                                <?php echo htmlspecialchars($nomeHierarquico); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-success" id="btnAssociarAreasAtuacao">Adicionar Selecionados</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 $(document).ready(function() {
     
-    // --- 1. CONFIGURAÇÃO INICIAL E DADOS ---
+    // --- 1. VARIÁVEIS DE ESTADO (Inicializadas pelo PHP) ---
     
-    var currentData = {
-        habilidades: <?php echo json_encode($cargoHabilidades); ?>, 
-        caracteristicas: <?php echo json_encode($cargoCaracteristicas); ?>,
-        cursos: <?php echo json_encode($cargoCursos); ?>,
-        recursosGrupos: <?php echo json_encode($cargoRecursosGrupos); ?>,
-        riscos: <?php echo json_encode($cargoRiscos); ?>, 
-        areasAtuacao: <?php echo json_encode($cargoAreas); ?>
+    const mapToSimpleState = (data) => data.map(item => ({id: item.id ? parseInt(item.id) : null, nome: item.nome, tipo: item.tipo, descricao: item.descricao, obrigatorio: item.obrigatorio, obs: item.obs}));
+
+    let habilidadesAssociadas = mapToSimpleState(<?php echo json_encode($cargoHabilidades); ?>);
+    let caracteristicasAssociadas = mapToSimpleState(<?php echo json_encode($cargoCaracteristicas); ?>);
+    let riscosAssociados = mapToSimpleState(<?php echo json_encode($cargoRiscos); ?>);
+    let cursosAssociados = mapToSimpleState(<?php echo json_encode($cargoCursos); ?>);
+    let recursosGruposAssociados = mapToSimpleState(<?php echo json_encode($cargoRecursosGrupos); ?>);
+    let areasAssociadas = mapToSimpleState(<?php echo json_encode($cargoAreas); ?>);
+    let sinonimosAssociados = mapToSimpleState(<?php echo json_encode($cargoSinonimos); ?>); // NOVO
+
+
+    // --- 2. FUNÇÕES GENÉRICAS E MAPAS DE ESTADO ---
+    
+    const entityMaps = {
+        habilidade: habilidadesAssociadas, caracteristica: caracteristicasAssociadas, 
+        risco: riscosAssociados, curso: cursosAssociados, 
+        recursoGrupo: recursosGruposAssociados, area: areasAssociadas,
+        sinonimo: sinonimosAssociados
     };
 
-    var lookups = {
-        riscos: <?php echo json_encode($riscos); ?>,
-        habilidades: <?php echo json_encode($habilidades); ?>,
-        caracteristicas: <?php echo json_encode($caracteristicas); ?>,
-        cursos: <?php echo json_encode($cursos); ?>,
-        recursosGrupos: <?php echo json_encode($recursosGrupos); ?>,
-        areasAtuacao: <?php echo json_encode($areasAtuacao); ?>
+    const attachRemoveListeners = (entityName) => {
+        document.querySelectorAll(`[data-entity="${entityName}"]`).forEach(button => {
+            const newButton = button.cloneNode(true);
+            button.parentNode.replaceChild(newButton, button);
+            
+            newButton.addEventListener('click', function() {
+                const itemId = this.getAttribute('data-id');
+                
+                // Se o ID for numérico, usa parseInt. Se for 'new-...', usa o nome
+                const isNumericId = !isNaN(itemId) && itemId !== null && itemId !== '';
+
+                if (isNumericId) {
+                    entityMaps[entityName] = entityMaps[entityName].filter(item => item.id !== parseInt(itemId));
+                } else {
+                    // Para Sinônimos (que podem ter IDs temporários baseados no nome)
+                    const itemNome = entityMaps[entityName].find(item => item.id === null && ('new-' + item.nome.replace(/\s/g, '-') === itemId))?.nome;
+                    if (itemNome) {
+                        entityMaps[entityName] = entityMaps[entityName].filter(item => item.nome !== itemNome);
+                    }
+                }
+                
+                renderMaps[entityName]();
+            });
+        });
     };
     
-    var simpleGridMaps = {
-        'habilidades': {idCol: 'habilidadeId', nameCol: 'habilidadeNome'},
-        'caracteristicas': {idCol: 'caracteristicaId', nameCol: 'caracteristicaNome'},
-        'cursos': {idCol: 'cursoId', nameCol: 'cursoNome'},
-        'recursosGrupos': {idCol: 'recursoGrupoId', nameCol: 'recursoGrupoNome'},
-        'areasAtuacao': {idCol: 'areaId', nameCol: 'areaNome'}
-    };
-    
-    let habilidadesAssociadas = currentData.habilidades; 
-
-    // --- 2. FUNÇÕES GENÉRICAS ---
-
-    function removeRow(event) {
-        event.target.closest('tr').remove();
-    }
-    
-    /**
-     * Adiciona uma linha simples para relacionamentos N:M (usada por Áreas, Características, Cursos, Recursos)
-     * AJUSTADO: Removida a lógica de coluna "Tipo" redundante.
-     */
-    function addSimpleGridRow(entityName, itemId, itemName, groupName = '') {
-        var gridBody = document.getElementById(entityName + 'GridBody');
-        var map = simpleGridMaps[entityName];
-        var inputName = map.idCol + '[]'; 
+    const addSimpleGridRow = (gridBodyId, itemId, itemName, inputName, isComplex = false) => {
+        const gridBody = document.getElementById(gridBodyId);
         
-        var existingItem = gridBody.querySelector('tr[data-id="' + itemId + '"]');
+        const existingItem = gridBody.querySelector(`tr[data-id="${itemId}"]`);
         if (existingItem) {
-            return; 
+            return;
         }
 
-        var newRow = gridBody.insertRow();
+        const newRow = gridBody.insertRow();
         newRow.setAttribute('data-id', itemId);
         
-        // Agora apenas 2 colunas: Conteúdo Principal e Ação
-        
+        // Input Name format
+        const entityName = inputName.replace('Id', '');
+
         newRow.innerHTML = `
             <td>
                 ${itemName}
-                <input type="hidden" name="${inputName}" value="${itemId}">
+                <input type="hidden" name="${inputName}[]" value="${itemId}">
             </td>
             <td class="text-center grid-action-cell">
-                <button type="button" class="btn btn-sm btn-danger remove-btn"><i class="fas fa-trash-alt"></i></button>
+                <button type="button" class="btn btn-sm btn-danger btn-remove-entity" data-id="${itemId}" data-entity="${entityName}" title="Remover">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
             </td>
         `;
-        newRow.querySelector('.remove-btn').addEventListener('click', removeRow);
-    }
+        return newRow;
+    };
     
-    // --- 3. GESTÃO DA GRADE HABILIDADES (REFEITO COM AGRUPAMENTO E MODAL) ---
+    // --- 3. FUNÇÕES DE RENDERIZAÇÃO DE GRADES ---
 
-    /**
-     * Renderiza o conteúdo do array JS de Habilidades na tabela e insere os inputs ocultos.
-     */
+    const normalizeTipo = (tipo) => {
+        if (tipo === 'Hardskill' || tipo === 'Hard Skills') return 'Hard Skills';
+        if (tipo === 'Softskill' || tipo === 'Soft Skills') return 'Soft Skills';
+        return 'Outros Tipos';
+    };
+
     const renderHabilidadesGrid = () => {
         const gridBody = document.getElementById('habilidadesGridBody');
         let html = '';
         
-        // 1. Ordena para melhor visualização (por tipo e depois por nome)
-        habilidadesAssociadas.sort((a, b) => {
-            const tipoA = a.habilidadeTipo || 'Outros Tipos';
-            const tipoB = b.habilidadeTipo || 'Outros Tipos';
-            
-            if (tipoA.includes('Hard') && !tipoB.includes('Hard')) return -1;
-            if (!tipoA.includes('Hard') && tipoB.includes('Hard')) return 1;
-            
-            return a.habilidadeNome.localeCompare(b.habilidadeNome);
-        }); 
+        habilidadesAssociadas.sort((a, b) => a.nome.localeCompare(b.nome)); 
 
-        // 2. Agrupa para inserir separadores
         const habilidadesAgrupadas = habilidadesAssociadas.reduce((acc, item) => {
-            let tipo = item.habilidadeTipo || 'Outros Tipos'; 
-            if (tipo === 'Hardskill') tipo = 'Hard Skills';
-            if (tipo === 'Softskill') tipo = 'Soft Skills';
-            
-            item.habilidadeTipoDisplay = tipo;
-
+            const tipo = normalizeTipo(item.tipo); 
             if (!acc[tipo]) acc[tipo] = [];
             acc[tipo].push(item);
             return acc;
         }, {});
 
-        const gruposOrdenados = ['Hard Skills', 'Soft Skills', 'Outros Tipos']; // Prioridade de exibição
+        const gruposOrdenados = ['Hard Skills', 'Soft Skills', 'Outros Tipos'];
         
         gruposOrdenados.forEach(tipo => {
             const grupoItens = habilidadesAgrupadas[tipo];
             
             if (grupoItens && grupoItens.length > 0) {
-                // Insere o separador de grupo
-                html += `
-                    <tr class="table-group-separator">
-                        <td colspan="2" class="fw-bold">
-                            <i class="fas fa-tag me-2"></i> ${tipo}
-                        </td>
-                    </tr>
-                `;
+                html += `<tr class="table-group-separator"><td colspan="2" class="fw-bold"><i class="fas fa-tag me-2"></i> ${tipo}</td></tr>`;
                 
-                // Insere os itens do grupo
                 grupoItens.forEach(item => {
-                    const itemId = item.habilidadeId;
-                    const itemName = item.habilidadeNome;
+                    const itemId = item.id;
+                    const itemName = item.nome;
 
                     html += `
                         <tr data-id="${itemId}" data-type="habilidade">
@@ -864,7 +973,7 @@ $(document).ready(function() {
                                 <input type="hidden" name="habilidadeId[]" value="${itemId}">
                             </td>
                             <td class="text-center grid-action-cell">
-                                <button type="button" class="btn btn-sm btn-danger remove-btn-habilidade" data-id="${itemId}" title="Remover">
+                                <button type="button" class="btn btn-sm btn-danger btn-remove-entity" data-id="${itemId}" data-entity="habilidade" title="Remover">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
                             </td>
@@ -875,215 +984,325 @@ $(document).ready(function() {
         });
         
         gridBody.innerHTML = html;
-        
-        // 3. Adiciona evento de remoção
-        document.querySelectorAll('.remove-btn-habilidade').forEach(button => {
-            button.addEventListener('click', function() {
-                const itemId = parseInt(this.getAttribute('data-id'));
-                habilidadesAssociadas = habilidadesAssociadas.filter(item => item.habilidadeId !== itemId);
-                renderHabilidadesGrid();
-            });
-        });
+        attachRemoveListeners('habilidade');
     };
     
-    // Função para obter dados de opções selecionadas no Select2
+    const renderCaracteristicasGrid = () => {
+        const gridBody = document.getElementById('caracteristicasGridBody');
+        gridBody.innerHTML = '';
+        caracteristicasAssociadas.forEach(item => {
+            addSimpleGridRow('caracteristicasGridBody', item.id, item.nome, 'caracteristicaId');
+        });
+        attachRemoveListeners('caracteristica');
+    };
+
+    const renderRecursosGruposGrid = () => {
+        const gridBody = document.getElementById('recursosGruposGridBody');
+        gridBody.innerHTML = '';
+        recursosGruposAssociados.forEach(item => {
+            addSimpleGridRow('recursosGruposGridBody', item.id, item.nome, 'recursoGrupoId');
+        });
+        attachRemoveListeners('recursoGrupo');
+    };
+
+    const renderAreasAtuacaoGrid = () => {
+        const gridBody = document.getElementById('areasAtuacaoGridBody');
+        gridBody.innerHTML = '';
+        areasAssociadas.forEach(item => {
+            addSimpleGridRow('areasAtuacaoGridBody', item.id, item.nome, 'areaId');
+        });
+        attachRemoveListeners('area');
+    };
+    
+    const renderRiscosGrid = () => {
+        const gridBody = document.getElementById('riscosGridBody');
+        gridBody.innerHTML = '';
+        
+        riscosAssociados.forEach(item => {
+            const newRow = gridBody.insertRow();
+            newRow.setAttribute('data-id', item.id);
+            
+            newRow.innerHTML = `
+                <td>
+                    ${item.nome}
+                    <input type="hidden" name="riscoId[]" value="${item.id}">
+                </td>
+                <td>
+                    <textarea name="riscoDescricao[]" placeholder="Descreva a exposição específica" class="form-control form-control-sm" rows="1">${item.descricao}</textarea>
+                </td>
+                <td class="text-center grid-action-cell">
+                    <button type="button" class="btn btn-sm btn-danger btn-remove-entity" data-id="${item.id}" data-entity="risco" title="Remover">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </td>
+            `;
+        });
+        attachRemoveListeners('risco');
+    };
+
+    const renderCursosGrid = () => {
+        const gridBody = document.getElementById('cursosGridBody');
+        gridBody.innerHTML = '';
+        
+        cursosAssociados.forEach(item => {
+            const isObrigatorio = item.obrigatorio === true || item.obrigatorio === 1;
+            const badgeClass = isObrigatorio ? 'bg-danger' : 'bg-secondary';
+            
+            const newRow = gridBody.insertRow();
+            newRow.setAttribute('data-id', item.id);
+            
+            newRow.innerHTML = `
+                <td>
+                    ${item.nome}
+                    <input type="hidden" name="cursoId[]" value="${item.id}">
+                </td>
+                <td>
+                    <span class="badge ${badgeClass}">${isObrigatorio ? 'OBRIGATÓRIO' : 'DESEJÁVEL'}</span>
+                    <small class="d-block text-muted">${item.obs || ''}</small>
+                    <input type="hidden" name="cursoCargoObrigatorio[]" value="${isObrigatorio ? 1 : 0}">
+                    <input type="hidden" name="cursoCargoObs[]" value="${item.obs || ''}">
+                </td>
+                <td class="text-center grid-action-cell">
+                    <button type="button" class="btn btn-sm btn-danger btn-remove-entity" data-id="${item.id}" data-entity="curso" title="Remover">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </td>
+            `;
+        });
+        attachRemoveListeners('curso');
+    };
+    
+    // 3.7. SINÔNIMOS (NOVO)
+    const renderSinonimosGrid = () => {
+        const gridBody = document.getElementById('sinonimosGridBody');
+        gridBody.innerHTML = '';
+        
+        sinonimosAssociados.forEach(item => {
+            // Usa o ID do banco ou um ID temporário baseado no nome para exclusão no frontend
+            const itemId = item.id || 'new-' + item.nome.replace(/\s/g, '-'); 
+            const newRow = gridBody.insertRow();
+            newRow.setAttribute('data-id', itemId);
+            
+            newRow.innerHTML = `
+                <td>
+                    ${item.nome}
+                    <input type="hidden" name="sinonimoNome[]" value="${item.nome}">
+                </td>
+                <td class="text-center grid-action-cell">
+                    <button type="button" class="btn btn-sm btn-danger btn-remove-entity" data-id="${itemId}" data-entity="sinonimo" title="Remover">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </td>
+            `;
+        });
+        attachRemoveListeners('sinonimo');
+    };
+
+    const renderMaps = {
+        habilidade: renderHabilidadesGrid, caracteristica: renderCaracteristicasGrid, 
+        risco: renderRiscosGrid, curso: renderCursosGrid, 
+        recursoGrupo: renderRecursosGruposGrid, area: renderAreasAtuacaoGrid,
+        sinonimo: renderSinonimosGrid
+    };
+
+
+    // --- 4. LISTENERS DOS MODAIS E INPUTS ---
+    
+    // Função auxiliar para obter dados de select2 (usada nos modais)
     const getSelectedOptionsData = (selectId) => {
         const selectedValues = $(`#${selectId}`).val();
         if (!selectedValues) return [];
         
         const data = [];
         const selectElement = document.getElementById(selectId);
-        
         const values = Array.isArray(selectedValues) ? selectedValues : [selectedValues];
         
         values.forEach(value => {
             const option = selectElement.querySelector(`option[value="${value}"]`);
             if (option) {
                 data.push({
-                    habilidadeId: parseInt(value),
-                    habilidadeNome: option.getAttribute('data-nome'),
-                    habilidadeTipo: option.getAttribute('data-tipo') 
+                    id: parseInt(value),
+                    nome: option.getAttribute('data-nome'),
+                    tipo: option.getAttribute('data-tipo')
                 });
             }
         });
         return data;
     };
-
-    document.getElementById('btnAssociarHabilidade').onclick = function() {
-        const selectedItems = getSelectedOptionsData('habilidadeSelect');
+    
+    const handleMultiSelectAssociation = (selectId, stateArray, renderFunction) => {
+        const selectedItems = getSelectedOptionsData(selectId);
         let addedCount = 0;
 
         selectedItems.forEach(data => {
-            const isDuplicate = habilidadesAssociadas.some(item => item.habilidadeId === data.habilidadeId);
-            
+            const isDuplicate = stateArray.some(item => item.id === data.id);
             if (!isDuplicate) {
-                habilidadesAssociadas.push(data);
+                const newItem = { id: data.id, nome: data.nome, ...(data.tipo && { tipo: data.tipo }) };
+                stateArray.push(newItem);
                 addedCount++;
             }
         });
 
         if (addedCount > 0) {
-            renderHabilidadesGrid();
+            renderFunction();
         }
+    };
+    
+    // 4.1. HABILIDADES
+    document.getElementById('btnAssociarHabilidade').onclick = function() {
+        handleMultiSelectAssociation('habilidadeSelect', habilidadesAssociadas, renderHabilidadesGrid);
         $('#habilidadeSelect').val(null).trigger('change');
         bootstrap.Modal.getInstance(document.getElementById('modalAssociacaoHabilidades')).hide();
     };
-
-
-    // --- 4. GESTÃO DA GRADE COMPLEXA (RISCOS) (MANTIDA DO GIT) ---
     
-    var riscosGridBody = document.getElementById('riscosGridBody');
-    var riscoNamesMap = {};
-    for (var id in lookups.riscos) {
-        riscoNamesMap[id] = lookups.riscos[id];
-    }
+    // 4.2. CARACTERÍSTICAS
+    document.getElementById('btnAssociarCaracteristica').onclick = function() {
+        handleMultiSelectAssociation('caracteristicaSelect', caracteristicasAssociadas, renderCaracteristicasGrid);
+        $('#caracteristicaSelect').val(null).trigger('change');
+        bootstrap.Modal.getInstance(document.getElementById('modalAssociacaoCaracteristicas')).hide();
+    };
 
-    function addRiscoRow(riscoId, riscoNome, descricao) {
-        if (!riscoId) return;
+    // 4.3. GRUPOS DE RECURSOS
+    document.getElementById('btnAssociarRecursosGrupos').onclick = function() {
+        handleMultiSelectAssociation('recursosGruposSelect', recursosGruposAssociados, renderRecursosGruposGrid);
+        $('#recursosGruposSelect').val(null).trigger('change');
+        bootstrap.Modal.getInstance(document.getElementById('modalAssociacaoRecursosGrupos')).hide();
+    };
 
-        var existingRisco = riscosGridBody.querySelector('tr[data-id="' + riscoId + '"]');
-        if (existingRisco) {
-            return;
-        }
+    // 4.4. ÁREAS DE ATUAÇÃO
+    document.getElementById('btnAssociarAreasAtuacao').onclick = function() {
+        handleMultiSelectAssociation('areasAtuacaoSelect', areasAssociadas, renderAreasAtuacaoGrid);
+        $('#areasAtuacaoSelect').val(null).trigger('change');
+        bootstrap.Modal.getInstance(document.getElementById('modalAssociacaoAreasAtuacao')).hide();
+    };
 
-        var newRow = riscosGridBody.insertRow();
-        newRow.setAttribute('data-id', riscoId);
-        
-        newRow.innerHTML = `
-            <td>
-                ${riscoNome}
-                <input type="hidden" name="riscoId[]" value="${riscoId}">
-            </td>
-            <td class="grid-risco-desc">
-                <textarea name="riscoDescricao[]" placeholder="Descreva a exposição específica" class="form-control form-control-sm">${descricao}</textarea>
-            </td>
-            <td class="text-center grid-action-cell">
-                <button type="button" class="btn btn-sm btn-danger remove-btn"><i class="fas fa-trash-alt"></i></button>
-            </td>
-        `;
-        newRow.querySelector('.remove-btn').addEventListener('click', removeRow);
-    }
-    
-    currentData.riscos.forEach(function(risco) {
-        var riscoNome = riscoNamesMap[risco.riscoId] || 'ID Desconhecido';
-        addRiscoRow(risco.riscoId, riscoNome, risco.riscoDescricao);
-    });
+    // 4.5. RISCOS
+    document.getElementById('btnAssociarRisco').onclick = function() {
+        const data = getSelectedOptionsData('riscoSelect')[0];
+        const descricao = document.getElementById('riscoDescricaoInput').value.trim();
 
-    document.getElementById('addRiscoBtn').addEventListener('click', function() {
-        var select = document.getElementById('newRiscoId');
-        var inputDesc = document.getElementById('newRiscoDescricao');
-        var riscoId = select.value;
-        var riscoNome = select.options[select.selectedIndex].text.replace('--- Risco ---', '').trim();
-        var descricao = inputDesc.value.trim();
-
-        if (riscoId) {
-            addRiscoRow(riscoId, riscoNome, descricao);
-            select.value = ''; 
-            inputDesc.value = ''; 
+        if (data && descricao) {
+            const isDuplicate = riscosAssociados.some(item => item.id === data.id);
+            if (!isDuplicate) {
+                riscosAssociados.push({ id: data.id, nome: data.nome, descricao: descricao });
+                renderRiscosGrid();
+                
+                document.getElementById('riscoDescricaoInput').value = '';
+                $('#riscoSelect').val(null).trigger('change');
+                bootstrap.Modal.getInstance(document.getElementById('modalAssociacaoRiscos')).hide();
+            } else {
+                alert('Este tipo de risco já foi associado. Para editar a descrição, altere o campo na grade abaixo.');
+            }
         } else {
-            alert('Selecione um Tipo de Risco.');
+            alert('Por favor, selecione um Risco e preencha a Descrição Específica.');
+        }
+    };
+    
+    // 4.6. CURSOS
+    document.getElementById('btnAssociarCurso').onclick = function() {
+        const selectedItems = getSelectedOptionsData('cursoSelect');
+        const isObrigatorio = document.getElementById('cursoObrigatorioInput').checked;
+        const obs = document.getElementById('cursoObsInput').value.trim();
+        let addedCount = 0;
+
+        selectedItems.forEach(data => {
+            const isDuplicate = cursosAssociados.some(item => item.id === data.id);
+            
+            if (!isDuplicate) {
+                cursosAssociados.push({
+                    id: data.id,
+                    nome: data.nome,
+                    obrigatorio: isObrigatorio ? 1 : 0, 
+                    obs: obs
+                });
+                addedCount++;
+            }
+        });
+
+        if (addedCount > 0) {
+            renderCursosGrid();
         }
         
-        $(select).val(null).trigger('change');
-    });
-
-    // --- 5. INICIALIZAÇÕES FINAIS ---
-
-    function initSimpleGrid(entityName, data, selectId, buttonId) {
-        var map = simpleGridMaps[entityName];
-        var idCol = map.idCol;
-        var nameCol = map.nameCol;
-        var gridBody = document.getElementById(entityName + 'GridBody');
-        
-        data.forEach(function(item) {
-            var itemId = item[idCol];
-            var itemName;
-            var groupName = '';
-
-            if (entityName === 'areasAtuacao') {
-                 itemName = lookups.areasAtuacao[itemId] || item.areaNome; 
-                 groupName = 'Área';
-            } else {
-                 itemName = item[nameCol]; 
-            }
-            
-            if (itemId && itemName) { 
-                 addSimpleGridRow(entityName, itemId, itemName, groupName);
-            }
-        });
-
-        document.getElementById(buttonId).addEventListener('click', function() {
-            var select = document.getElementById(selectId);
-            var itemId = select.value;
-            var itemName;
-            
-            if (!itemId) {
-                 alert('Selecione um item para adicionar.');
-                 return;
-            }
-
-            var selectedOption = select.options[select.selectedIndex];
-            var optgroupLabel = selectedOption.closest('optgroup')?.label;
-            
-            if (optgroupLabel) {
-                itemName = selectedOption.text;
-            } else {
-                itemName = selectedOption.text.replace(/--- Selecione.*---/, '').trim();
-                if (entityName === 'areasAtuacao') {
-                    itemName = lookups.areasAtuacao[itemId]; 
-                }
-            }
-            
-            var existingItem = gridBody.querySelector('tr[data-id="' + itemId + '"]');
-
-            if (existingItem) {
-                 alert(itemName + ' já foi adicionado.');
-                 return;
-            }
-            
-            addSimpleGridRow(entityName, itemId, itemName, '');
-            select.value = ''; 
-            $(select).val(null).trigger('change');
-        });
-    }
-
-    // Inicialização de todas as grades simples
-    initSimpleGrid('caracteristicas', currentData.caracteristicas, 'newCaracteristicaId', 'addCaracteristicaBtn');
-    initSimpleGrid('cursos', currentData.cursos, 'newCursoId', 'addCursoBtn');
-    initSimpleGrid('recursosGrupos', currentData.recursosGrupos, 'newRecursoGrupoId', 'addRecursoGrupoBtn');
-    initSimpleGrid('areasAtuacao', currentData.areasAtuacao, 'newAreaId', 'addAreaBtn');
+        document.getElementById('cursoObsInput').value = '';
+        document.getElementById('cursoObrigatorioInput').checked = false;
+        $('#cursoSelect').val(null).trigger('change');
+        bootstrap.Modal.getInstance(document.getElementById('modalAssociacaoCursos')).hide();
+    };
     
-    if (typeof jQuery !== 'undefined' && typeof $.fn.select2 !== 'undefined') {
+    // 4.7. SINÔNIMOS (NOVO)
+    document.getElementById('btnAddSinonimo').onclick = function() {
+        const input = document.getElementById('sinonimoInput');
+        const nome = input.value.trim();
+
+        if (nome) {
+            const isDuplicate = sinonimosAssociados.some(item => item.nome.toLowerCase() === nome.toLowerCase());
+
+            if (!isDuplicate) {
+                // ID temporário para exclusão no frontend (se for um novo item)
+                const tempId = 'new-' + nome.replace(/\s/g, '-'); 
+                sinonimosAssociados.push({ id: null, nome: nome }); 
+                renderSinonimosGrid();
+                input.value = ''; 
+            } else {
+                alert('Sinônimo já adicionado.');
+            }
+        } else {
+            alert('Digite um nome válido.');
+        }
+    };
+
+
+    // --- 5. INICIALIZAÇÃO GERAL ---
+
+    function initSelect2() {
         $('.searchable-select').select2({
             theme: "bootstrap-5",
             width: '100%',
             placeholder: "Buscar e selecionar...",
             minimumInputLength: 2, 
+            dropdownParent: $('body'),
             language: {
-                inputTooShort: function(args) {
-                    var remainingChars = args.minimum - args.input.length;
-                    return "Digite " + remainingChars + " ou mais caracteres para buscar.";
-                }
+                inputTooShort: (args) => `Digite ${args.minimum - args.input.length} ou mais caracteres para buscar.`,
             },
-            templateResult: function (data, container) {
+            templateResult: (data, container) => {
                 if (data.element && data.element.closest('optgroup')) {
                     return $('<span>' + data.element.closest('optgroup').label + ' > ' + data.text + '</span>');
                 }
                 return data.text;
             }
         });
-
-         $('#modalAssociacaoHabilidades .searchable-select').select2({ 
-            theme: "bootstrap-5", 
-            width: '100%', 
-            placeholder: "Buscar ou selecionar...",
-            dropdownParent: $('#modalAssociacaoHabilidades'),
-            allowClear: true
-        });
+        
+        const initModalSelect2 = (selector, parentId) => {
+             $(selector).select2({ 
+                theme: "bootstrap-5", 
+                width: '100%', 
+                placeholder: "Buscar ou selecionar...",
+                dropdownParent: $(parentId),
+                allowClear: true
+            });
+        };
+        
+        initModalSelect2('#habilidadeSelect', '#modalAssociacaoHabilidades');
+        initModalSelect2('#caracteristicaSelect', '#modalAssociacaoCaracteristicas');
+        initModalSelect2('#riscoSelect', '#modalAssociacaoRiscos');
+        initModalSelect2('#cursoSelect', '#modalAssociacaoCursos');
+        initModalSelect2('#recursosGruposSelect', '#modalAssociacaoRecursosGrupos');
+        initModalSelect2('#areasAtuacaoSelect', '#modalAssociacaoAreasAtuacao');
     }
     
+    // Renderiza dados existentes
     renderHabilidadesGrid();
+    renderCaracteristicasGrid();
+    renderRiscosGrid();
+    renderCursosGrid();
+    renderRecursosGruposGrid();
+    renderAreasAtuacaoGrid();
+    renderSinonimosGrid(); // NOVO
+    
+    // Executa Select2
+    initSelect2();
 
+    // Ativação da primeira aba
     var firstTab = document.querySelector('#basicas-tab');
     if (firstTab) {
         new bootstrap.Tab(firstTab).show();

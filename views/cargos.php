@@ -111,7 +111,6 @@ if ($currentPage > $totalPages && $totalPages > 0) {
 $sql = "
     SELECT 
         c.cargoId, c.cargoNome, c.cargoResumo, c.cargoDataAtualizacao,
-        e.escolaridadeTitulo,
         b.cboNome
     FROM cargos c
     LEFT JOIN escolaridades e ON e.escolaridadeId = c.escolaridadeId
@@ -125,8 +124,8 @@ if (!empty($params['term'])) {
     $bindings[] = "%{$params['term']}%";
 }
 
-// 2.5. Validação de Colunas (Mantida para segurança na ordenação)
-$validColumns = ['c.cargoId', 'c.cargoNome', 'e.escolaridadeTitulo', 'b.cboNome', 'c.cargoDataAtualizacao'];
+// 2.5. Validação de Colunas (Removida a ordenação por escolaridade)
+$validColumns = ['c.cargoId', 'c.cargoNome', 'b.cboNome', 'c.cargoDataAtualizacao'];
 $orderBy = in_array($params['order_by'], $validColumns) ? $params['order_by'] : 'c.cargoId';
 $sortDir = in_array(strtoupper($params['sort_dir']), ['ASC', 'DESC']) ? $params['sort_dir'] : 'ASC';
 
@@ -253,8 +252,6 @@ if (isset($_GET['message'])) {
                         <th><?php echo createSortLink('c.cargoId', 'ID', $params); ?></th>
                         <th><?php echo createSortLink('c.cargoNome', 'Cargo', $params); ?></th>
                         <th><?php echo createSortLink('b.cboNome', 'CBO', $params); ?></th>
-                        <th><?php echo createSortLink('e.escolaridadeTitulo', 'Escolaridade', $params); ?></th>
-                        <th>Resumo</th>
                         <th class="action-cell text-center">Ações</th>
                     </tr>
                 </thead>
@@ -265,8 +262,6 @@ if (isset($_GET['message'])) {
                                 <td><?php echo htmlspecialchars($row['cargoId']); ?></td>
                                 <td><strong class="text-primary"><?php echo htmlspecialchars($row['cargoNome']); ?></strong></td> 
                                 <td><?php echo htmlspecialchars($row['cboNome'] ?? 'N/A'); ?></td>
-                                <td><?php echo htmlspecialchars($row['escolaridadeTitulo'] ?? 'N/A'); ?></td>
-                                <td><div class="short-text" title="<?php echo htmlspecialchars($row['cargoResumo']); ?>"><?php echo htmlspecialchars($row['cargoResumo']); ?></div></td>
                                 <td class="action-cell text-center">
                                     
                                     <a href="../relatorios/cargo_individual.php?id=<?php echo $row['cargoId']; ?>&format=html" 
@@ -302,7 +297,7 @@ if (isset($_GET['message'])) {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="6" class="text-center">Nenhum cargo encontrado.</td>
+                            <td colspan="4" class="text-center">Nenhum cargo encontrado.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
