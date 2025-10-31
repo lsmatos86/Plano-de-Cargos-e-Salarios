@@ -1,9 +1,13 @@
 <?php
-// Arquivo: views/riscos.php
+// Arquivo: views/riscos.php (REFATORADO)
 
-// Inclusão de arquivos na pasta superior (../)
+// 1. Inclusão de arquivos
+require_once '../vendor/autoload.php';
 require_once '../config.php';
-require_once '../includes/functions.php';
+require_once '../includes/functions.php'; // (Ainda necessário para isUserLoggedIn e getSortDirection)
+
+// 2. Importa o novo Repositório
+use App\Repository\RiscoRepository;
 
 // Redireciona para o login se o usuário não estiver autenticado
 if (!isUserLoggedIn()) {
@@ -12,85 +16,95 @@ if (!isUserLoggedIn()) {
 }
 
 // Configurações específicas desta tabela
-$table_name = 'riscos';
 $id_column = 'riscoId';
 $name_column = 'riscoNome'; // Coluna ENUM
 $page_title = 'Gestão de Tipos de Riscos';
 
-$pdo = getDbConnection();
 $message = '';
 $message_type = '';
 
-// 1. Obtém as opções ENUM do banco para usar no formulário SELECT
-$enum_options = getEnumOptions($pdo, $table_name, $name_column);
+// Instancia o Repositório
+$repo = new RiscoRepository();
+
+// 1. Obtém as opções ENUM do repositório
+$enum_options = $repo->getEnumOptions();
 
 
 // ----------------------------------------------------
-// LÓGICA DE CRUD (CREATE/UPDATE/DELETE)
+// LÓGICA DE CRUD (CREATE/UPDATE/DELETE) - REFATORADO
 // ----------------------------------------------------
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-    $riscoNome = trim($_POST[$name_column] ?? ''); // Pega o valor ENUM selecionado
-    $id = (int)($_POST[$id_column] ?? 0);
-    $action = $_POST['action'];
+try {
+    // 1. Lógica de CREATE/UPDATE (POST)
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+        $riscoNome = trim($_POST[$name_column] ?? '');
+        
+        $repo->save($_POST); // O repositório lida com insert/update e validação
+        
+        $action_desc = ($_POST['action'] === 'insert') ? 'cadastrado' : 'atualizado';
+        $message = "Risco '{$riscoNome}' {$action_desc} com sucesso!";
+        $message_type = 'success';
+    }
 
-    // Garante que o valor enviado seja um valor ENUM válido
-    if (!in_array($riscoNome, $enum_options)) {
-        $message = "Valor de Risco inválido ou vazio.";
-        $message_type = 'warning';
-    } else {
-        try {
-            if ($action === 'insert') {
-                if (insertSimpleRecord($pdo, $table_name, $name_column, $riscoNome)) {
-                    $message = "Tipo de Risco '{$riscoNome}' cadastrado com sucesso!";
-                    $message_type = 'success';
-                }
-            } elseif ($action === 'update' && $id > 0) {
-                $stmt = $pdo->prepare("UPDATE {$table_name} SET {$name_column} = ? WHERE {$id_column} = ?");
-                $stmt->execute([$riscoNome, $id]);
-                $message = "Registro ID {$id} atualizado com sucesso para '{$riscoNome}'!";
-                $message_type = 'success';
-            }
-        } catch (Exception $e) {
-            $message = "Erro ao processar a ação: Este risco já existe ou houve falha na query.";
+    // 2. Lógica de DELETE (GET)
+    if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
+        $id = (int)$_GET['id'];
+        $deleted = $repo->delete($id);
+        
+        if ($deleted) {
+            $message = "Risco ID {$id} excluído com sucesso!";
+            $message_type = 'success';
+        } else {
+            $message = "Erro: Risco ID {$id} não encontrado ou já excluído.";
             $message_type = 'danger';
         }
-    }
-    
-    header("Location: riscos.php?message=" . urlencode($message) . "&type={$message_type}");
-    exit;
-}
-
-if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
-    $id = (int)$_GET['id'];
-    
-    if (deleteRecord($pdo, $table_name, $id_column, $id)) {
-        $message = "Registro ID {$id} excluído com sucesso!";
-        $message_type = 'success';
-    } else {
-        $message = "Erro ao excluir: O registro ID {$id} não foi encontrado ou está vinculado à tabela Riscos_Cargo.";
-        $message_type = 'danger';
+        
+        // Redireciona para limpar a URL após a ação
+        header("Location: riscos.php?message=" . urlencode($message) . "&type={$message_type}");
+        exit;
     }
 
-    header("Location: riscos.php?message=" . urlencode($message) . "&type={$message_type}");
-    exit;
+} catch (Exception $e) {
+    // Captura qualquer exceção do Repositório (validação, FK, DB)
+    $message = $e->getMessage();
+    $message_type = 'danger';
 }
 
-
-// ----------------------------------------------------
-// LÓGICA DE LEITURA E FILTRO (READ)
-// ----------------------------------------------------
-$params = [
-    'term' => $_GET['term'] ?? '',
-    'order_by' => $_GET['order_by'] ?? $id_column,
-    'sort_dir' => $_GET['sort_dir'] ?? 'ASC'
-];
-
-$registros = getRecords($pdo, $table_name, $id_column, $name_column, $params);
-
-if (isset($_GET['message'])) {
+// Mensagens vindas de um redirecionamento
+if (empty($message) && isset($_GET['message'])) {
     $message = htmlspecialchars($_GET['message']);
     $message_type = htmlspecialchars($_GET['type'] ?? 'info');
 }
+
+// ----------------------------------------------------
+// LÓGICA DE LEITURA (READ) - REFATORADO
+// ----------------------------------------------------
+// 1. Parâmetros de Filtro e Ordenação
+$params = [
+    'term' => $_GET['term'] ?? '',
+    'order_by' => $_GET['order_by'] ?? $id_column,
+    'sort_dir' => $_GET['sort_dir'] ?? 'ASC',
+    'page' => $_GET['page'] ?? 1,
+    'limit' => 10
+];
+
+// 2. Busca os dados usando o Repositório
+try {
+    $result = $repo->findAllPaginated($params);
+    
+    $registros = $result['data'];
+    $totalRecords = $result['total'];
+    $totalPages = $result['totalPages'];
+    $currentPage = $result['currentPage'];
+
+} catch (Exception $e) {
+    $registros = [];
+    $totalRecords = 0;
+    $totalPages = 1;
+    $currentPage = 1;
+    $message = "Erro ao carregar dados: " . $e->getMessage();
+    $message_type = 'danger';
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -138,16 +152,19 @@ if (isset($_GET['message'])) {
 
     <div class="row mb-3">
         <div class="col-md-4">
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#cadastroModal" id="btnNovoCadastro">
-                <i class="fas fa-plus"></i> Inserir Novo Risco
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#cadastroModal" id="btnNovoCadastro">
+                <i class="fas fa-plus"></i> Novo Risco
             </button>
         </div>
         <div class="col-md-8">
             <form method="GET" class="d-flex">
-                <input type="search" name="term" class="form-control me-2" placeholder="Filtrar por Risco (Físico, Ergonômico, etc.)" value="<?php echo htmlspecialchars($params['term']); ?>">
+                <input type="search" name="term" class="form-control me-2" placeholder="Filtrar por nome..." value="<?php echo htmlspecialchars($params['term']); ?>">
+                <input type="hidden" name="order_by" value="<?php echo htmlspecialchars($params['order_by']); ?>">
+                <input type="hidden" name="sort_dir" value="<?php echo htmlspecialchars($params['sort_dir']); ?>">
+                
                 <button class="btn btn-outline-secondary" type="submit">Buscar</button>
                 <?php if (!empty($params['term'])): ?>
-                    <a href="riscos.php" class="btn btn-outline-danger ms-2" title="Limpar Filtro"><i class="fas fa-times"></i></a>
+                    <a href="riscos.php" class="btn btn-outline-danger ms-2" title="Limpar Filtro"><i class="fas fa-times"></i> Limpar</a>
                 <?php endif; ?>
             </form>
         </div>
@@ -155,19 +172,26 @@ if (isset($_GET['message'])) {
 
     <div class="card">
         <div class="card-header bg-light">
-            <span class="fw-bold">Registros Encontrados: </span> <?php echo count($registros); ?>
+            <span class="fw-bold">Registros Encontrados: </span> <?php echo $totalRecords; ?> (Página <?php echo $currentPage; ?> de <?php echo $totalPages; ?>)
         </div>
         <div class="card-body p-0">
             <table class="table table-striped table-hover table-sm mb-0">
                 <thead class="bg-light">
                     <tr>
-                        <th><a href="?order_by=<?php echo $id_column; ?>&sort_dir=<?php echo getSortDirection($params['order_by'], $id_column); ?>&term=<?php echo urlencode($params['term']); ?>" class="text-decoration-none text-dark">ID 
-                            <?php if ($params['order_by'] === $id_column): ?><i class="fas fa-sort-<?php echo strtolower($params['sort_dir']); ?>"></i><?php endif; ?>
-                        </a></th>
-                        <th><a href="?order_by=<?php echo $name_column; ?>&sort_dir=<?php echo getSortDirection($params['order_by'], $name_column); ?>&term=<?php echo urlencode($params['term']); ?>" class="text-decoration-none text-dark">Tipo de Risco
-                            <?php if ($params['order_by'] === $name_column): ?><i class="fas fa-sort-<?php echo strtolower($params['sort_dir']); ?>"></i><?php endif; ?>
-                        </a></th>
-                        <th>Ações</th>
+                        <?php 
+                        function createSortLink($column, $text, $params) {
+                            $new_dir = getSortDirection($params['order_by'], $column);
+                            $icon = 'fa-sort';
+                            if ($params['order_by'] === $column) {
+                                $icon = $new_dir === 'ASC' ? 'fa-sort-up' : 'fa-sort-down';
+                            }
+                            $query_params = http_build_query(array_merge($params, ['order_by' => $column, 'sort_dir' => $new_dir, 'page' => 1]));
+                            return '<a href="?' . $query_params . '" class="text-decoration-none text-dark"><i class="fas ' . $icon . ' me-1"></i> ' . $text . '</a>';
+                        }
+                        ?>
+                        <th><?php echo createSortLink($id_column, 'ID', $params); ?></th>
+                        <th><?php echo createSortLink($name_column, 'Nome do Risco (Tipo)', $params); ?></th>
+                        <th width="150px" class="text-center">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -175,23 +199,24 @@ if (isset($_GET['message'])) {
                         <?php foreach ($registros as $row): ?>
                             <tr>
                                 <td><?php echo htmlspecialchars($row[$id_column]); ?></td>
-                                <td><?php echo htmlspecialchars($row[$name_column]); ?></td>
                                 <td>
-                                    <button 
-                                        type="button" 
-                                        class="btn btn-sm btn-info text-white btn-edit" 
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#cadastroModal"
-                                        data-id="<?php echo $row[$id_column]; ?>"
-                                        data-risco="<?php echo htmlspecialchars($row[$name_column]); ?>"
-                                        title="Editar">
+                                    <?php echo getRiscoIcon($row[$name_column]); ?>
+                                    <strong><?php echo htmlspecialchars($row[$name_column]); ?></strong>
+                                </td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-info text-white btn-edit" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#cadastroModal"
+                                            data-id="<?php echo $row[$id_column]; ?>"
+                                            data-risco="<?php echo htmlspecialchars($row[$name_column]); ?>"
+                                            title="Editar">
                                         <i class="fas fa-edit"></i>
                                     </button>
                                     
                                     <a href="riscos.php?action=delete&id=<?php echo $row[$id_column]; ?>" 
                                        class="btn btn-sm btn-danger" 
                                        title="Excluir"
-                                       onclick="return confirm('ATENÇÃO: Este risco pode ter Cargos vinculados. Deseja realmente excluir?');">
+                                       onclick="return confirm('Deseja realmente excluir este item? Esta ação não pode ser desfeita.');">
                                        <i class="fas fa-trash-alt"></i>
                                     </a>
                                 </td>
@@ -206,24 +231,50 @@ if (isset($_GET['message'])) {
             </table>
         </div>
     </div>
+    
+    <?php if ($totalPages > 1): ?>
+    <nav aria-label="Navegação de página" class="mt-4">
+        <ul class="pagination justify-content-center">
+            
+            <li class="page-item <?php echo ($currentPage <= 1) ? 'disabled' : ''; ?>">
+                <?php $prev_query = http_build_query(array_merge($params, ['page' => $currentPage - 1])); ?>
+                <a class="page-link" href="?<?php echo $prev_query; ?>">Anterior</a>
+            </li>
+
+            <?php for ($i = 1; $i <= $totalPages; $i++): 
+                $page_query = http_build_query(array_merge($params, ['page' => $i]));
+            ?>
+                <li class="page-item <?php echo ($i === $currentPage) ? 'active' : ''; ?>">
+                    <a class="page-link" href="?<?php echo $page_query; ?>"><?php echo $i; ?></a>
+                </li>
+            <?php endfor; ?>
+
+            <li class="page-item <?php echo ($currentPage >= $totalPages) ? 'disabled' : ''; ?>">
+                <?php $next_query = http_build_query(array_merge($params, ['page' => $currentPage + 1])); ?>
+                <a class="page-link" href="?<?php echo $next_query; ?>">Próxima</a>
+            </li>
+        </ul>
+    </nav>
+    <?php endif; ?>
+
 </div>
 
-<div class="modal fade" id="cadastroModal" tabindex="-1" aria-labelledby="cadastroModalLabel" aria-hidden="true">
+<div class="modal fade" id="cadastroModal" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="POST" id="formCadastro">
-                <input type="hidden" name="action" id="modalAction" value="insert">
-                <input type="hidden" name="<?php echo $id_column; ?>" id="modalId">
-
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title" id="cadastroModalLabel">Cadastrar Novo Tipo de Risco</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalLabel">Cadastrar Novo Risco</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST">
                 <div class="modal-body">
+                    <input type="hidden" name="action" id="modalAction" value="insert">
+                    <input type="hidden" name="<?php echo $id_column; ?>" id="modalId" value="">
+
                     <div class="mb-3">
-                        <label for="inputRiscoNome" class="form-label">Tipo de Risco</label>
-                        <select class="form-select" id="inputRiscoNome" name="<?php echo $name_column; ?>" required>
-                            <option value="" disabled selected>Selecione o Tipo de Risco</option>
+                        <label for="modalRiscoNome" class="form-label">Tipo de Risco *</label>
+                        <select class="form-select" id="modalRiscoNome" name="<?php echo $name_column; ?>" required>
+                            <option value="">--- Selecione um tipo ---</option>
                             <?php foreach ($enum_options as $option): ?>
                                 <option value="<?php echo htmlspecialchars($option); ?>">
                                     <?php echo htmlspecialchars($option); ?>
@@ -234,7 +285,7 @@ if (isset($_GET['message'])) {
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                    <button type="submit" class="btn btn-success" id="btnSalvar">Salvar</button>
+                    <button type="submit" class="btn btn-primary" id="btnSalvar">Salvar Cadastro</button>
                 </div>
             </form>
         </div>
@@ -242,18 +293,17 @@ if (isset($_GET['message'])) {
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
-document.addEventListener('DOMContentLoaded', function () {
     const modalElement = document.getElementById('cadastroModal');
-    const modalTitle = document.getElementById('cadastroModalLabel');
+    const modalTitle = document.getElementById('modalLabel');
     const modalAction = document.getElementById('modalAction');
     const modalId = document.getElementById('modalId');
-    const inputRiscoNome = document.getElementById('inputRiscoNome');
+    const inputRiscoNome = document.getElementById('modalRiscoNome');
     const btnSalvar = document.getElementById('btnSalvar');
 
-    // Função para resetar o modal para Inserção
     const resetModal = () => {
-        modalTitle.textContent = 'Cadastrar Novo Tipo de Risco';
+        modalTitle.textContent = 'Cadastrar Novo Risco';
         modalAction.value = 'insert';
         modalId.value = '';
         inputRiscoNome.selectedIndex = 0; // Reseta a seleção
@@ -287,7 +337,7 @@ document.addEventListener('DOMContentLoaded', function () {
             resetModal();
         }
     });
-});
 </script>
+
 </body>
 </html>

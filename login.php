@@ -1,6 +1,10 @@
 <?php
 // Arquivo: login.php (Localização: Raiz do Projeto)
 
+// 0. INCLUI O AUTOLOADER (NOVO)
+// Essencial para carregar App\Core\Database usado em authenticateUser()
+require_once 'vendor/autoload.php';
+
 // 1. Inclui o arquivo de constantes do banco de dados (na raiz)
 require_once 'config.php';
 

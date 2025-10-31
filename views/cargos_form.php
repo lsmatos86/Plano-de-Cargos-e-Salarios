@@ -9,9 +9,10 @@ require_once '../config.php';
 use App\Repository\LookupRepository;
 use App\Repository\HabilidadeRepository;
 use App\Repository\AreaRepository;
-use App\Repository\CargoRepository; // <-- Importa o CargoRepository
+use App\Repository\CargoRepository;
 
-// 3. Incluir functions.php (ainda necessário para login e POST)
+// 3. Incluir functions.php (APENAS para login e validação de tabela)
+// A conexão $pdo não é mais necessária aqui.
 require_once '../includes/functions.php';
 
 if (!isUserLoggedIn()) {
@@ -19,18 +20,17 @@ if (!isUserLoggedIn()) {
     exit;
 }
 
-$pdo = getDbConnection(); // <-- AINDA NECESSÁRIO para a lógica de POST
+// Inicializa variáveis
 $message = '';
 $message_type = '';
 
 // Variáveis de Controle
 $originalId = (int)($_GET['id'] ?? 0);
 $action = $_GET['action'] ?? '';
-
 $isDuplicating = $action === 'duplicate' && $originalId > 0;
 $isEditing = !$isDuplicating && $originalId > 0;
-$currentFormId = $isEditing ? $originalId : 0; 
-$cargoId = $originalId; 
+$currentFormId = $isEditing ? $originalId : 0;
+$cargoId = $originalId;
 $page_title = $isDuplicating ? 'Duplicar Cargo (Novo Registro)' : ($isEditing ? 'Editar Cargo' : 'Novo Cargo');
 
 // ----------------------------------------------------
@@ -39,20 +39,19 @@ $page_title = $isDuplicating ? 'Duplicar Cargo (Novo Registro)' : ($isEditing ? 
 $lookupRepo = new LookupRepository();
 $habilidadeRepo = new HabilidadeRepository();
 $areaRepo = new AreaRepository();
-$cargoRepo = new CargoRepository(); // <-- Instancia o CargoRepository
+$cargoRepo = new CargoRepository(); // Instancia o Repositório de Cargo
 
-$cbos = $lookupRepo->getLookup('cbos', 'cboId', 'cboCod', 'cboTituloOficial'); 
+$cbos = $lookupRepo->getLookup('cbos', 'cboId', 'cboCod', 'cboTituloOficial');
 $escolaridades = $lookupRepo->getLookup('escolaridades', 'escolaridadeId', 'escolaridadeTitulo');
 $habilidadesAgrupadas = $habilidadeRepo->getGroupedLookup();
-$habilidades = $lookupRepo->getLookup('habilidades', 'habilidadeId', 'habilidadeNome'); 
+$habilidades = $lookupRepo->getLookup('habilidades', 'habilidadeId', 'habilidadeNome');
 $caracteristicas = $lookupRepo->getLookup('caracteristicas', 'caracteristicaId', 'caracteristicaNome');
-$riscos = $lookupRepo->getLookup('riscos', 'riscoId', 'riscoNome'); 
+$riscos = $lookupRepo->getLookup('riscos', 'riscoId', 'riscoNome');
 $cursos = $lookupRepo->getLookup('cursos', 'cursoId', 'cursoNome');
 $recursosGrupos = $lookupRepo->getLookup('recursos_grupos', 'recursoGrupoId', 'recursoGrupoNome');
 $faixasSalariais = $lookupRepo->getLookup('faixas_salariais', 'faixaId', 'faixaNivel');
 $cargosSupervisor = $lookupRepo->getLookup('cargos', 'cargoId', 'cargoNome');
-
-$areasAtuacao = $areaRepo->getHierarchyLookup(); 
+$areasAtuacao = $areaRepo->getHierarchyLookup();
 $niveisOrdenados = $lookupRepo->getNivelHierarquicoLookup();
 
 // --- Variáveis de estado do Formulário ---
@@ -60,22 +59,20 @@ $cargo = [];
 $cargoAreas = [];
 $cargoHabilidades = [];
 $cargoCaracteristicas = [];
-$cargoRiscos = []; 
+$cargoRiscos = [];
 $cargoCursos = [];
 $cargoRecursosGrupos = [];
 $cargoSinonimos = [];
 
 
 // ----------------------------------------------------
-// 2. BUSCA DADOS PARA EDIÇÃO OU DUPLICAÇÃO (REFATORADO - PASSO 10)
+// 2. BUSCA DADOS PARA EDIÇÃO OU DUPLICAÇÃO (REFATORADO no Passo 10)
 // ----------------------------------------------------
 if ($isEditing || $isDuplicating) {
     try {
-        // Toda a lógica de busca foi movida para o repositório!
-        $cargoData = $cargoRepo->findFormData($cargoId); 
+        $cargoData = $cargoRepo->findFormData($cargoId);
 
         if ($cargoData) {
-            // Preenche as variáveis que o formulário espera
             $cargo = $cargoData['cargo'];
             $cargoSinonimos = $cargoData['sinonimos'];
             $cargoRiscos = $cargoData['riscos'];
@@ -87,7 +84,7 @@ if ($isEditing || $isDuplicating) {
 
             if ($isDuplicating) {
                 $cargo['cargoNome'] = ($cargo['cargoNome'] ?? 'Cargo Duplicado') . ' (CÓPIA)';
-                unset($cargo['cargoId']); 
+                unset($cargo['cargoId']);
             }
         } else {
             $message = "Cargo não encontrado.";
@@ -95,7 +92,7 @@ if ($isEditing || $isDuplicating) {
             $isEditing = false;
         }
 
-    } catch (PDOException $e) {
+    } catch (Exception $e) { // Captura Exceção genérica
         $message = "Erro ao carregar dados: " . $e->getMessage();
         $message_type = 'danger';
     }
@@ -103,136 +100,50 @@ if ($isEditing || $isDuplicating) {
 
 
 // ----------------------------------------------------
-// 3. LÓGICA DE SALVAMENTO (POST) (Ainda procedural - Próximo Passo)
+// 3. LÓGICA DE SALVAMENTO (POST) (REFATORADO - PASSO 11)
 // ----------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cargoNome'])) {
     
-    $cargoIdSubmissao = (int)($_POST['cargoId'] ?? 0);
-    $isUpdating = $cargoIdSubmissao > 0;
-    
-    // 3.1 Captura dos Dados Principais (omitido para brevidade)
-    $data = [
-        'cargoNome' => trim($_POST['cargoNome'] ?? ''), 'cargoDescricao' => trim($_POST['cargoDescricao'] ?? null),
-        'cboId' => trim($_POST['cboId'] ?? 0), 
-        'cargoResumo' => trim($_POST['cargoResumo'] ?? null),
-        'escolaridadeId' => (int)($_POST['escolaridadeId'] ?? 0), 
-        'cargoExperiencia' => trim($_POST['cargoExperiencia'] ?? null),
-        'cargoCondicoes' => trim($_POST['cargoCondicoes'] ?? null), 
-        'cargoComplexidade' => trim($_POST['cargoComplexidade'] ?? null),
-        'cargoResponsabilidades' => trim($_POST['cargoResponsabilidades'] ?? null),
-        'faixaId' => empty($_POST['faixaId']) ? null : (int)$_POST['faixaId'],
-        'nivelHierarquicoId' => empty($_POST['nivelHierarquicoId']) ? null : (int)$_POST['nivelHierarquicoId'],
-        'cargoSupervisorId' => empty($_POST['cargoSupervisorId']) ? null : (int)$_POST['cargoSupervisorId'],
-    ];
+    try {
+        // Toda a lógica de validação, transação, INSERT/UPDATE
+        // está agora encapsulada no método save()!
+        
+        $novoCargoId = $cargoRepo->save($_POST);
 
-    // Relacionamentos N:M SIMPLES
-    $relacionamentosSimples = [
-        'cargos_area' => ['coluna' => 'areaId', 'valores' => (array)($_POST['areaId'] ?? [])],
-        'habilidades_cargo' => ['coluna' => 'habilidadeId', 'valores' => (array)($_POST['habilidadeId'] ?? [])],
-        'caracteristicas_cargo' => ['coluna' => 'caracteristicaId', 'valores' => (array)($_POST['caracteristicaId'] ?? [])],
-        'recursos_grupos_cargo' => ['coluna' => 'recursoGrupoId', 'valores' => (array)($_POST['recursoGrupoId'] ?? [])],
-    ];
-    
-    // Relacionamentos N:M COMPLEXOS (Riscos e Cursos)
-    $riscosInput = [
-        'riscoId' => (array)($_POST['riscoId'] ?? []),
-        'riscoDescricao' => (array)($_POST['riscoDescricao'] ?? []),
-    ];
-    
-    $cursosInput = [
-        'cursoId' => (array)($_POST['cursoId'] ?? []),
-        'cursoCargoObrigatorio' => (array)($_POST['cursoCargoObrigatorio'] ?? []), // Array de 0 ou 1
-        'cursoCargoObs' => (array)($_POST['cursoCargoObs'] ?? []),
-    ];
+        $message = "Cargo salvo com sucesso! ID: {$novoCargoId}";
+        $message_type = 'success';
 
-    $sinonimosInput = (array)($_POST['sinonimoNome'] ?? []); // Sinônimos
-    
-    if (empty($data['cargoNome']) || empty($data['cboId']) || $data['escolaridadeId'] <= 0) {
-        $message = "Os campos Nome do Cargo, CBO e Escolaridade são obrigatórios.";
+        // Redireciona para a página de edição do cargo salvo
+        header("Location: cargos_form.php?id={$novoCargoId}&message=" . urlencode($message) . "&type={$message_type}");
+        exit;
+
+    } catch (Exception $e) {
+        // Se o repo lançar uma exceção (validação ou DB), nós a pegamos
+        $message = "Erro fatal ao salvar. Erro: " . $e->getMessage();
         $message_type = 'danger';
+        
+        // Repopula o formulário com os dados que o usuário enviou
         $cargo = array_merge($cargo, $_POST);
-        $cargoId = $cargoIdSubmissao;
-    } else {
-
-        try {
-            $pdo->beginTransaction();
-
-            // 3.3 PREPARAÇÃO DA QUERY PRINCIPAL (UPDATE/CREATE)
-            $fields = array_keys($data); $bindings = array_values($data);
-            if ($isUpdating) {
-                $sql_fields = implode(' = ?, ', $fields) . ' = ?';
-                $sql = "UPDATE cargos SET {$sql_fields}, cargoDataAtualizacao = CURRENT_TIMESTAMP() WHERE cargoId = ?";
-                $bindings[] = $cargoIdSubmissao;
-                $stmt = $pdo->prepare($sql); $stmt->execute($bindings);
-                $novoCargoId = $cargoIdSubmissao;
-            } else {
-                $sql_fields = implode(', ', $fields); $placeholders = implode(', ', array_fill(0, count($fields), '?'));
-                $sql = "INSERT INTO cargos ({$sql_fields}) VALUES ({$placeholders})";
-                $stmt = $pdo->prepare($sql); $stmt->execute($bindings);
-                $novoCargoId = $pdo->lastInsertId();
+        $cargoId = (int)($_POST['cargoId'] ?? 0);
+        
+        // (A lógica de recarregar os arrays de JS abaixo lidará
+        // com a repopulação dos grids N:M em caso de falha)
+        $cargoAreas = array_map(fn($id) => ['id' => $id, 'nome' => $areasAtuacao[$id] ?? 'N/A'], $_POST['areaId'] ?? []);
+        $cargoHabilidades = array_map(fn($id) => ['id' => $id, 'nome' => $habilidades[$id] ?? 'N/A'], $_POST['habilidadeId'] ?? []);
+        $cargoCaracteristicas = array_map(fn($id) => ['id' => $id, 'nome' => $caracteristicas[$id] ?? 'N/A'], $_POST['caracteristicaId'] ?? []);
+        $cargoRecursosGrupos = array_map(fn($id) => ['id' => $id, 'nome' => $recursosGrupos[$id] ?? 'N/A'], $_POST['recursoGrupoId'] ?? []);
+        $cargoSinonimos = array_map(fn($nome) => ['id' => $nome, 'nome' => $nome], $_POST['sinonimoNome'] ?? []);
+        
+        // Repopula Cursos e Riscos (complexos)
+        if(isset($_POST['riscoId'])) {
+            foreach($_POST['riscoId'] as $index => $id) {
+                $cargoRiscos[] = ['id' => $id, 'nome' => $riscos[$id] ?? 'N/A', 'descricao' => $_POST['riscoDescricao'][$index] ?? ''];
             }
-            
-            // 3.4 SALVAMENTO DOS RELACIONAMENTOS N:M SIMPLES
-            foreach ($relacionamentosSimples as $tableName => $rel) {
-                $column = $rel['coluna'];
-                $valores = $rel['valores'];
-                $pdo->prepare("DELETE FROM {$tableName} WHERE cargoId = ?")->execute([$novoCargoId]);
-                if (!empty($valores)) {
-                    $insert_sql = "INSERT INTO {$tableName} (cargoId, {$column}) VALUES (?, ?)";
-                    $stmt_rel = $pdo->prepare($insert_sql);
-                    foreach ($valores as $valorId) {
-                        $stmt_rel->execute([$novoCargoId, $valorId]);
-                    }
-                }
+        }
+        if(isset($_POST['cursoId'])) {
+            foreach($_POST['cursoId'] as $index => $id) {
+                $cargoCursos[] = ['id' => $id, 'nome' => $cursos[$id] ?? 'N/A', 'obrigatorio' => (bool)($_POST['cursoCargoObrigatorio'][$index] ?? 0), 'obs' => $_POST['cursoCargoObs'][$index] ?? ''];
             }
-            
-            // 3.5 SALVAMENTO DOS RISCOS (COMPLEX)
-            $pdo->prepare("DELETE FROM riscos_cargo WHERE cargoId = ?")->execute([$novoCargoId]);
-            if (!empty($riscosInput['riscoId'])) {
-                $sql_risco = "INSERT INTO riscos_cargo (cargoId, riscoId, riscoDescricao) VALUES (?, ?, ?)";
-                $stmt_risco = $pdo->prepare($sql_risco);
-                for ($i = 0; $i < count($riscosInput['riscoId']); $i++) {
-                    $stmt_risco->execute([$novoCargoId, (int)$riscosInput['riscoId'][$i], $riscosInput['riscoDescricao'][$i] ?? '']);
-                }
-            }
-
-            // 3.6 SALVAMENTO DOS CURSOS (COMPLEX)
-            $pdo->prepare("DELETE FROM cursos_cargo WHERE cargoId = ?")->execute([$novoCargoId]);
-            if (!empty($cursosInput['cursoId'])) {
-                $sql_curso = "INSERT INTO cursos_cargo (cargoId, cursoId, cursoCargoObrigatorio, cursoCargoObs) VALUES (?, ?, ?, ?)";
-                $stmt_curso = $pdo->prepare($sql_curso);
-                // Itera sobre o array de IDs de cursos
-                for ($i = 0; $i < count($cursosInput['cursoId']); $i++) {
-                    $obrigatorio = (int)($cursosInput['cursoCargoObrigatorio'][$i] ?? 0);
-                    $obs = $cursosInput['cursoCargoObs'][$i] ?? '';
-                    $stmt_curso->execute([$novoCargoId, (int)$cursosInput['cursoId'][$i], $obrigatorio, $obs]);
-                }
-            }
-            
-            // 3.7 SALVAMENTO DOS SINÔNIMOS
-            $pdo->prepare("DELETE FROM cargo_sinonimos WHERE cargoId = ?")->execute([$novoCargoId]);
-            if (!empty($sinonimosInput)) {
-                $sql_sin = "INSERT INTO cargo_sinonimos (cargoId, cargoSinonimoNome) VALUES (?, ?)";
-                $stmt_sin = $pdo->prepare($sql_sin);
-                foreach ($sinonimosInput as $sinonimoNome) {
-                     $stmt_sin->execute([$novoCargoId, trim($sinonimoNome)]);
-                }
-            }
-
-            $pdo->commit();
-            
-            $message = "Cargo salvo com sucesso! ID: {$novoCargoId}";
-            $message_type = 'success';
-            
-            header("Location: cargos_form.php?id={$novoCargoId}&message=" . urlencode($message) . "&type={$message_type}");
-            exit;
-
-        } catch (PDOException $e) {
-            $pdo->rollBack();
-            $message = "Erro fatal ao salvar. Erro: " . $e->getMessage();
-            $message_type = 'danger';
-            $cargo = array_merge($cargo, $_POST); 
-            $cargoId = $cargoIdSubmissao; 
         }
     }
 }
@@ -259,6 +170,7 @@ if (isset($_GET['message'])) {
     }));
 
     // Inicializa as variáveis globais antes de carregar o script externo
+    // Estas variáveis são preenchidas pela lógica GET (Passo 10) ou pela lógica POST-Falha (Passo 11)
     window.habilidadesAssociadas = mapToSimpleState(<?php echo json_encode($cargoHabilidades); ?>);
     window.caracteristicasAssociadas = mapToSimpleState(<?php echo json_encode($cargoCaracteristicas); ?>);
     window.riscosAssociados = mapToSimpleState(<?php echo json_encode($cargoRiscos); ?>);
