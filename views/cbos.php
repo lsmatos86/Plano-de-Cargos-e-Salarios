@@ -12,9 +12,9 @@ if (!isUserLoggedIn()) {
 
 // Configurações específicas desta tabela
 $table_name = 'cbos';
-$id_column = 'cboId'; // PK - Agora armazena o código XXXX-YY
-$name_column = 'cboNome'; // Nome da Ocupação (Curto)
-$title_column = 'cboTituloOficial'; // NOVO: Título Completo do Ministério do Trabalho
+$id_column = 'cboId'; // PK
+$name_column = 'cboCod'; // AJUSTE: cboNome -> cboCod
+$title_column = 'cboTituloOficial'; 
 $fk_column = 'familiaCboId';
 $page_title = 'Gestão de Códigos CBO';
 
@@ -23,6 +23,7 @@ $message = '';
 $message_type = '';
 
 // 1. CARREGAR DADOS FK: Famílias CBO para o SELECT
+// AJUSTE: getLookupData foi modificado na função para usar cboCod e cboTituloOficial
 $familias_cbo = getLookupData($pdo, 'familia_cbo', 'familiaCboId', 'familiaCboNome');
 
 
@@ -30,9 +31,9 @@ $familias_cbo = getLookupData($pdo, 'familia_cbo', 'familiaCboId', 'familiaCboNo
 // 2. LÓGICA DE CRUD (CREATE/UPDATE/DELETE)
 // ----------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-    $nome = trim($_POST[$name_column] ?? ''); // Nome Curto
-    $tituloOficial = trim($_POST[$title_column] ?? ''); // Título Oficial
-    $id = trim($_POST[$id_column] ?? 0); // Código CBO (XXXX-YY)
+    $nomeCurto = trim($_POST[$name_column] ?? ''); // MUDANÇA: Usando cboCod
+    $tituloOficial = trim($_POST[$title_column] ?? '');
+    $id = trim($_POST[$id_column] ?? 0);
     $familiaId = (int)($_POST[$fk_column] ?? 0);
     $action = $_POST['action'];
     
@@ -40,8 +41,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $is_valid_format = (bool)preg_match('/^\d{4}-\d{2}$/', $id);
     
     // Validação
-    if (empty($nome) || empty($tituloOficial) || empty($id) || $familiaId === 0) {
-        $message = "Todos os campos (Código CBO, Nome, Título Oficial e Família) são obrigatórios.";
+    if (empty($nomeCurto) || empty($tituloOficial) || empty($id) || $familiaId === 0) {
+        $message = "Todos os campos (ID, Código CBO, Título Oficial e Família) são obrigatórios.";
         $message_type = 'warning';
     } elseif (!$is_valid_format) {
         $message = "O Código CBO deve estar no formato XXXX-YY (Ex: 6201-10).";
@@ -50,37 +51,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         try {
             if ($action === 'insert') {
                 // Lógica de Inserção
-                // Ajustada para incluir o novo campo cboTituloOficial
                 $stmt = $pdo->prepare("INSERT INTO {$table_name} ({$id_column}, {$name_column}, {$title_column}, {$fk_column}) VALUES (?, ?, ?, ?)");
-                $stmt->execute([$id, $nome, $tituloOficial, $familiaId]);
+                $stmt->execute([$id, $nomeCurto, $tituloOficial, $familiaId]);
                 
-                $message = "CBO '{$nome}' cadastrado com sucesso!";
+                $message = "CBO '{$nomeCurto}' cadastrado com sucesso!";
                 $message_type = 'success';
                 
             } elseif ($action === 'update') {
                 // Lógica de Atualização. A PK (cboId) não deve ser alterada.
-                // Ajustada para incluir o novo campo cboTituloOficial
                 $stmt = $pdo->prepare("UPDATE {$table_name} SET {$name_column} = ?, {$title_column} = ?, {$fk_column} = ? WHERE {$id_column} = ?");
-                $stmt->execute([$nome, $tituloOficial, $familiaId, $id]);
+                $stmt->execute([$nomeCurto, $tituloOficial, $familiaId, $id]);
 
                 $message = "CBO Código {$id} atualizado com sucesso!";
                 $message_type = 'success';
             }
         } catch (Exception $e) {
-            // Pode falhar por UNIQUE KEY (CBO ID já existe) ou FOREIGN KEY (Família ID não existe)
             $message = "Erro ao processar a ação: O código CBO já existe ou a Família é inválida. Erro: " . $e->getMessage();
             $message_type = 'danger';
         }
     }
     
-    // Se houve erro de validação/SQL, mantém o POST e preenche os campos do modal na próxima abertura
     if ($message_type === 'warning' || $message_type === 'danger') {
-        // Redireciona com dados de erro para serem exibidos
-        header("Location: cbos.php?message=" . urlencode($message) . "&type={$message_type}&error_id=" . urlencode($id) . "&error_nome=" . urlencode($nome) . "&error_titulo=" . urlencode($tituloOficial) . "&error_familia=" . urlencode($familiaId));
+        header("Location: cbos.php?message=" . urlencode($message) . "&type={$message_type}&error_id=" . urlencode($id) . "&error_nome=" . urlencode($nomeCurto) . "&error_titulo=" . urlencode($tituloOficial) . "&error_familia=" . urlencode($familiaId));
         exit;
     }
     
-    // Redireciona em caso de sucesso
     header("Location: cbos.php?message=" . urlencode($message) . "&type={$message_type}");
     exit;
 }
@@ -123,7 +118,7 @@ $sql = "
 $bindings = [];
 
 if (!empty($params['term'])) {
-    // Filtra pelo código, nome curto ou nome oficial
+    // Filtra pelo código (cboCod e cboId) ou nome oficial
     $sql .= " WHERE t.{$name_column} LIKE ? OR t.{$id_column} LIKE ? OR t.{$title_column} LIKE ?";
     $bindings[] = "%{$params['term']}%";
     $bindings[] = "%{$params['term']}%";
@@ -233,13 +228,13 @@ $error_data = [
                     <tr>
                         <th style="width:10%;">
                             <a href="?order_by=<?php echo $id_column; ?>&sort_dir=<?php echo getSortDirection($params['order_by'], $id_column); ?>&term=<?php echo urlencode($params['term']); ?>" class="text-decoration-none text-dark">
-                                Código CBO
+                                ID
                                 <?php if ($params['order_by'] === $id_column): ?><i class="fas fa-sort-<?php echo strtolower($params['sort_dir']); ?>"></i><?php endif; ?>
                             </a>
                         </th>
                         <th style="width:25%;">
                             <a href="?order_by=<?php echo $name_column; ?>&sort_dir=<?php echo getSortDirection($params['order_by'], $name_column); ?>&term=<?php echo urlencode($params['term']); ?>" class="text-decoration-none text-dark">
-                                Nome Curto
+                                Código CBO
                                 <?php if ($params['order_by'] === $name_column): ?><i class="fas fa-sort-<?php echo strtolower($params['sort_dir']); ?>"></i><?php endif; ?>
                             </a>
                         </th>
@@ -317,8 +312,8 @@ $error_data = [
                         <small class="form-text text-muted">Este é o código único no formato XXXX-YY e não pode ser alterado após o cadastro.</small>
                     </div>
                     <div class="mb-3">
-                        <label for="inputNome" class="form-label">Nome Curto da Ocupação</label>
-                        <input type="text" class="form-control" id="inputNome" name="<?php echo $name_column; ?>" placeholder="Ex: Coordenador de Colheita" required>
+                        <label for="inputNome" class="form-label">Código Curto da Ocupação</label>
+                        <input type="text" class="form-control" id="inputNome" name="<?php echo $name_column; ?>" placeholder="Ex: CoordenadorColheita" required>
                     </div>
                     <div class="mb-3">
                         <label for="inputTituloOficial" class="form-label">Título Oficial (MTE)</label>
@@ -360,7 +355,6 @@ $(document).ready(function () {
     const inputFamiliaId = document.getElementById('inputFamiliaId');
     const btnSalvar = document.getElementById('btnSalvar');
     
-    // Dados de erro de submissão do PHP (se houver)
     const errorData = {
         id: "<?php echo $error_data['id']; ?>",
         nome: "<?php echo $error_data['nome']; ?>",
@@ -368,7 +362,6 @@ $(document).ready(function () {
         familia: "<?php echo $error_data['familia']; ?>"
     };
 
-    // Inicializa Select2 para o campo Família CBO
     $('#inputFamiliaId').select2({
         theme: "bootstrap-5",
         width: '100%',
@@ -377,21 +370,19 @@ $(document).ready(function () {
         allowClear: true
     });
 
-    // Função para resetar o modal para Inserção
     const resetModal = () => {
         modalTitle.textContent = 'Cadastrar Novo CBO';
         modalAction.value = 'insert';
         inputId.value = '';
         inputNome.value = '';
         inputTituloOficial.value = '';
-        inputId.readOnly = false; // Permite edição do ID na inserção
-        $('#inputFamiliaId').val(null).trigger('change'); // Reseta Select2
+        inputId.readOnly = false;
+        $('#inputFamiliaId').val(null).trigger('change');
         btnSalvar.textContent = 'Salvar Cadastro';
         document.querySelector('.modal-header').classList.remove('bg-info', 'bg-danger');
         document.querySelector('.modal-header').classList.add('bg-primary');
     };
     
-    // Função para preencher o modal em modo Edição
     const setupEditModal = (button) => {
         const id = button.getAttribute('data-id');
         const nome = button.getAttribute('data-nome');
@@ -403,7 +394,7 @@ $(document).ready(function () {
         inputId.value = id;
         inputNome.value = nome;
         inputTituloOficial.value = titulo;
-        inputId.readOnly = true; // Bloqueia edição do ID (PK)
+        inputId.readOnly = true;
         btnSalvar.textContent = 'Atualizar';
 
         $('#inputFamiliaId').val(familiaid).trigger('change');
@@ -412,27 +403,21 @@ $(document).ready(function () {
         document.querySelector('.modal-header').classList.add('bg-info');
     };
 
-    // 1. Lógica para abrir o modal no modo INSERIR
     document.getElementById('btnNovoCadastro').addEventListener('click', resetModal);
 
-    // 2. Lógica para abrir o modal no modo EDITAR OU ERRO DE SUBMISSÃO
     modalElement.addEventListener('show.bs.modal', function (event) {
         const button = event.relatedTarget;
         
-        // Verifica se é o botão de edição
         if (button && button.classList.contains('btn-edit')) {
             setupEditModal(button);
         } else if (errorData.id || errorData.nome || errorData.titulo || errorData.familia) {
-            // Modo Erro de Submissão (reabre o modal com dados pré-preenchidos)
             modalTitle.textContent = 'Erro de Submissão: ' + (errorData.id ? 'CBO ' + errorData.id : 'Novo Cadastro');
-            modalAction.value = 'insert'; // Assume inserção
+            modalAction.value = 'insert'; 
             
-            // Preenche com os dados que causaram o erro
             inputId.value = errorData.id;
             inputNome.value = errorData.nome;
             inputTituloOficial.value = errorData.titulo;
             
-            // Tenta preencher a família
             if (errorData.familia) {
                 $('#inputFamiliaId').val(errorData.familia).trigger('change');
             } else {
@@ -446,20 +431,16 @@ $(document).ready(function () {
             document.querySelector('.modal-header').classList.add('bg-danger');
 
         } else {
-            // Caso padrão (abertura via Novo CBO)
             resetModal();
         }
     });
 
-    // 3. Remove os dados de erro da URL após carregar o modal
     if (errorData.id || errorData.nome || errorData.titulo || errorData.familia) {
-        // Usa timeout pequeno para garantir que o modal seja processado antes de tentar abrir
         setTimeout(() => {
             if (!$(modalElement).hasClass('show')) {
                  $(modalElement).modal('show'); 
             }
             
-            // Limpa os parâmetros de erro da URL
             const url = new URL(window.location.href);
             url.searchParams.delete('error_id');
             url.searchParams.delete('error_nome');

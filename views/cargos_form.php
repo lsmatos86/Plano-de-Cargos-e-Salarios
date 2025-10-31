@@ -30,7 +30,8 @@ $page_title = $isDuplicating ? 'Duplicar Cargo (Novo Registro)' : ($isEditing ? 
 // ----------------------------------------------------
 // 1. CARREGAMENTO DOS LOOKUPS MESTRES
 // ----------------------------------------------------
-$cbos = getLookupData($pdo, 'cbos', 'cboId', 'cboNome', 'cboTituloOficial');
+// AJUSTE: Renomeado cboNome para cboCod na chamada da função
+$cbos = getLookupData($pdo, 'cbos', 'cboId', 'cboCod', 'cboTituloOficial'); 
 $escolaridades = getLookupData($pdo, 'escolaridades', 'escolaridadeId', 'escolaridadeTitulo');
 // Habilidades agrupadas e simples (para select e lookup)
 $habilidadesAgrupadas = getHabilidadesGrouped($pdo);
@@ -134,7 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cargoNome'])) {
     // 3.1 Captura dos Dados Principais (omitido para brevidade)
     $data = [
         'cargoNome' => trim($_POST['cargoNome'] ?? ''), 'cargoDescricao' => trim($_POST['cargoDescricao'] ?? null),
-        'cboId' => trim($_POST['cboId'] ?? 0), // CBO agora é string (XXXX-YY)
+        'cboId' => trim($_POST['cboId'] ?? 0), 
         'cargoResumo' => trim($_POST['cargoResumo'] ?? null),
         'escolaridadeId' => (int)($_POST['escolaridadeId'] ?? 0), 
         'cargoExperiencia' => trim($_POST['cargoExperiencia'] ?? null),
@@ -202,7 +203,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cargoNome'])) {
                     $insert_sql = "INSERT INTO {$tableName} (cargoId, {$column}) VALUES (?, ?)";
                     $stmt_rel = $pdo->prepare($insert_sql);
                     foreach ($valores as $valorId) {
-                        $stmt_rel->execute([$novoCargoId, (int)$valorId]);
+                        $stmt_rel->execute([$novoCargoId, $valorId]);
                     }
                 }
             }
@@ -222,6 +223,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cargoNome'])) {
             if (!empty($cursosInput['cursoId'])) {
                 $sql_curso = "INSERT INTO cursos_cargo (cargoId, cursoId, cursoCargoObrigatorio, cursoCargoObs) VALUES (?, ?, ?, ?)";
                 $stmt_curso = $pdo->prepare($sql_curso);
+                // Itera sobre o array de IDs de cursos
                 for ($i = 0; $i < count($cursosInput['cursoId']); $i++) {
                     $obrigatorio = (int)($cursosInput['cursoCargoObrigatorio'][$i] ?? 0);
                     $obs = $cursosInput['cursoCargoObs'][$i] ?? '';
@@ -292,12 +294,13 @@ arsort($niveisOrdenados);
         textarea { resize: vertical; }
         .grid-header { background-color: #f8f9fa; border-top: 1px solid #dee2e6; padding-top: 10px; }
         .grid-body tr:last-child td { border-bottom: none; }
-        .grid-action-cell { width: 50px; }
+        .grid-action-cell { width: 80px; } 
         .grid-risco-desc textarea { width: 100%; resize: vertical; min-height: 40px; border: 1px solid #ced4da; padding: 5px; }
         .table-group-separator { background-color: #e9ecef; }
         .grid-container { max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; }
         /* Estilos para Select2 no modal */
         .select2-container--bootstrap-5 .select2-dropdown { z-index: 1060; }
+        .form-control-sm { min-height: calc(1.5em + 0.5rem + 2px); }
     </style>
 </head>
 <body>
@@ -548,8 +551,8 @@ arsort($niveisOrdenados);
                         <table class="table table-sm mb-0">
                             <thead>
                                 <tr>
-                                    <th width="50%">Curso</th>
-                                    <th width="30%">Obrigatoriedade</th>
+                                    <th width="35%">Curso</th>
+                                    <th width="50%">Obrigatoriedade e Observação</th>
                                     <th class="grid-action-cell text-center">Ação</th>
                                 </tr>
                             </thead>
@@ -856,6 +859,57 @@ arsort($niveisOrdenados);
     </div>
 </div>
 
+
+<div class="modal fade" id="modalEdicaoCurso" tabindex="-1" aria-labelledby="modalEdicaoCursoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="modalEdicaoCursoLabel">Editar Curso: <span id="cursoEditNome"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="cursoEditId">
+                 <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="1" id="cursoEditObrigatorio">
+                        <label class="form-check-label" for="cursoEditObrigatorio">Curso Obrigatório?</label>
+                    </div>
+                </div>
+                 <div class="mb-3">
+                    <label for="cursoEditObs" class="form-label">Observação (Periodicidade, Requisito)</label>
+                    <textarea class="form-control" id="cursoEditObs" rows="3" placeholder="Ex: Deve ser refeito anualmente; Recomendado para certificação."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-info text-white" id="btnSalvarEdicaoCurso">Salvar Edição</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalEdicaoRisco" tabindex="-1" aria-labelledby="modalEdicaoRiscoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="modalEdicaoRiscoLabel">Editar Risco: <span id="riscoEditNome"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="riscoEditId">
+                <div class="mb-3">
+                    <label for="riscoEditDescricao" class="form-label">Descrição da Exposição Específica</label>
+                    <textarea class="form-control" id="riscoEditDescricao" rows="4" placeholder="Ex: Exposição prolongada ao sol acima de 30ºC e poeira por deslocamentos." required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-info text-white" id="btnSalvarEdicaoRisco">Salvar Edição</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 $(document).ready(function() {
@@ -1033,15 +1087,23 @@ $(document).ready(function() {
             const newRow = gridBody.insertRow();
             newRow.setAttribute('data-id', item.id);
             
+            const itemDescricao = item.descricao || '';
+            const trimmedDesc = itemDescricao.length > 50 ? itemDescricao.substring(0, 50) + '...' : itemDescricao;
+
             newRow.innerHTML = `
                 <td>
                     ${item.nome}
                     <input type="hidden" name="riscoId[]" value="${item.id}">
                 </td>
                 <td>
-                    <textarea name="riscoDescricao[]" placeholder="Descreva a exposição específica" class="form-control form-control-sm" rows="1">${item.descricao || ''}</textarea>
+                    <span title="${itemDescricao}">${trimmedDesc}</span>
+                    <input type="hidden" name="riscoDescricao[]" value="${itemDescricao}">
                 </td>
                 <td class="text-center grid-action-cell">
+                    <button type="button" class="btn btn-sm btn-info text-white btn-edit-risco me-1" 
+                        data-id="${item.id}" data-bs-toggle="modal" data-bs-target="#modalEdicaoRisco" title="Editar">
+                        <i class="fas fa-pen"></i>
+                    </button>
                     <button type="button" class="btn btn-sm btn-danger btn-remove-entity" data-id="${item.id}" data-entity="risco" title="Remover">
                         <i class="fas fa-trash-alt"></i>
                     </button>
@@ -1049,6 +1111,7 @@ $(document).ready(function() {
             `;
         });
         attachRemoveListeners('risco');
+        attachEditListeners('risco'); // Anexa listeners para o botão de edição
     };
 
     const renderCursosGrid = () => {
@@ -1062,6 +1125,9 @@ $(document).ready(function() {
             const newRow = gridBody.insertRow();
             newRow.setAttribute('data-id', item.id);
             
+            const itemObs = item.obs || '';
+            const trimmedObs = itemObs.length > 30 ? itemObs.substring(0, 30) + '...' : itemObs;
+
             newRow.innerHTML = `
                 <td>
                     ${item.nome}
@@ -1069,11 +1135,15 @@ $(document).ready(function() {
                 </td>
                 <td>
                     <span class="badge ${badgeClass}">${isObrigatorio ? 'OBRIGATÓRIO' : 'DESEJÁVEL'}</span>
-                    <small class="d-block text-muted">${item.obs || ''}</small>
+                    <small class="d-block text-muted" title="${itemObs}">${trimmedObs}</small>
                     <input type="hidden" name="cursoCargoObrigatorio[]" value="${isObrigatorio ? 1 : 0}">
                     <input type="hidden" name="cursoCargoObs[]" value="${item.obs || ''}">
                 </td>
                 <td class="text-center grid-action-cell">
+                    <button type="button" class="btn btn-sm btn-info text-white btn-edit-curso me-1" 
+                        data-id="${item.id}" data-bs-toggle="modal" data-bs-target="#modalEdicaoCurso" title="Editar">
+                        <i class="fas fa-pen"></i>
+                    </button>
                     <button type="button" class="btn btn-sm btn-danger btn-remove-entity" data-id="${item.id}" data-entity="curso" title="Remover">
                         <i class="fas fa-trash-alt"></i>
                     </button>
@@ -1081,6 +1151,7 @@ $(document).ready(function() {
             `;
         });
         attachRemoveListeners('curso');
+        attachEditListeners('curso'); // Anexa listeners para o botão de edição
     };
     
     // SINÔNIMOS
@@ -1089,7 +1160,6 @@ $(document).ready(function() {
         gridBody.innerHTML = '';
         
         sinonimosAssociados.forEach(item => {
-            // Usa o ID do banco ou um ID temporário baseado no nome para exclusão no frontend
             const itemId = item.id || 'new-' + item.nome.replace(/\s/g, '-'); 
             const newRow = gridBody.insertRow();
             newRow.setAttribute('data-id', itemId);
@@ -1117,7 +1187,96 @@ $(document).ready(function() {
     };
 
 
-    // --- 4. LISTENERS DOS MODAIS E INPUTS ---
+    // --- 4. FUNÇÕES DE EDIÇÃO EM MODAL ---
+    
+    const attachEditListeners = (entityName) => {
+        const gridBody = document.getElementById(entityName + 'sGridBody');
+        const selector = entityName === 'curso' ? '.btn-edit-curso' : '.btn-edit-risco';
+        
+        // Remove listeners antigos para evitar execução duplicada
+        gridBody.querySelectorAll(selector).forEach(oldButton => {
+            const newButton = oldButton.cloneNode(true);
+            oldButton.parentNode.replaceChild(newButton, oldButton);
+        });
+
+        // Adiciona listeners novos
+        gridBody.querySelectorAll(selector).forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                const itemId = parseInt(this.getAttribute('data-id'));
+
+                if (entityName === 'curso') {
+                    setupEditCursoModal(itemId);
+                } else if (entityName === 'risco') {
+                    setupEditRiscoModal(itemId);
+                }
+            });
+        });
+    };
+
+    // 4.1. SETUP MODAL CURSO
+    const setupEditCursoModal = (id) => {
+        const item = cursosAssociados.find(i => i.id === id);
+        if (!item) return;
+
+        $('#cursoEditNome').text(item.nome);
+        $('#cursoEditId').val(item.id);
+        $('#cursoEditObrigatorio').prop('checked', item.obrigatorio === 1 || item.obrigatorio === true);
+        $('#cursoEditObs').val(item.obs || '');
+        
+        // Abre o modal
+        const modal = new bootstrap.Modal(document.getElementById('modalEdicaoCurso'));
+        modal.show();
+    };
+
+    // 4.2. SALVAR EDIÇÃO CURSO
+    document.getElementById('btnSalvarEdicaoCurso').onclick = function() {
+        const id = parseInt($('#cursoEditId').val());
+        const isObrigatorio = $('#cursoEditObrigatorio').prop('checked');
+        const obs = $('#cursoEditObs').val().trim();
+
+        const item = cursosAssociados.find(i => i.id === id);
+        if (item) {
+            item.obrigatorio = isObrigatorio ? 1 : 0;
+            item.obs = obs;
+            renderCursosGrid();
+            bootstrap.Modal.getInstance(document.getElementById('modalEdicaoCurso')).hide();
+        }
+    };
+    
+    // 4.3. SETUP MODAL RISCO
+    const setupEditRiscoModal = (id) => {
+        const item = riscosAssociados.find(i => i.id === id);
+        if (!item) return;
+
+        $('#riscoEditNome').text(item.nome);
+        $('#riscoEditId').val(item.id);
+        $('#riscoEditDescricao').val(item.descricao || '');
+        
+        // Abre o modal
+        const modal = new bootstrap.Modal(document.getElementById('modalEdicaoRisco'));
+        modal.show();
+    };
+    
+    // 4.4. SALVAR EDIÇÃO RISCO
+    document.getElementById('btnSalvarEdicaoRisco').onclick = function() {
+        const id = parseInt($('#riscoEditId').val());
+        const descricao = $('#riscoEditDescricao').val().trim();
+
+        if (descricao) {
+            const item = riscosAssociados.find(i => i.id === id);
+            if (item) {
+                item.descricao = descricao;
+                renderRiscosGrid();
+                bootstrap.Modal.getInstance(document.getElementById('modalEdicaoRisco')).hide();
+            }
+        } else {
+            alert('A descrição do risco é obrigatória.');
+        }
+    };
+
+
+    // --- 5. LISTENERS DE ADIÇÃO (MANTIDOS) ---
     
     const getSelectedOptionsData = (selectId) => {
         const selectedValues = $(`#${selectId}`).val();
@@ -1158,35 +1317,30 @@ $(document).ready(function() {
         }
     };
     
-    // 4.1. HABILIDADES
     document.getElementById('btnAssociarHabilidade').onclick = function() {
         handleMultiSelectAssociation('habilidadeSelect', habilidadesAssociadas, renderHabilidadesGrid);
         $('#habilidadeSelect').val(null).trigger('change');
         bootstrap.Modal.getInstance(document.getElementById('modalAssociacaoHabilidades')).hide();
     };
     
-    // 4.2. CARACTERÍSTICAS
     document.getElementById('btnAssociarCaracteristica').onclick = function() {
         handleMultiSelectAssociation('caracteristicaSelect', caracteristicasAssociadas, renderCaracteristicasGrid);
         $('#caracteristicaSelect').val(null).trigger('change');
         bootstrap.Modal.getInstance(document.getElementById('modalAssociacaoCaracteristicas')).hide();
     };
 
-    // 4.3. GRUPOS DE RECURSOS
     document.getElementById('btnAssociarRecursosGrupos').onclick = function() {
         handleMultiSelectAssociation('recursosGruposSelect', recursosGruposAssociados, renderRecursosGruposGrid);
         $('#recursosGruposSelect').val(null).trigger('change');
         bootstrap.Modal.getInstance(document.getElementById('modalAssociacaoRecursosGrupos')).hide();
     };
 
-    // 4.4. ÁREAS DE ATUAÇÃO
     document.getElementById('btnAssociarAreasAtuacao').onclick = function() {
         handleMultiSelectAssociation('areasAtuacaoSelect', areasAssociadas, renderAreasAtuacaoGrid);
         $('#areasAtuacaoSelect').val(null).trigger('change');
         bootstrap.Modal.getInstance(document.getElementById('modalAssociacaoAreasAtuacao')).hide();
     };
 
-    // 4.5. RISCOS
     document.getElementById('btnAssociarRisco').onclick = function() {
         const data = getSelectedOptionsData('riscoSelect')[0];
         const descricao = document.getElementById('riscoDescricaoInput').value.trim();
@@ -1201,14 +1355,13 @@ $(document).ready(function() {
                 $('#riscoSelect').val(null).trigger('change');
                 bootstrap.Modal.getInstance(document.getElementById('modalAssociacaoRiscos')).hide();
             } else {
-                alert('Este tipo de risco já foi associado. Para editar a descrição, altere o campo na grade abaixo.');
+                alert('Este tipo de risco já foi associado.');
             }
         } else {
             alert('Por favor, selecione um Risco e preencha a Descrição Específica.');
         }
     };
     
-    // 4.6. CURSOS
     document.getElementById('btnAssociarCurso').onclick = function() {
         const selectedItems = getSelectedOptionsData('cursoSelect');
         const isObrigatorio = document.getElementById('cursoObrigatorioInput').checked;
@@ -1239,7 +1392,6 @@ $(document).ready(function() {
         bootstrap.Modal.getInstance(document.getElementById('modalAssociacaoCursos')).hide();
     };
     
-    // 4.7. SINÔNIMOS
     document.getElementById('btnAddSinonimo').onclick = function() {
         const input = document.getElementById('sinonimoInput');
         const nome = input.value.trim();
@@ -1260,7 +1412,7 @@ $(document).ready(function() {
     };
 
 
-    // --- 5. INICIALIZAÇÃO GERAL ---
+    // --- 6. INICIALIZAÇÃO GERAL ---
 
     function initSelect2() {
         $('.searchable-select').select2({

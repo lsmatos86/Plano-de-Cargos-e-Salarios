@@ -258,10 +258,10 @@ function getLookupData(PDO $pdo, string $tableName, string $idColumn, string $na
     try {
         $selectFields = $idColumn . ', ' . $nameColumn;
         
-        // AJUSTE: Se for a tabela CBO, concatena o ID (cboId) e o título oficial (cboTituloOficial)
+        // Se for a tabela CBO, concatena o código (cboCod) e o título oficial
         if ($concatColumn && $tableName === 'cbos') {
-            // CONCATENANDO o ID (cboId - XXXX-YY) com o Título Oficial (cboTituloOficial)
-            $selectFields = "{$idColumn}, CONCAT({$idColumn}, ' - ', {$concatColumn}) AS display_name"; 
+            // AJUSTE: Concatenando o código (cboCod, passado como $nameColumn) com o título oficial
+            $selectFields = "{$idColumn}, CONCAT({$nameColumn}, ' - ', {$concatColumn}) AS display_name";
             $nameColumn = 'display_name'; // Usa o alias para o fetch
         }
 
@@ -404,7 +404,7 @@ function getCargoReportData(PDO $pdo, int $cargoId): ?array
             SELECT 
                 c.*, 
                 e.escolaridadeTitulo,
-                b.cboNome,
+                b.cboCod, -- AJUSTE: Usando cboCod (antigo cboNome)
                 b.cboTituloOficial,
                 f.faixaNivel,               
                 f.faixaSalarioMinimo,       
