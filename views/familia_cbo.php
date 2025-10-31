@@ -1,9 +1,13 @@
 <?php
-// Arquivo: views/familia_cbo.php
+// Arquivo: views/familia_cbo.php (REFATORADO)
 
-// Inclusão de arquivos na pasta superior (../)
+// 1. Inclusão de arquivos
+require_once '../vendor/autoload.php';
 require_once '../config.php';
-require_once '../includes/functions.php';
+require_once '../includes/functions.php'; // (Ainda necessário para isUserLoggedIn e getSortDirection)
+
+// 2. Importa o novo Repositório
+use App\Repository\FamiliaCboRepository;
 
 // Redireciona para o login se o usuário não estiver autenticado
 if (!isUserLoggedIn()) {
@@ -12,82 +16,91 @@ if (!isUserLoggedIn()) {
 }
 
 // Configurações específicas desta tabela
-$table_name = 'familia_cbo';
 $id_column = 'familiaCboId';
 $name_column = 'familiaCboNome';
 $page_title = 'Gestão de Famílias CBO';
 
-$pdo = getDbConnection();
 $message = '';
 $message_type = '';
 
-// ----------------------------------------------------
-// LÓGICA DE CRUD (CREATE/UPDATE/DELETE)
-// ----------------------------------------------------
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-    $nome = trim($_POST[$name_column] ?? '');
-    $id = (int)($_POST[$id_column] ?? 0);
-    $action = $_POST['action'];
+// Instancia o Repositório
+$repo = new FamiliaCboRepository();
 
-    if (!empty($nome)) {
-        try {
-            if ($action === 'insert') {
-                if (insertSimpleRecord($pdo, $table_name, $name_column, $nome)) {
-                    $message = "Família CBO '{$nome}' cadastrada com sucesso!";
-                    $message_type = 'success';
-                } else {
-                    $message = "Falha ao cadastrar no banco de dados.";
-                    $message_type = 'danger';
-                }
-            } elseif ($action === 'update' && $id > 0) {
-                $stmt = $pdo->prepare("UPDATE {$table_name} SET {$name_column} = ? WHERE {$id_column} = ?");
-                $stmt->execute([$nome, $id]);
-                $message = "Registro ID {$id} atualizado com sucesso para '{$nome}'!";
-                $message_type = 'success';
-            }
-        } catch (Exception $e) {
-            $message = "Erro ao processar a ação: " . $e->getMessage();
+// ----------------------------------------------------
+// LÓGICA DE CRUD (CREATE/UPDATE/DELETE) - REFATORADO
+// ----------------------------------------------------
+try {
+    // 1. Lógica de CREATE/UPDATE (POST)
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+        $nome = trim($_POST[$name_column] ?? '');
+        
+        $repo->save($_POST); // O repositório lida com insert/update e validação
+        
+        $action_desc = ($_POST['action'] === 'insert') ? 'cadastrada' : 'atualizada';
+        $message = "Família CBO '{$nome}' {$action_desc} com sucesso!";
+        $message_type = 'success';
+    }
+
+    // 2. Lógica de DELETE (GET)
+    if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
+        $id = (int)$_GET['id'];
+        $deleted = $repo->delete($id);
+        
+        if ($deleted) {
+            $message = "Família CBO ID {$id} excluída com sucesso!";
+            $message_type = 'success';
+        } else {
+            $message = "Erro: Família CBO ID {$id} não encontrada ou já excluída.";
             $message_type = 'danger';
         }
-    } else {
-        $message = "O nome não pode ser vazio.";
-        $message_type = 'warning';
-    }
-    
-    header("Location: familia_cbo.php?message=" . urlencode($message) . "&type={$message_type}");
-    exit;
-}
-
-if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
-    $id = (int)$_GET['id'];
-    
-    if (deleteRecord($pdo, $table_name, $id_column, $id)) {
-        $message = "Registro ID {$id} excluído com sucesso!";
-        $message_type = 'success';
-    } else {
-        $message = "Erro ao excluir: O registro ID {$id} não foi encontrado ou está vinculado a um CBO (Chave Estrangeira).";
-        $message_type = 'danger';
+        
+        // Redireciona para limpar a URL após a ação
+        header("Location: familia_cbo.php?message=" . urlencode($message) . "&type={$message_type}");
+        exit;
     }
 
-    header("Location: familia_cbo.php?message=" . urlencode($message) . "&type={$message_type}");
-    exit;
+} catch (Exception $e) {
+    // Captura qualquer exceção do Repositório (validação, FK, DB)
+    $message = $e->getMessage();
+    $message_type = 'danger';
 }
 
-// ----------------------------------------------------
-// LÓGICA DE LEITURA E FILTRO (READ)
-// ----------------------------------------------------
-$params = [
-    'term' => $_GET['term'] ?? '',
-    'order_by' => $_GET['order_by'] ?? $id_column,
-    'sort_dir' => $_GET['sort_dir'] ?? 'ASC'
-];
-
-$registros = getRecords($pdo, $table_name, $id_column, $name_column, $params);
-
-if (isset($_GET['message'])) {
+// Mensagens vindas de um redirecionamento
+if (empty($message) && isset($_GET['message'])) {
     $message = htmlspecialchars($_GET['message']);
     $message_type = htmlspecialchars($_GET['type'] ?? 'info');
 }
+
+// ----------------------------------------------------
+// LÓGICA DE LEITURA (READ) - REFATORADO
+// ----------------------------------------------------
+// 1. Parâmetros de Filtro e Ordenação
+$params = [
+    'term' => $_GET['term'] ?? '',
+    'order_by' => $_GET['order_by'] ?? $id_column,
+    'sort_dir' => $_GET['sort_dir'] ?? 'ASC',
+    'page' => $_GET['page'] ?? 1,
+    'limit' => 10
+];
+
+// 2. Busca os dados usando o Repositório
+try {
+    $result = $repo->findAllPaginated($params);
+    
+    $registros = $result['data'];
+    $totalRecords = $result['total'];
+    $totalPages = $result['totalPages'];
+    $currentPage = $result['currentPage'];
+
+} catch (Exception $e) {
+    $registros = [];
+    $totalRecords = 0;
+    $totalPages = 1;
+    $currentPage = 1;
+    $message = "Erro ao carregar dados: " . $e->getMessage();
+    $message_type = 'danger';
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -135,16 +148,19 @@ if (isset($_GET['message'])) {
 
     <div class="row mb-3">
         <div class="col-md-4">
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#cadastroModal" id="btnNovoCadastro">
-                <i class="fas fa-plus"></i> Inserir Nova Família CBO
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#cadastroModal" id="btnNovoCadastro">
+                <i class="fas fa-plus"></i> Nova Família CBO
             </button>
         </div>
         <div class="col-md-8">
             <form method="GET" class="d-flex">
-                <input type="search" name="term" class="form-control me-2" placeholder="Filtrar por Nome da Família CBO" value="<?php echo htmlspecialchars($params['term']); ?>">
+                <input type="search" name="term" class="form-control me-2" placeholder="Filtrar por nome..." value="<?php echo htmlspecialchars($params['term']); ?>">
+                <input type="hidden" name="order_by" value="<?php echo htmlspecialchars($params['order_by']); ?>">
+                <input type="hidden" name="sort_dir" value="<?php echo htmlspecialchars($params['sort_dir']); ?>">
+                
                 <button class="btn btn-outline-secondary" type="submit">Buscar</button>
                 <?php if (!empty($params['term'])): ?>
-                    <a href="familia_cbo.php" class="btn btn-outline-danger ms-2" title="Limpar Filtro"><i class="fas fa-times"></i></a>
+                    <a href="familia_cbo.php" class="btn btn-outline-danger ms-2" title="Limpar Filtro"><i class="fas fa-times"></i> Limpar</a>
                 <?php endif; ?>
             </form>
         </div>
@@ -152,27 +168,26 @@ if (isset($_GET['message'])) {
 
     <div class="card">
         <div class="card-header bg-light">
-            <span class="fw-bold">Registros Encontrados: </span> <?php echo count($registros); ?>
+            <span class="fw-bold">Registros Encontrados: </span> <?php echo $totalRecords; ?> (Página <?php echo $currentPage; ?> de <?php echo $totalPages; ?>)
         </div>
         <div class="card-body p-0">
             <table class="table table-striped table-hover table-sm mb-0">
                 <thead class="bg-light">
                     <tr>
-                        <th>
-                            <a href="?order_by=<?php echo $id_column; ?>&sort_dir=<?php echo getSortDirection($params['order_by'], $id_column); ?>&term=<?php echo urlencode($params['term']); ?>" class="text-decoration-none text-dark">
-                                ID 
-                                <?php if ($params['order_by'] === $id_column): ?><i class="fas fa-sort-<?php echo strtolower($params['sort_dir']); ?>"></i><?php endif; ?>
-                            </a>
-                        </th>
-                        <th>
-                            <a href="?order_by=<?php echo $name_column; ?>&sort_dir=<?php echo getSortDirection($params['order_by'], $name_column); ?>&term=<?php echo urlencode($params['term']); ?>" class="text-decoration-none text-dark">
-                                Nome da Família
-                                <?php if ($params['order_by'] === $name_column): ?><i class="fas fa-sort-<?php echo strtolower($params['sort_dir']); ?>"></i><?php endif; ?>
-                            </a>
-                        </th>
-                        <th>Cadastro</th>
-                        <th>Atualização</th>
-                        <th>Ações</th>
+                        <?php 
+                        function createSortLink($column, $text, $params) {
+                            $new_dir = getSortDirection($params['order_by'], $column);
+                            $icon = 'fa-sort';
+                            if ($params['order_by'] === $column) {
+                                $icon = $new_dir === 'ASC' ? 'fa-sort-up' : 'fa-sort-down';
+                            }
+                            $query_params = http_build_query(array_merge($params, ['order_by' => $column, 'sort_dir' => $new_dir, 'page' => 1]));
+                            return '<a href="?' . $query_params . '" class="text-decoration-none text-dark"><i class="fas ' . $icon . ' me-1"></i> ' . $text . '</a>';
+                        }
+                        ?>
+                        <th><?php echo createSortLink($id_column, 'ID', $params); ?></th>
+                        <th><?php echo createSortLink($name_column, 'Nome da Família', $params); ?></th>
+                        <th width="150px" class="text-center">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -180,25 +195,21 @@ if (isset($_GET['message'])) {
                         <?php foreach ($registros as $row): ?>
                             <tr>
                                 <td><?php echo htmlspecialchars($row[$id_column]); ?></td>
-                                <td><?php echo htmlspecialchars($row[$name_column]); ?></td>
-                                <td><?php echo date('d/m/Y H:i', strtotime($row['familiaCboDataCadastro'])); ?></td>
-                                <td><?php echo date('d/m/Y H:i', strtotime($row['familiaCboDataAtualizacao'])); ?></td>
-                                <td>
-                                    <button 
-                                        type="button" 
-                                        class="btn btn-sm btn-info text-white btn-edit" 
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#cadastroModal"
-                                        data-id="<?php echo $row[$id_column]; ?>"
-                                        data-nome="<?php echo htmlspecialchars($row[$name_column]); ?>"
-                                        title="Editar">
+                                <td><strong><?php echo htmlspecialchars($row[$name_column]); ?></strong></td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-info text-white btn-edit" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#cadastroModal"
+                                            data-id="<?php echo $row[$id_column]; ?>"
+                                            data-nome="<?php echo htmlspecialchars($row[$name_column]); ?>"
+                                            title="Editar">
                                         <i class="fas fa-edit"></i>
                                     </button>
                                     
                                     <a href="familia_cbo.php?action=delete&id=<?php echo $row[$id_column]; ?>" 
                                        class="btn btn-sm btn-danger" 
                                        title="Excluir"
-                                       onclick="return confirm('ATENÇÃO: Este registro pode ter CBOs vinculados. Deseja realmente excluir?');">
+                                       onclick="return confirm('Deseja realmente excluir este item? Esta ação não pode ser desfeita.');">
                                        <i class="fas fa-trash-alt"></i>
                                     </a>
                                 </td>
@@ -206,35 +217,61 @@ if (isset($_GET['message'])) {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="5" class="text-center">Nenhum registro encontrado. <?php if($params['term']) echo "(Filtro: " . htmlspecialchars($params['term']) . ")"; ?></td>
+                            <td colspan="3" class="text-center">Nenhum registro encontrado.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
             </table>
         </div>
     </div>
+    
+    <?php if ($totalPages > 1): ?>
+    <nav aria-label="Navegação de página" class="mt-4">
+        <ul class="pagination justify-content-center">
+            
+            <li class="page-item <?php echo ($currentPage <= 1) ? 'disabled' : ''; ?>">
+                <?php $prev_query = http_build_query(array_merge($params, ['page' => $currentPage - 1])); ?>
+                <a class="page-link" href="?<?php echo $prev_query; ?>">Anterior</a>
+            </li>
+
+            <?php for ($i = 1; $i <= $totalPages; $i++): 
+                $page_query = http_build_query(array_merge($params, ['page' => $i]));
+            ?>
+                <li class="page-item <?php echo ($i === $currentPage) ? 'active' : ''; ?>">
+                    <a class="page-link" href="?<?php echo $page_query; ?>"><?php echo $i; ?></a>
+                </li>
+            <?php endfor; ?>
+
+            <li class="page-item <?php echo ($currentPage >= $totalPages) ? 'disabled' : ''; ?>">
+                <?php $next_query = http_build_query(array_merge($params, ['page' => $currentPage + 1])); ?>
+                <a class="page-link" href="?<?php echo $next_query; ?>">Próxima</a>
+            </li>
+        </ul>
+    </nav>
+    <?php endif; ?>
+
 </div>
 
-<div class="modal fade" id="cadastroModal" tabindex="-1" aria-labelledby="cadastroModalLabel" aria-hidden="true">
+<div class="modal fade" id="cadastroModal" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="POST" id="formCadastro">
-                <input type="hidden" name="action" id="modalAction" value="insert">
-                <input type="hidden" name="<?php echo $id_column; ?>" id="modalId">
-
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title" id="cadastroModalLabel">Cadastrar Nova Família CBO</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalLabel">Cadastrar Nova Família CBO</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST">
                 <div class="modal-body">
+                    <input type="hidden" name="action" id="modalAction" value="insert">
+                    <input type="hidden" name="<?php echo $id_column; ?>" id="modalId" value="">
+
                     <div class="mb-3">
-                        <label for="inputNome" class="form-label">Nome da Família CBO</label>
-                        <input type="text" class="form-control" id="inputNome" name="<?php echo $name_column; ?>" placeholder="Ex: Trabalhadores Agropecuários" required>
+                        <label for="modalNome" class="form-label">Nome da Família *</label>
+                        <input type="text" class="form-control" id="modalNome" name="<?php echo $name_column; ?>" required maxlength="255">
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                    <button type="submit" class="btn btn-success" id="btnSalvar">Salvar</button>
+                    <button type="submit" class="btn btn-primary" id="btnSalvar">Salvar Cadastro</button>
                 </div>
             </form>
         </div>
@@ -242,16 +279,15 @@ if (isset($_GET['message'])) {
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
-document.addEventListener('DOMContentLoaded', function () {
     const modalElement = document.getElementById('cadastroModal');
-    const modalTitle = document.getElementById('cadastroModalLabel');
+    const modalTitle = document.getElementById('modalLabel');
     const modalAction = document.getElementById('modalAction');
     const modalId = document.getElementById('modalId');
-    const inputNome = document.getElementById('inputNome');
+    const inputNome = document.getElementById('modalNome');
     const btnSalvar = document.getElementById('btnSalvar');
 
-    // Função para resetar o modal para Inserção
     const resetModal = () => {
         modalTitle.textContent = 'Cadastrar Nova Família CBO';
         modalAction.value = 'insert';
@@ -287,7 +323,7 @@ document.addEventListener('DOMContentLoaded', function () {
             resetModal();
         }
     });
-});
 </script>
+
 </body>
 </html>

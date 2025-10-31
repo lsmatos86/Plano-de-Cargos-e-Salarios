@@ -1,158 +1,121 @@
 <?php
-// Arquivo: views/cbos.php
+// Arquivo: views/cbos.php (REFATORADO)
 
-// Inclusão de arquivos na pasta superior (../)
+// 1. Inclusão de arquivos
+require_once '../vendor/autoload.php';
 require_once '../config.php';
-require_once '../includes/functions.php';
+require_once '../includes/functions.php'; // (Ainda necessário para isUserLoggedIn e getSortDirection)
 
+// 2. Importa os Repositórios
+use App\Repository\CboRepository;
+use App\Repository\LookupRepository;
+
+// Redireciona para o login se o usuário não estiver autenticado
 if (!isUserLoggedIn()) {
     header('Location: ../login.php');
     exit;
 }
 
-// Configurações específicas desta tabela
-$table_name = 'cbos';
-$id_column = 'cboId'; // PK
-$name_column = 'cboCod'; // AJUSTE: cboNome -> cboCod
-$title_column = 'cboTituloOficial'; 
-$fk_column = 'familiaCboId';
+// Configurações
 $page_title = 'Gestão de Códigos CBO';
-
-$pdo = getDbConnection();
+$id_column = 'cboId'; // PK
+$name_column = 'cboCod';
+$title_column = 'cboTituloOficial';
+$fk_column = 'familiaCboId';
 $message = '';
 $message_type = '';
 
-// 1. CARREGAR DADOS FK: Famílias CBO para o SELECT
-// AJUSTE: getLookupData foi modificado na função para usar cboCod e cboTituloOficial
-$familias_cbo = getLookupData($pdo, 'familia_cbo', 'familiaCboId', 'familiaCboNome');
+// Instancia os Repositórios
+$repo = new CboRepository();
+$lookupRepo = new LookupRepository();
 
-
-// ----------------------------------------------------
-// 2. LÓGICA DE CRUD (CREATE/UPDATE/DELETE)
-// ----------------------------------------------------
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-    $nomeCurto = trim($_POST[$name_column] ?? ''); // MUDANÇA: Usando cboCod
-    $tituloOficial = trim($_POST[$title_column] ?? '');
-    $id = trim($_POST[$id_column] ?? 0);
-    $familiaId = (int)($_POST[$fk_column] ?? 0);
-    $action = $_POST['action'];
-    
-    // NOVO: Função de validação de formato XXXX-YY
-    $is_valid_format = (bool)preg_match('/^\d{4}-\d{2}$/', $id);
-    
-    // Validação
-    if (empty($nomeCurto) || empty($tituloOficial) || empty($id) || $familiaId === 0) {
-        $message = "Todos os campos (ID, Código CBO, Título Oficial e Família) são obrigatórios.";
-        $message_type = 'warning';
-    } elseif (!$is_valid_format) {
-        $message = "O Código CBO deve estar no formato XXXX-YY (Ex: 6201-10).";
-        $message_type = 'warning';
-    } else {
-        try {
-            if ($action === 'insert') {
-                // Lógica de Inserção
-                $stmt = $pdo->prepare("INSERT INTO {$table_name} ({$id_column}, {$name_column}, {$title_column}, {$fk_column}) VALUES (?, ?, ?, ?)");
-                $stmt->execute([$id, $nomeCurto, $tituloOficial, $familiaId]);
-                
-                $message = "CBO '{$nomeCurto}' cadastrado com sucesso!";
-                $message_type = 'success';
-                
-            } elseif ($action === 'update') {
-                // Lógica de Atualização. A PK (cboId) não deve ser alterada.
-                $stmt = $pdo->prepare("UPDATE {$table_name} SET {$name_column} = ?, {$title_column} = ?, {$fk_column} = ? WHERE {$id_column} = ?");
-                $stmt->execute([$nomeCurto, $tituloOficial, $familiaId, $id]);
-
-                $message = "CBO Código {$id} atualizado com sucesso!";
-                $message_type = 'success';
-            }
-        } catch (Exception $e) {
-            $message = "Erro ao processar a ação: O código CBO já existe ou a Família é inválida. Erro: " . $e->getMessage();
-            $message_type = 'danger';
-        }
-    }
-    
-    if ($message_type === 'warning' || $message_type === 'danger') {
-        header("Location: cbos.php?message=" . urlencode($message) . "&type={$message_type}&error_id=" . urlencode($id) . "&error_nome=" . urlencode($nomeCurto) . "&error_titulo=" . urlencode($tituloOficial) . "&error_familia=" . urlencode($familiaId));
-        exit;
-    }
-    
-    header("Location: cbos.php?message=" . urlencode($message) . "&type={$message_type}");
-    exit;
-}
-
-// ----------------------------------------------------
-// 3. LÓGICA DE EXCLUSÃO (DELETE - Via GET)
-// ----------------------------------------------------
-if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
-    $id = trim($_GET['id']);
-    
-    if (deleteRecord($pdo, $table_name, $id_column, $id)) {
-        $message = "Registro CBO {$id} excluído com sucesso!";
-        $message_type = 'success';
-    } else {
-        $message = "Erro ao excluir: O CBO está vinculado a um Cargo.";
-        $message_type = 'danger';
-    }
-
-    header("Location: cbos.php?message=" . urlencode($message) . "&type={$message_type}");
-    exit;
-}
-
-// ----------------------------------------------------
-// 4. LÓGICA DE LEITURA E FILTRO (READ All)
-// ----------------------------------------------------
-$params = [
-    'term' => $_GET['term'] ?? '',
-    'order_by' => $_GET['order_by'] ?? $id_column,
-    'sort_dir' => $_GET['sort_dir'] ?? 'ASC'
-];
-
-// Query mais complexa para juntar com o nome da Família CBO e o novo campo
-$sql = "
-    SELECT 
-        t.*, 
-        f.familiaCboNome 
-    FROM {$table_name} t
-    JOIN familia_cbo f ON f.familiaCboId = t.familiaCboId
-";
-$bindings = [];
-
-if (!empty($params['term'])) {
-    // Filtra pelo código (cboCod e cboId) ou nome oficial
-    $sql .= " WHERE t.{$name_column} LIKE ? OR t.{$id_column} LIKE ? OR t.{$title_column} LIKE ?";
-    $bindings[] = "%{$params['term']}%";
-    $bindings[] = "%{$params['term']}%";
-    $bindings[] = "%{$params['term']}%";
-}
-
-$validColumns = [$id_column, $name_column, $title_column, 'familiaCboNome', $id_column.'DataCadastro', $id_column.'DataAtualizacao'];
-$orderBy = in_array($params['order_by'], $validColumns) ? $params['order_by'] : $id_column;
-$sortDir = in_array(strtoupper($params['sort_dir']), ['ASC', 'DESC']) ? $params['sort_dir'] : 'ASC';
-
-$sql .= " ORDER BY {$orderBy} {$sortDir}";
-
+// Carrega os dados FK para o SELECT do formulário
 try {
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($bindings);
-    $registros = $stmt->fetchAll();
-} catch (\PDOException $e) {
-    $registros = [];
-    $message = "Erro ao carregar dados: " . $e->getMessage();
+    $familias_cbo = $lookupRepo->getLookup('familia_cbo', 'familiaCboId', 'familiaCboNome');
+} catch (Exception $e) {
+    $familias_cbo = [];
+    $message = "Erro ao carregar famílias CBO: " . $e->getMessage();
     $message_type = 'danger';
 }
 
-if (isset($_GET['message'])) {
+// ----------------------------------------------------
+// LÓGICA DE CRUD (CREATE/UPDATE/DELETE) - REFATORADO
+// ----------------------------------------------------
+$error_data = []; // Armazena dados do POST em caso de erro
+
+try {
+    // 1. Lógica de CREATE/UPDATE (POST)
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+        
+        $repo->save($_POST); // O repositório lida com insert/update e validação
+        
+        $cod = trim($_POST[$name_column] ?? '');
+        $action_desc = ($_POST['action'] === 'insert') ? 'cadastrado' : 'atualizado';
+        $message = "CBO '{$cod}' {$action_desc} com sucesso!";
+        $message_type = 'success';
+    }
+
+    // 2. Lógica de DELETE (GET)
+    if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
+        $id = (int)$_GET['id'];
+        $deleted = $repo->delete($id);
+        
+        if ($deleted) {
+            $message = "CBO ID {$id} excluído com sucesso!";
+            $message_type = 'success';
+        } else {
+            $message = "Erro: CBO ID {$id} não encontrado ou já excluído.";
+            $message_type = 'danger';
+        }
+        
+        // Redireciona para limpar a URL após a ação
+        header("Location: cbos.php?message=" . urlencode($message) . "&type={$message_type}");
+        exit;
+    }
+
+} catch (Exception $e) {
+    // Captura qualquer exceção do Repositório (validação, FK, DB)
+    $message = $e->getMessage();
+    $message_type = 'danger';
+    // Salva os dados do POST para repopular o modal em caso de erro
+    $error_data = $_POST;
+}
+
+// Mensagens vindas de um redirecionamento
+if (empty($message) && isset($_GET['message'])) {
     $message = htmlspecialchars($_GET['message']);
     $message_type = htmlspecialchars($_GET['type'] ?? 'info');
 }
 
-// Verifica se houve dados de erro de submissão (para preencher o modal)
-$error_data = [
-    'id' => $_GET['error_id'] ?? '',
-    'nome' => $_GET['error_nome'] ?? '',
-    'titulo' => $_GET['error_titulo'] ?? '',
-    'familia' => $_GET['error_familia'] ?? ''
+// ----------------------------------------------------
+// LÓGICA DE LEITURA (READ) - REFATORADO
+// ----------------------------------------------------
+// 1. Parâmetros de Filtro e Ordenação
+$params = [
+    'term' => $_GET['term'] ?? '',
+    'order_by' => $_GET['order_by'] ?? 'c.cboCod', // Padrão
+    'sort_dir' => $_GET['sort_dir'] ?? 'ASC',    // Padrão
+    'page' => $_GET['page'] ?? 1,
+    'limit' => 10
 ];
+
+// 2. Busca os dados usando o Repositório
+try {
+    $result = $repo->findAllPaginated($params);
+    
+    $registros = $result['data'];
+    $totalRecords = $result['total'];
+    $totalPages = $result['totalPages'];
+    $currentPage = $result['currentPage'];
+
+} catch (Exception $e) {
+    $registros = [];
+    $totalRecords = 0;
+    $totalPages = 1;
+    $currentPage = 1;
+    $message = "Erro ao carregar dados: " . $e->getMessage();
+    $message_type = 'danger';
+}
 
 ?>
 
@@ -164,8 +127,15 @@ $error_data = [
     <title><?php echo $page_title; ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+    
+    <style>
+        .short-text { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        /* Corrige o z-index do select2 no modal */
+        .select2-container--bootstrap-5 .select2-dropdown { z-index: 1060; }
+    </style>
 </head>
 <body>
 
@@ -191,7 +161,7 @@ $error_data = [
             </ol>
         </nav>
     </div>
-    
+
     <h1 class="mb-4"><?php echo $page_title; ?></h1>
 
     <?php if ($message): ?>
@@ -203,137 +173,147 @@ $error_data = [
 
     <div class="row mb-3">
         <div class="col-md-4">
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#cadastroModal" id="btnNovoCadastro">
-                <i class="fas fa-plus"></i> Inserir Novo CBO
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#cadastroModal" id="btnNovoCadastro">
+                <i class="fas fa-plus"></i> Novo CBO
             </button>
         </div>
         <div class="col-md-8">
             <form method="GET" class="d-flex">
-                <input type="search" name="term" class="form-control me-2" placeholder="Filtrar por Nome, Título ou Código CBO" value="<?php echo htmlspecialchars($params['term']); ?>">
+                <input type="search" name="term" class="form-control me-2" placeholder="Filtrar por Cód, Título ou Família..." value="<?php echo htmlspecialchars($params['term']); ?>">
+                <input type="hidden" name="order_by" value="<?php echo htmlspecialchars($params['order_by']); ?>">
+                <input type="hidden" name="sort_dir" value="<?php echo htmlspecialchars($params['sort_dir']); ?>">
+                
                 <button class="btn btn-outline-secondary" type="submit">Buscar</button>
                 <?php if (!empty($params['term'])): ?>
-                    <a href="cbos.php" class="btn btn-outline-danger ms-2" title="Limpar Filtro"><i class="fas fa-times"></i></a>
+                    <a href="cbos.php" class="btn btn-outline-danger ms-2" title="Limpar Filtro"><i class="fas fa-times"></i> Limpar</a>
                 <?php endif; ?>
             </form>
         </div>
     </div>
 
-    <div class="card">
+    <div class="card shadow-sm">
         <div class="card-header bg-light">
-            <span class="fw-bold">Registros Encontrados: </span> <?php echo count($registros); ?>
+            <span class="fw-bold">Registros Encontrados: </span> <?php echo $totalRecords; ?> (Página <?php echo $currentPage; ?> de <?php echo $totalPages; ?>)
         </div>
         <div class="card-body p-0">
-            <table class="table table-striped table-hover table-sm mb-0">
-                <thead class="bg-light">
-                    <tr>
-                        <th style="width:10%;">
-                            <a href="?order_by=<?php echo $id_column; ?>&sort_dir=<?php echo getSortDirection($params['order_by'], $id_column); ?>&term=<?php echo urlencode($params['term']); ?>" class="text-decoration-none text-dark">
-                                ID
-                                <?php if ($params['order_by'] === $id_column): ?><i class="fas fa-sort-<?php echo strtolower($params['sort_dir']); ?>"></i><?php endif; ?>
-                            </a>
-                        </th>
-                        <th style="width:25%;">
-                            <a href="?order_by=<?php echo $name_column; ?>&sort_dir=<?php echo getSortDirection($params['order_by'], $name_column); ?>&term=<?php echo urlencode($params['term']); ?>" class="text-decoration-none text-dark">
-                                Código CBO
-                                <?php if ($params['order_by'] === $name_column): ?><i class="fas fa-sort-<?php echo strtolower($params['sort_dir']); ?>"></i><?php endif; ?>
-                            </a>
-                        </th>
-                         <th style="width:35%;">
-                            <a href="?order_by=<?php echo $title_column; ?>&sort_dir=<?php echo getSortDirection($params['order_by'], $title_column); ?>&term=<?php echo urlencode($params['term']); ?>" class="text-decoration-none text-dark">
-                                Título Oficial (MTE)
-                                <?php if ($params['order_by'] === $title_column): ?><i class="fas fa-sort-<?php echo strtolower($params['sort_dir']); ?>"></i><?php endif; ?>
-                            </a>
-                        </th>
-                         <th style="width:20%;">
-                            <a href="?order_by=familiaCboNome&sort_dir=<?php echo getSortDirection($params['order_by'], 'familiaCboNome'); ?>&term=<?php echo urlencode($params['term']); ?>" class="text-decoration-none text-dark">
-                                Família CBO
-                                <?php if ($params['order_by'] === 'familiaCboNome'): ?><i class="fas fa-sort-<?php echo strtolower($params['sort_dir']); ?>"></i><?php endif; ?>
-                            </a>
-                        </th>
-                        <th style="width:10%;">Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (count($registros) > 0): ?>
-                        <?php foreach ($registros as $row): ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars($row[$id_column]); ?></td>
-                                <td><?php echo htmlspecialchars($row[$name_column]); ?></td>
-                                <td><?php echo htmlspecialchars($row[$title_column] ?? 'N/A'); ?></td>
-                                <td><?php echo htmlspecialchars($row['familiaCboNome']); ?></td>
-                                <td>
-                                    <button 
-                                        type="button" 
-                                        class="btn btn-sm btn-info text-white btn-edit" 
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#cadastroModal"
-                                        data-id="<?php echo htmlspecialchars($row[$id_column]); ?>"
-                                        data-nome="<?php echo htmlspecialchars($row[$name_column]); ?>"
-                                        data-titulo="<?php echo htmlspecialchars($row[$title_column] ?? ''); ?>"
-                                        data-familiaid="<?php echo htmlspecialchars($row[$fk_column]); ?>"
-                                        title="Editar">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    
-                                    <a href="cbos.php?action=delete&id=<?php echo htmlspecialchars($row[$id_column]); ?>" 
-                                       class="btn btn-sm btn-danger" 
-                                       title="Excluir"
-                                       onclick="return confirm('ATENÇÃO: Este CBO está vinculado a Cargos. Deseja realmente excluir?');">
-                                       <i class="fas fa-trash-alt"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover table-sm mb-0">
+                    <thead class="bg-light">
                         <tr>
-                            <td colspan="5" class="text-center">Nenhum registro encontrado. <?php if($params['term']) echo "(Filtro: " . htmlspecialchars($params['term']) . ")"; ?></td>
+                            <?php 
+                            function createSortLink($column, $text, $params) {
+                                $new_dir = getSortDirection($params['order_by'], $column);
+                                $icon = 'fa-sort';
+                                if ($params['order_by'] === $column) {
+                                    $icon = $new_dir === 'ASC' ? 'fa-sort-up' : 'fa-sort-down';
+                                }
+                                $query_params = http_build_query(array_merge($params, ['order_by' => $column, 'sort_dir' => $new_dir, 'page' => 1]));
+                                return '<a href="?' . $query_params . '" class="text-decoration-none text-dark"><i class="fas ' . $icon . ' me-1"></i> ' . $text . '</a>';
+                            }
+                            ?>
+                            <th><?php echo createSortLink('c.cboCod', 'Cód. CBO', $params); ?></th>
+                            <th><?php echo createSortLink('c.cboTituloOficial', 'Título Oficial', $params); ?></th>
+                            <th><?php echo createSortLink('f.familiaCboNome', 'Família CBO', $params); ?></th>
+                            <th width="120px" class="text-center">Ações</th>
                         </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        <?php if (count($registros) > 0): ?>
+                            <?php foreach ($registros as $row): ?>
+                                <tr>
+                                    <td><strong><?php echo htmlspecialchars($row['cboCod']); ?></strong></td>
+                                    <td><?php echo htmlspecialchars($row['cboTituloOficial']); ?></td>
+                                    <td><?php echo htmlspecialchars($row['familiaCboNome'] ?? 'N/A'); ?></td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-info text-white btn-edit" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#cadastroModal"
+                                                data-id="<?php echo $row[$id_column]; ?>"
+                                                data-cod="<?php echo htmlspecialchars($row['cboCod']); ?>"
+                                                data-titulo="<?php echo htmlspecialchars($row['cboTituloOficial']); ?>"
+                                                data-familia="<?php echo htmlspecialchars($row[$fk_column]); ?>"
+                                                title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <a href="cbos.php?action=delete&id=<?php echo $row[$id_column]; ?>" 
+                                            class="btn btn-sm btn-danger" 
+                                            title="Excluir"
+                                            onclick="return confirm('ATENÇÃO: A exclusão deste CBO pode afetar os Cargos. Deseja realmente excluir?');">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr class="text-center">
+                                <td colspan="4">Nenhum registro encontrado.</td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
+    
+    <?php if ($totalPages > 1): ?>
+    <nav aria-label="Navegação de página" class="mt-4">
+        <ul class="pagination justify-content-center">
+            <li class="page-item <?php echo ($currentPage <= 1) ? 'disabled' : ''; ?>">
+                <?php $prev_query = http_build_query(array_merge($params, ['page' => $currentPage - 1])); ?>
+                <a class="page-link" href="?<?php echo $prev_query; ?>">Anterior</a>
+            </li>
+            <?php for ($i = 1; $i <= $totalPages; $i++): 
+                $page_query = http_build_query(array_merge($params, ['page' => $i])); ?>
+                <li class="page-item <?php echo ($i === $currentPage) ? 'active' : ''; ?>">
+                    <a class="page-link" href="?<?php echo $page_query; ?>"><?php echo $i; ?></a>
+                </li>
+            <?php endfor; ?>
+            <li class="page-item <?php echo ($currentPage >= $totalPages) ? 'disabled' : ''; ?>">
+                <?php $next_query = http_build_query(array_merge($params, ['page' => $currentPage + 1])); ?>
+                <a class="page-link" href="?<?php echo $next_query; ?>">Próxima</a>
+            </li>
+        </ul>
+    </nav>
+    <?php endif; ?>
+
 </div>
 
-<div class="modal fade" id="cadastroModal" tabindex="-1" aria-labelledby="cadastroModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+<div class="modal fade" id="cadastroModal" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <form method="POST" id="formCadastro">
-                <input type="hidden" name="action" id="modalAction" value="insert">
-                
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title" id="cadastroModalLabel">Cadastrar Novo CBO</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalLabel">Novo Código CBO</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST">
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="inputId" class="form-label">Código CBO (XXXX-YY)</label>
-                        <input type="text" class="form-control" id="inputId" name="<?php echo $id_column; ?>" placeholder="Ex: 6201-10" pattern="\d{4}-\d{2}" title="Formato exigido: XXXX-YY" required>
-                        <small class="form-text text-muted">Este é o código único no formato XXXX-YY e não pode ser alterado após o cadastro.</small>
+                    <input type="hidden" name="action" id="modalAction" value="insert">
+                    <input type="hidden" name="<?php echo $id_column; ?>" id="modalId" value="">
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="modalCod" class="form-label">Cód. CBO (ex: 1234-56) *</label>
+                            <input type="text" class="form-control" id="modalCod" name="<?php echo $name_column; ?>" required maxlength="7">
+                        </div>
+                        <div class="col-md-8 mb-3">
+                            <label for="modalFamiliaId" class="form-label">Família CBO *</label>
+                            <select class="form-select select2-modal" id="modalFamiliaId" name="<?php echo $fk_column; ?>" required style="width: 100%;">
+                                <option value="">--- Selecione uma Família ---</option>
+                                <?php foreach ($familias_cbo as $id => $nome): ?>
+                                    <option value="<?php echo $id; ?>"><?php echo htmlspecialchars($nome); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
                     </div>
+                    
                     <div class="mb-3">
-                        <label for="inputNome" class="form-label">Código Curto da Ocupação</label>
-                        <input type="text" class="form-control" id="inputNome" name="<?php echo $name_column; ?>" placeholder="Ex: CoordenadorColheita" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="inputTituloOficial" class="form-label">Título Oficial (MTE)</label>
-                        <input type="text" class="form-control" id="inputTituloOficial" name="<?php echo $title_column; ?>" placeholder="Ex: Coordenador(a) de equipe de colheita e transporte" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="inputFamiliaId" class="form-label">Família CBO</label>
-                        <select class="form-select" id="inputFamiliaId" name="<?php echo $fk_column; ?>" required data-placeholder="Selecione a Família CBO...">
-                             <option value=""></option>
-                            <?php foreach ($familias_cbo as $id => $nome): ?>
-                                <option value="<?php echo htmlspecialchars($id); ?>">
-                                    <?php echo htmlspecialchars($nome); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+                        <label for="modalTitulo" class="form-label">Título Oficial *</label>
+                        <input type="text" class="form-control" id="modalTitulo" name="<?php echo $title_column; ?>" required maxlength="255">
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                    <button type="submit" class="btn btn-success" id="btnSalvar">Salvar</button>
+                    <button type="submit" class="btn btn-primary" id="btnSalvar">Salvar Cadastro</button>
                 </div>
             </form>
         </div>
@@ -342,114 +322,91 @@ $error_data = [
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
 
 <script>
-$(document).ready(function () {
-    const modalElement = document.getElementById('cadastroModal');
-    const modalTitle = document.getElementById('cadastroModalLabel');
-    const modalAction = document.getElementById('modalAction');
-    const inputId = document.getElementById('inputId');
-    const inputNome = document.getElementById('inputNome');
-    const inputTituloOficial = document.getElementById('inputTituloOficial');
-    const inputFamiliaId = document.getElementById('inputFamiliaId');
-    const btnSalvar = document.getElementById('btnSalvar');
+    // Armazena os dados do POST em caso de erro de validação
+    const errorData = <?php echo json_encode($error_data); ?>;
     
-    const errorData = {
-        id: "<?php echo $error_data['id']; ?>",
-        nome: "<?php echo $error_data['nome']; ?>",
-        titulo: "<?php echo $error_data['titulo']; ?>",
-        familia: "<?php echo $error_data['familia']; ?>"
-    };
-
-    $('#inputFamiliaId').select2({
-        theme: "bootstrap-5",
-        width: '100%',
-        placeholder: "Selecione a Família CBO...",
-        dropdownParent: $('#cadastroModal'),
-        allowClear: true
+    // Inicializa o Select2
+    $(document).ready(function() {
+        $('.select2-modal').select2({
+            theme: 'bootstrap-5',
+            dropdownParent: $('#cadastroModal') // Garante que o dropdown apareça sobre o modal
+        });
     });
 
+    const modalElement = document.getElementById('cadastroModal');
+    const modalTitle = document.getElementById('modalLabel');
+    const modalAction = document.getElementById('modalAction');
+    const modalId = document.getElementById('modalId');
+    const modalCod = document.getElementById('modalCod');
+    const modalTitulo = document.getElementById('modalTitulo');
+    const modalFamiliaId = document.getElementById('modalFamiliaId'); // O <select>
+    const btnSalvar = document.getElementById('btnSalvar');
+
     const resetModal = () => {
-        modalTitle.textContent = 'Cadastrar Novo CBO';
+        modalTitle.textContent = 'Novo Código CBO';
         modalAction.value = 'insert';
-        inputId.value = '';
-        inputNome.value = '';
-        inputTituloOficial.value = '';
-        inputId.readOnly = false;
-        $('#inputFamiliaId').val(null).trigger('change');
+        modalId.value = '';
+        modalCod.value = '';
+        modalTitulo.value = '';
+        $('#modalFamiliaId').val(null).trigger('change'); // Reseta o Select2
+        
         btnSalvar.textContent = 'Salvar Cadastro';
         document.querySelector('.modal-header').classList.remove('bg-info', 'bg-danger');
         document.querySelector('.modal-header').classList.add('bg-primary');
     };
-    
-    const setupEditModal = (button) => {
-        const id = button.getAttribute('data-id');
-        const nome = button.getAttribute('data-nome');
-        const titulo = button.getAttribute('data-titulo');
-        const familiaid = button.getAttribute('data-familiaid');
-        
-        modalTitle.textContent = 'Editar CBO (Código: ' + id + ')';
-        modalAction.value = 'update';
-        inputId.value = id;
-        inputNome.value = nome;
-        inputTituloOficial.value = titulo;
-        inputId.readOnly = true;
-        btnSalvar.textContent = 'Atualizar';
 
-        $('#inputFamiliaId').val(familiaid).trigger('change');
-
-        document.querySelector('.modal-header').classList.remove('bg-primary', 'bg-danger');
-        document.querySelector('.modal-header').classList.add('bg-info');
-    };
-
+    // 1. Lógica para abrir o modal no modo INSERIR
     document.getElementById('btnNovoCadastro').addEventListener('click', resetModal);
 
+    // 2. Lógica para abrir o modal no modo EDITAR
     modalElement.addEventListener('show.bs.modal', function (event) {
         const button = event.relatedTarget;
         
-        if (button && button.classList.contains('btn-edit')) {
-            setupEditModal(button);
-        } else if (errorData.id || errorData.nome || errorData.titulo || errorData.familia) {
-            modalTitle.textContent = 'Erro de Submissão: ' + (errorData.id ? 'CBO ' + errorData.id : 'Novo Cadastro');
-            modalAction.value = 'insert'; 
-            
-            inputId.value = errorData.id;
-            inputNome.value = errorData.nome;
-            inputTituloOficial.value = errorData.titulo;
-            
-            if (errorData.familia) {
-                $('#inputFamiliaId').val(errorData.familia).trigger('change');
-            } else {
-                $('#inputFamiliaId').val(null).trigger('change');
-            }
-            
-            inputId.readOnly = false;
-            btnSalvar.textContent = 'Corrigir e Salvar';
-            
+        // Se houver dados de erro, repopula o formulário com eles
+        if (Object.keys(errorData).length > 0) {
+            modalTitle.textContent = 'Corrija os dados (ID: ' + (errorData.cboId || 'Novo') + ')';
+            modalAction.value = errorData.action || 'insert';
+            modalId.value = errorData.cboId || '';
+            modalCod.value = errorData.cboCod || '';
+            modalTitulo.value = errorData.cboTituloOficial || '';
+            $('#modalFamiliaId').val(errorData.familiaCboId || null).trigger('change');
+
+            btnSalvar.textContent = 'Salvar Correções';
             document.querySelector('.modal-header').classList.remove('bg-primary', 'bg-info');
             document.querySelector('.modal-header').classList.add('bg-danger');
 
+        } else if (button && button.classList.contains('btn-edit')) {
+            // Se for um clique normal de "Editar"
+            const id = button.getAttribute('data-id');
+            const cod = button.getAttribute('data-cod');
+            const titulo = button.getAttribute('data-titulo');
+            const familiaId = button.getAttribute('data-familia');
+            
+            modalTitle.textContent = 'Editar CBO (ID: ' + id + ')';
+            modalAction.value = 'update';
+            modalId.value = id;
+            modalCod.value = cod;
+            modalTitulo.value = titulo;
+            $('#modalFamiliaId').val(familiaId).trigger('change'); // Define o valor do Select2
+
+            btnSalvar.textContent = 'Atualizar';
+            document.querySelector('.modal-header').classList.remove('bg-primary', 'bg-danger');
+            document.querySelector('.modal-header').classList.add('bg-info');
         } else {
+            // Se abriu de qualquer outra forma (como o botão "Novo")
             resetModal();
         }
     });
 
-    if (errorData.id || errorData.nome || errorData.titulo || errorData.familia) {
-        setTimeout(() => {
-            if (!$(modalElement).hasClass('show')) {
-                 $(modalElement).modal('show'); 
-            }
-            
-            const url = new URL(window.location.href);
-            url.searchParams.delete('error_id');
-            url.searchParams.delete('error_nome');
-            url.searchParams.delete('error_titulo');
-            url.searchParams.delete('error_familia');
-            window.history.replaceState({}, document.title, url.toString());
-        }, 100);
+    // Se houver dados de erro, abre o modal automaticamente
+    if (Object.keys(errorData).length > 0) {
+        var modal = new bootstrap.Modal(modalElement);
+        modal.show();
     }
-});
 </script>
+
 </body>
 </html>

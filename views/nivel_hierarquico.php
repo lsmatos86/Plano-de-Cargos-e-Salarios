@@ -1,155 +1,115 @@
 <?php
-// Arquivo: views/nivel_hierarquico.php (Gerenciamento de Níveis Hierárquicos)
+// Arquivo: views/nivel_hierarquico.php (REFATORADO)
 
+// 1. Inclusão de arquivos
+require_once '../vendor/autoload.php';
 require_once '../config.php';
-require_once '../includes/functions.php';
+require_once '../includes/functions.php'; // (Ainda necessário para isUserLoggedIn e getSortDirection)
 
+// 2. Importa os Repositórios
+use App\Repository\NivelHierarquicoRepository;
+use App\Repository\LookupRepository;
+
+// Redireciona para o login se o usuário não estiver autenticado
 if (!isUserLoggedIn()) {
     header('Location: ../login.php');
     exit;
 }
 
+// Configurações
 $page_title = 'Gerenciamento de Níveis Hierárquicos';
-$pdo = getDbConnection();
+$id_column = 'nivelId';
 $message = '';
 $message_type = '';
-$table_name = 'nivel_hierarquico';
-$id_column = 'nivelId';
 
-// Variáveis de Coluna
-$order_column = 'nivelOrdem';
-$name_column = 'nivelDescricao'; // Nome descritivo (ex: Junior, Pleno)
-$fk_column = 'tipoId';           // Chave Estrangeira para tipo_hierarquia
-$date_update_column = 'nivelDataAtualizacao';
-// NOVOS CAMPOS ADICIONADOS
-$attributions_column = 'nivelAtribuicoes'; 
-$autonomy_column = 'nivelAutonomia';     
-$creation_date_column = 'nivelDataCadastro'; 
-$when_to_use_column = 'nivelQuandoUtilizar'; // NOVO CAMPO
+// Instancia os Repositórios
+$repo = new NivelHierarquicoRepository();
+$lookupRepo = new LookupRepository();
 
 // Carrega os Tipos de Hierarquia para o SELECT do formulário
-// NOTE: TipoId e TipoNome são os campos usados na tabela 'tipo_hierarquia'
-$tiposHierarquia = getLookupData($pdo, 'tipo_hierarquia', 'tipoId', 'tipoNome'); 
+try {
+    $tiposHierarquia = $lookupRepo->getLookup('tipo_hierarquia', 'tipoId', 'tipoNome');
+} catch (Exception $e) {
+    $tiposHierarquia = [];
+    $message = "Erro ao carregar tipos de hierarquia: " . $e->getMessage();
+    $message_type = 'danger';
+}
+
 
 // ----------------------------------------------------
-// 1. LÓGICA DE CADASTRO/EDIÇÃO (CREATE/UPDATE)
+// LÓGICA DE CRUD (CREATE/UPDATE/DELETE) - REFATORADO
 // ----------------------------------------------------
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $id = (int)($_POST[$id_column] ?? 0);
-    $ordem = (int)($_POST[$order_column] ?? 0);
-    $descricao = trim($_POST[$name_column] ?? '');
-    $tipoId = (int)($_POST[$fk_column] ?? 0);
-    // CAPTURA DOS NOVOS CAMPOS
-    $atribuicoes = trim($_POST[$attributions_column] ?? null);
-    $autonomia = trim($_POST[$autonomy_column] ?? null);
-    $quandoUtilizar = trim($_POST[$when_to_use_column] ?? null); // CAPTURA DO NOVO CAMPO
+try {
+    // 1. Lógica de CREATE/UPDATE (POST)
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        
+        $repo->save($_POST); // O repositório lida com insert/update e validação
+        
+        $ordem = (int)($_POST['nivelOrdem'] ?? 0);
+        $id = (int)($_POST[$id_column] ?? 0);
+        $action_desc = ($id > 0) ? 'atualizado' : 'cadastrado';
+        $message = "Nível Hierárquico (Ordem: {$ordem}) {$action_desc} com sucesso!";
+        $message_type = 'success';
+    }
 
-    if ($ordem <= 0 || empty($descricao) || $tipoId <= 0) {
-        $message = "Os campos Ordem (Nível), Descrição e Tipo de Hierarquia são obrigatórios.";
-        $message_type = 'danger';
-    } else {
-        try {
-            if ($id > 0) {
-                // UPDATE - Inclui todos os campos
-                $sql = "UPDATE {$table_name} SET {$order_column} = ?, {$name_column} = ?, {$fk_column} = ?, {$attributions_column} = ?, {$autonomy_column} = ?, {$when_to_use_column} = ?, {$date_update_column} = CURRENT_TIMESTAMP() WHERE {$id_column} = ?";
-                $stmt = $pdo->prepare($sql);
-                $stmt->execute([$ordem, $descricao, $tipoId, $atribuicoes, $autonomia, $quandoUtilizar, $id]);
-                $message = "Nível Hierárquico atualizado com sucesso!";
-            } else {
-                // CREATE - Inclui todos os campos
-                $sql = "INSERT INTO {$table_name} ({$order_column}, {$name_column}, {$fk_column}, {$attributions_column}, {$autonomy_column}, {$when_to_use_column}, {$creation_date_column}) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP())";
-                $stmt = $pdo->prepare($sql);
-                $stmt->execute([$ordem, $descricao, $tipoId, $atribuicoes, $autonomia, $quandoUtilizar]);
-                $message = "Novo Nível Hierárquico cadastrado com sucesso!";
-            }
+    // 2. Lógica de DELETE (GET)
+    if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
+        $id = (int)$_GET['id'];
+        $deleted = $repo->delete($id);
+        
+        if ($deleted) {
+            $message = "Nível Hierárquico ID {$id} excluído com sucesso!";
             $message_type = 'success';
-        } catch (PDOException $e) {
-            $error_info = $e->errorInfo[1] ?? 0;
-            
-            // MENSAGEM DE ERRO AJUSTADA (Para refletir a possível causa e o feedback do usuário)
-            if ($error_info == 1062) { 
-                $message = "Erro ao salvar: Existe uma violação de unicidade. Verifique se o Nome/Descrição já existe, ou se a combinação Ordem-Tipo está duplicada.";
-            } else {
-                $message = "Erro ao salvar: " . $e->getMessage();
-            }
+        } else {
+            $message = "Erro: Nível Hierárquico ID {$id} não encontrado ou já excluído.";
             $message_type = 'danger';
         }
-    }
-    // Redireciona para evitar re-submissão do formulário
-    header("Location: nivel_hierarquico.php?message=" . urlencode($message) . "&type={$message_type}");
-    exit;
-}
-
-// ----------------------------------------------------
-// 2. LÓGICA DE EXCLUSÃO (DELETE)
-// ----------------------------------------------------
-if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
-    $id = (int)$_GET['id'];
-    
-    // Utiliza a função de exclusão segura
-    $deleted = deleteRecord($pdo, $table_name, $id_column, $id);
-    
-    if ($deleted) {
-        $message = "Nível Hierárquico ID {$id} excluído com sucesso!";
-        $message_type = 'success';
-    } else {
-        // Geralmente falha por FK, pois cargos depende desta tabela
-        $message = "Erro ao excluir: O registro ID {$id} não foi encontrado ou está sendo usado por um Cargo.";
-        $message_type = 'danger';
+        
+        // Redireciona para limpar a URL após a ação
+        header("Location: nivel_hierarquico.php?message=" . urlencode($message) . "&type={$message_type}");
+        exit;
     }
 
-    header("Location: nivel_hierarquico.php?message=" . urlencode($message) . "&type={$message_type}");
-    exit;
+} catch (Exception $e) {
+    // Captura qualquer exceção do Repositório (validação, FK, DB)
+    $message = $e->getMessage();
+    $message_type = 'danger';
 }
 
-// ----------------------------------------------------
-// 3. LÓGICA DE LEITURA E FILTRO (READ All)
-// ----------------------------------------------------
-$params = [
-    'term' => $_GET['term'] ?? '',
-    'order_by' => $_GET['order_by'] ?? $order_column,
-    'sort_dir' => $_GET['sort_dir'] ?? 'ASC'
-];
-
-// Query com JOIN e NOVOS CAMPOS
-$sql = "
-    SELECT 
-        nh.nivelId, nh.nivelOrdem, nh.nivelDescricao, nh.nivelDataCadastro, nh.nivelDataAtualizacao,
-        nh.{$attributions_column}, nh.{$autonomy_column}, nh.{$when_to_use_column}, 
-        th.tipoNome
-    FROM {$table_name} nh
-    LEFT JOIN tipo_hierarquia th ON th.tipoId = nh.tipoId
-";
-$bindings = [];
-
-if (!empty($params['term'])) {
-    $sql .= " WHERE nh.nivelDescricao LIKE ? OR th.tipoNome LIKE ?";
-    $bindings[] = "%{$params['term']}%";
-    $bindings[] = "%{$params['term']}%";
-}
-
-$validColumns = ['nivelId', 'nivelOrdem', 'nivelDescricao', 'tipoNome', 'nivelDataAtualizacao', 'nivelDataCadastro'];
-$orderBy = in_array($params['order_by'], $validColumns) ? $params['order_by'] : $order_column;
-$sortDir = in_array(strtoupper($params['sort_dir']), ['ASC', 'DESC']) ? $params['sort_dir'] : 'ASC';
-
-$sql .= " ORDER BY {$orderBy} {$sortDir}";
-
-$stmt = $pdo->prepare($sql);
-$stmt->execute($bindings);
-$registros = $stmt->fetchAll();
-
-// 4. Carrega dados para o formulário de edição
-$nivelToEdit = null;
-if (isset($_GET['id'])) {
-    $stmt = $pdo->prepare("SELECT * FROM {$table_name} WHERE {$id_column} = ?");
-    $stmt->execute([$_GET['id']]);
-    $nivelToEdit = $stmt->fetch();
-}
-
-// Mensagens após redirecionamento
-if (isset($_GET['message'])) {
+// Mensagens vindas de um redirecionamento
+if (empty($message) && isset($_GET['message'])) {
     $message = htmlspecialchars($_GET['message']);
     $message_type = htmlspecialchars($_GET['type'] ?? 'info');
+}
+
+// ----------------------------------------------------
+// LÓGICA DE LEITURA (READ) - REFATORADO
+// ----------------------------------------------------
+// 1. Parâmetros de Filtro e Ordenação
+$params = [
+    'term' => $_GET['term'] ?? '',
+    'order_by' => $_GET['order_by'] ?? 'n.nivelOrdem', // Padrão de ordenação
+    'sort_dir' => $_GET['sort_dir'] ?? 'DESC',       // Padrão de ordenação
+    'page' => $_GET['page'] ?? 1,
+    'limit' => 10
+];
+
+// 2. Busca os dados usando o Repositório
+try {
+    $result = $repo->findAllPaginated($params);
+    
+    $registros = $result['data'];
+    $totalRecords = $result['total'];
+    $totalPages = $result['totalPages'];
+    $currentPage = $result['currentPage'];
+
+} catch (Exception $e) {
+    $registros = [];
+    $totalRecords = 0;
+    $totalPages = 1;
+    $currentPage = 1;
+    $message = "Erro ao carregar dados: " . $e->getMessage();
+    $message_type = 'danger';
 }
 
 ?>
@@ -163,9 +123,7 @@ if (isset($_GET['message'])) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style>
-        .short-text { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block;}
-        .description-cell { max-width: 150px; } /* Ajuste para melhor visualização da descrição */
-        textarea { resize: vertical; }
+        .short-text { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     </style>
 </head>
 <body>
@@ -206,145 +164,225 @@ if (isset($_GET['message'])) {
         <div class="col-md-4">
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-primary text-white">
-                    <?php echo $nivelToEdit ? 'Editar: ' . htmlspecialchars($nivelToEdit[$name_column] ?? '') : 'Novo Nível Hierárquico'; ?>
+                    <h5 class="mb-0" id="formTitle"><i class="fas fa-plus"></i> Novo Nível</h5>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="nivel_hierarquico.php">
-                        <input type="hidden" name="<?php echo $id_column; ?>" value="<?php echo htmlspecialchars($nivelToEdit[$id_column] ?? 0); ?>">
-
-                        <div class="mb-3">
-                            <label for="<?php echo $order_column; ?>" class="form-label">Ordem (Nível Numérico) *</label>
-                            <input type="number" class="form-control" id="<?php echo $order_column; ?>" name="<?php echo $order_column; ?>" value="<?php echo htmlspecialchars($nivelToEdit[$order_column] ?? ''); ?>" required min="1" max="99">
-                            <div class="form-text">Quanto maior o número, maior o nível hierárquico. Ex: 1=Estagiário, 10=Diretor.</div>
+                    <form method="POST" action="nivel_hierarquico.php" id="cadastroForm">
+                        <input type="hidden" name="<?php echo $id_column; ?>" id="formId" value="">
+                        
+                        <div class="row">
+                            <div class="col-md-5 mb-3">
+                                <label for="formOrdem" class="form-label">Ordem (ex: 1) *</label>
+                                <input type="number" class="form-control" id="formOrdem" name="nivelOrdem" required min="1" max="99">
+                            </div>
+                            <div class="col-md-7 mb-3">
+                                <label for="formTipo" class="form-label">Tipo *</label>
+                                <select class="form-select" id="formTipo" name="tipoId" required>
+                                    <option value="">Selecione...</option>
+                                    <?php foreach ($tiposHierarquia as $id => $nome): ?>
+                                        <option value="<?php echo $id; ?>"><?php echo htmlspecialchars($nome); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
                         </div>
 
                         <div class="mb-3">
-                            <label for="<?php echo $name_column; ?>" class="form-label">Descrição do Nível *</label>
-                            <input type="text" class="form-control" id="<?php echo $name_column; ?>" name="<?php echo $name_column; ?>" value="<?php echo htmlspecialchars($nivelToEdit[$name_column] ?? ''); ?>" required>
-                            <div class="form-text">Ex: Analista Júnior, Coordenador, Gerente Executivo.</div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="<?php echo $fk_column; ?>" class="form-label">Tipo de Hierarquia *</label>
-                            <select class="form-select" id="<?php echo $fk_column; ?>" name="<?php echo $fk_column; ?>" required>
-                                <option value="">--- Selecione o Tipo ---</option>
-                                <?php foreach ($tiposHierarquia as $id => $nome): ?>
-                                    <option value="<?php echo $id; ?>" <?php echo (int)($nivelToEdit[$fk_column] ?? 0) === (int)$id ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($nome); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                            <div class="form-text">Ex: Estratégico, Tático. <a href="tipo_hierarquia.php" target="_blank">Gerenciar Tipos</a></div>
+                            <label for="formDescricao" class="form-label">Descrição (ex: Diretoria, Gerência) *</label>
+                            <input type="text" class="form-control" id="formDescricao" name="nivelDescricao" required maxlength="100">
                         </div>
                         
                         <div class="mb-3">
-                            <label for="<?php echo $attributions_column; ?>" class="form-label">Distribuição das Atribuições</label>
-                            <textarea class="form-control" id="<?php echo $attributions_column; ?>" name="<?php echo $attributions_column; ?>" rows="3"><?php echo htmlspecialchars($nivelToEdit[$attributions_column] ?? ''); ?></textarea>
-                            <div class="form-text">Detalhamento das responsabilidades chave neste nível.</div>
+                            <label for="formAtribuicoes" class="form-label">Atribuições Gerais</label>
+                            <textarea class="form-control" id="formAtribuicoes" name="nivelAtribuicoes" rows="3"></textarea>
                         </div>
-
                         <div class="mb-3">
-                            <label for="<?php echo $autonomy_column; ?>" class="form-label">Autonomia / Responsabilidade</label>
-                            <textarea class="form-control" id="<?php echo $autonomy_column; ?>" name="<?php echo $autonomy_column; ?>" rows="3"><?php echo htmlspecialchars($nivelToEdit[$autonomy_column] ?? ''); ?></textarea>
-                            <div class="form-text">Grau de liberdade para tomada de decisão e impacto dos resultados.</div>
+                            <label for="formAutonomia" class="form-label">Autonomia</label>
+                            <textarea class="form-control" id="formAutonomia" name="nivelAutonomia" rows="3"></textarea>
+                        </div>
+                         <div class="mb-3">
+                            <label for="formQuandoUtilizar" class="form-label">Quando Utilizar</label>
+                            <textarea class="form-control" id="formQuandoUtilizar" name="nivelQuandoUtilizar" rows="3"></textarea>
                         </div>
                         
-                        <div class="mb-3">
-                            <label for="<?php echo $when_to_use_column; ?>" class="form-label">Quando Utilizar</label>
-                            <textarea class="form-control" id="<?php echo $when_to_use_column; ?>" name="<?php echo $when_to_use_column; ?>" rows="3"><?php echo htmlspecialchars($nivelToEdit[$when_to_use_column] ?? ''); ?></textarea>
-                            <div class="form-text">Critérios específicos ou contexto para a aplicação deste nível na estrutura.</div>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="fas fa-save"></i> <?php echo $nivelToEdit ? 'Salvar Alterações' : 'Cadastrar'; ?>
+                        <button type="submit" class="btn btn-primary w-100" id="btnSalvar">
+                            <i class="fas fa-check"></i> Salvar
                         </button>
-                        <?php if ($nivelToEdit): ?>
-                             <a href="nivel_hierarquico.php" class="btn btn-outline-secondary w-100 mt-2">
-                                <i class="fas fa-plus"></i> Novo Cadastro
-                            </a>
-                        <?php endif; ?>
+                        <button type="button" class="btn btn-outline-secondary w-100 mt-2" id="btnLimpar" onclick="resetForm()">
+                            Limpar Formulário
+                        </button>
                     </form>
                 </div>
             </div>
         </div>
 
         <div class="col-md-8">
+            <form method="GET" class="d-flex mb-3">
+                <input type="search" name="term" class="form-control me-2" placeholder="Filtrar por descrição ou tipo..." value="<?php echo htmlspecialchars($params['term']); ?>">
+                <input type="hidden" name="order_by" value="<?php echo htmlspecialchars($params['order_by']); ?>">
+                <input type="hidden" name="sort_dir" value="<?php echo htmlspecialchars($params['sort_dir']); ?>">
+                
+                <button class="btn btn-outline-secondary" type="submit"><i class="fas fa-search"></i></button>
+                <?php if (!empty($params['term'])): ?>
+                    <a href="nivel_hierarquico.php" class="btn btn-outline-danger ms-2" title="Limpar Filtro"><i class="fas fa-times"></i></a>
+                <?php endif; ?>
+            </form>
+
             <div class="card shadow-sm">
                 <div class="card-header bg-light">
-                    <span class="fw-bold">Registros Encontrados: </span> <?php echo count($registros); ?>
+                    <span class="fw-bold">Registros Encontrados: </span> <?php echo $totalRecords; ?> (Página <?php echo $currentPage; ?> de <?php echo $totalPages; ?>)
                 </div>
                 <div class="card-body p-0">
-                    <table class="table table-striped table-hover table-sm mb-0">
-                        <thead class="bg-light">
-                            <tr>
-                                <th>ID</th>
-                                <th><i class="fas fa-sort-numeric-down"></i> Ordem</th>
-                                <th>Descrição</th>
-                                <th>Tipo de Hierarquia</th>
-                                <th>Atribuições</th> 
-                                <th>Autonomia/Resp.</th> 
-                                <th>Quando Utilizar</th> 
-                                <th><i class="fas fa-calendar-alt"></i> Atualização</th>
-                                <th class="text-center">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (count($registros) > 0): ?>
-                                <?php foreach ($registros as $row): ?>
-                                    <tr>
-                                        <td><?php echo htmlspecialchars($row[$id_column]); ?></td>
-                                        <td><strong class="text-secondary"><?php echo htmlspecialchars($row[$order_column]); ?>º</strong></td>
-                                        <td><strong class="text-primary"><?php echo htmlspecialchars($row[$name_column]); ?></strong></td>
-                                        <td><?php echo htmlspecialchars($row['tipoNome'] ?? 'N/A'); ?></td>
-                                        
-                                        <td class="description-cell">
-                                            <span class="short-text" title="<?php echo htmlspecialchars($row[$attributions_column] ?? ''); ?>">
-                                                <?php echo htmlspecialchars($row[$attributions_column] ?? 'N/A'); ?>
-                                            </span>
-                                        </td>
-                                        
-                                        <td class="description-cell">
-                                            <span class="short-text" title="<?php echo htmlspecialchars($row[$autonomy_column] ?? ''); ?>">
-                                                <?php echo htmlspecialchars($row[$autonomy_column] ?? 'N/A'); ?>
-                                            </span>
-                                        </td>
-                                        
-                                        <td class="description-cell">
-                                            <span class="short-text" title="<?php echo htmlspecialchars($row[$when_to_use_column] ?? ''); ?>">
-                                                <?php echo htmlspecialchars($row[$when_to_use_column] ?? 'N/A'); ?>
-                                            </span>
-                                        </td>
-                                        
-                                        <td><?php echo (new DateTime($row[$date_update_column] ?? $row['nivelDataCadastro'] ?? 'now'))->format('d/m/Y H:i'); ?></td>
-                                        
-                                        <td class="text-center">
-                                            <a href="nivel_hierarquico.php?id=<?php echo $row[$id_column]; ?>" 
-                                                class="btn btn-sm btn-info text-white" 
-                                                title="Editar">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            <a href="nivel_hierarquico.php?action=delete&id=<?php echo $row[$id_column]; ?>" 
-                                                class="btn btn-sm btn-danger" 
-                                                title="Excluir"
-                                                onclick="return confirm('ATENÇÃO: A exclusão deste nível pode afetar os Cargos. Deseja realmente excluir?');">
-                                                <i class="fas fa-trash-alt"></i>
-                                            </a>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php else: ?>
-                                <tr class="text-center">
-                                    <td colspan="9">Nenhum registro encontrado.</td>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover table-sm mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <?php 
+                                    // Esta função ainda está em functions.php
+                                    function createSortLink($column, $text, $params) {
+                                        $new_dir = getSortDirection($params['order_by'], $column);
+                                        $icon = 'fa-sort';
+                                        if ($params['order_by'] === $column) {
+                                            $icon = $new_dir === 'ASC' ? 'fa-sort-up' : 'fa-sort-down';
+                                        }
+                                        $query_params = http_build_query(array_merge($params, ['order_by' => $column, 'sort_dir' => $new_dir, 'page' => 1]));
+                                        return '<a href="?' . $query_params . '" class="text-decoration-none text-dark"><i class="fas ' . $icon . ' me-1"></i> ' . $text . '</a>';
+                                    }
+                                    ?>
+                                    <th><?php echo createSortLink('n.nivelOrdem', 'Ordem', $params); ?></th>
+                                    <th><?php echo createSortLink('n.nivelDescricao', 'Descrição', $params); ?></th>
+                                    <th><?php echo createSortLink('t.tipoNome', 'Tipo', $params); ?></th>
+                                    <th><?php echo createSortLink('n.nivelAtribuicoes', 'Atribuições', $params); ?></th>
+                                    <th width="120px" class="text-center">Ações</th>
                                 </tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <?php if (count($registros) > 0): ?>
+                                    <?php foreach ($registros as $row): ?>
+                                        <tr>
+                                            <td class="text-center">
+                                                <span class="badge bg-secondary"><?php echo htmlspecialchars($row['nivelOrdem']); ?>º</span>
+                                            </td>
+                                            <td><strong><?php echo htmlspecialchars($row['nivelDescricao']); ?></strong></td>
+                                            <td><?php echo htmlspecialchars($row['tipoNome'] ?? 'N/A'); ?></td>
+                                            <td class="short-text" title="<?php echo htmlspecialchars($row['nivelAtribuicoes']); ?>">
+                                                <?php echo htmlspecialchars($row['nivelAtribuicoes']); ?>
+                                            </td>
+                                            <td class="text-center">
+                                                <a href="#" class="btn btn-sm btn-info text-white btn-edit"
+                                                    data-id="<?php echo $row['nivelId']; ?>"
+                                                    data-ordem="<?php echo htmlspecialchars($row['nivelOrdem']); ?>"
+                                                    data-descricao="<?php echo htmlspecialchars($row['nivelDescricao']); ?>"
+                                                    data-tipoid="<?php echo htmlspecialchars($row['tipoId']); ?>"
+                                                    data-atribuicoes="<?php echo htmlspecialchars($row['nivelAtribuicoes']); ?>"
+                                                    data-autonomia="<?php echo htmlspecialchars($row['nivelAutonomia']); ?>"
+                                                    data-quando="<?php echo htmlspecialchars($row['nivelQuandoUtilizar']); ?>"
+                                                    title="Editar">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <a href="nivel_hierarquico.php?action=delete&id=<?php echo $row[$id_column]; ?>" 
+                                                    class="btn btn-sm btn-danger" 
+                                                    title="Excluir"
+                                                    onclick="return confirm('ATENÇÃO: A exclusão deste nível pode afetar os Cargos. Deseja realmente excluir?');">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr class="text-center">
+                                        <td colspan="5">Nenhum registro encontrado.</td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
+            
+            <?php if ($totalPages > 1): ?>
+            <nav aria-label="Navegação de página" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item <?php echo ($currentPage <= 1) ? 'disabled' : ''; ?>">
+                        <?php $prev_query = http_build_query(array_merge($params, ['page' => $currentPage - 1])); ?>
+                        <a class="page-link" href="?<?php echo $prev_query; ?>">Anterior</a>
+                    </li>
+                    <?php for ($i = 1; $i <= $totalPages; $i++): 
+                        $page_query = http_build_query(array_merge($params, ['page' => $i])); ?>
+                        <li class="page-item <?php echo ($i === $currentPage) ? 'active' : ''; ?>">
+                            <a class="page-link" href="?<?php echo $page_query; ?>"><?php echo $i; ?></a>
+                        </li>
+                    <?php endfor; ?>
+                    <li class="page-item <?php echo ($currentPage >= $totalPages) ? 'disabled' : ''; ?>">
+                        <?php $next_query = http_build_query(array_merge($params, ['page' => $currentPage + 1])); ?>
+                        <a class="page-link" href="?<?php echo $next_query; ?>">Próxima</a>
+                    </li>
+                </ul>
+            </nav>
+            <?php endif; ?>
+
         </div>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    const formTitle = document.getElementById('formTitle');
+    const formId = document.getElementById('formId');
+    const formOrdem = document.getElementById('formOrdem');
+    const formTipo = document.getElementById('formTipo');
+    const formDescricao = document.getElementById('formDescricao');
+    const formAtribuicoes = document.getElementById('formAtribuicoes');
+    const formAutonomia = document.getElementById('formAutonomia');
+    const formQuandoUtilizar = document.getElementById('formQuandoUtilizar');
+    const btnSalvar = document.getElementById('btnSalvar');
+    const form = document.getElementById('cadastroForm');
+    const header = document.querySelector('.card-header');
+
+    function resetForm() {
+        formTitle.innerHTML = '<i class="fas fa-plus"></i> Novo Nível';
+        formId.value = '';
+        formOrdem.value = '';
+        formTipo.selectedIndex = 0;
+        formDescricao.value = '';
+        formAtribuicoes.value = '';
+        formAutonomia.value = '';
+        formQuandoUtilizar.value = '';
+        
+        btnSalvar.innerHTML = '<i class="fas fa-check"></i> Salvar';
+        btnSalvar.classList.remove('btn-info');
+        btnSalvar.classList.add('btn-primary');
+        header.classList.remove('bg-info');
+        header.classList.add('bg-primary');
+        form.action = 'nivel_hierarquico.php';
+    }
+
+    // Adiciona listener para todos os botões de edição
+    document.querySelectorAll('.btn-edit').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault(); 
+            
+            const data = this.dataset;
+
+            formTitle.innerHTML = '<i class="fas fa-edit"></i> Editar Nível (ID: ' + data.id + ')';
+            formId.value = data.id;
+            formOrdem.value = data.ordem;
+            formTipo.value = data.tipoid;
+            formDescricao.value = data.descricao;
+            formAtribuicoes.value = data.atribuicoes;
+            formAutonomia.value = data.autonomia;
+            formQuandoUtilizar.value = data.quando;
+            
+            btnSalvar.innerHTML = '<i class="fas fa-check"></i> Atualizar';
+            btnSalvar.classList.remove('btn-primary');
+            btnSalvar.classList.add('btn-info');
+            header.classList.remove('bg-primary');
+            header.classList.add('bg-info');
+            
+            formOrdem.focus();
+        });
+    });
+</script>
+
 </body>
 </html>
