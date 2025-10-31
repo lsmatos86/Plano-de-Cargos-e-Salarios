@@ -35,7 +35,7 @@ $escolaridades = getLookupData($pdo, 'escolaridades', 'escolaridadeId', 'escolar
 // NOVO: Habilidades agrupadas para o OPTGROUP
 $habilidadesAgrupadas = getHabilidadesGrouped($pdo);
 // Lookups simples (ID => Nome) para outros grids
-$habilidades = getLookupData($pdo, 'habilidades', 'habilidadeId', 'habilidadeNome'); 
+$habilidades = getLookupData($pdo, 'habilidades', 'habilidadeId', 'habilidadeNome'); // Lista plana para uso interno
 $caracteristicas = getLookupData($pdo, 'caracteristicas', 'caracteristicaId', 'caracteristicaNome');
 $riscos = getLookupData($pdo, 'riscos', 'riscoId', 'riscoNome'); 
 $cursos = getLookupData($pdo, 'cursos', 'cursoId', 'cursoNome');
@@ -284,6 +284,7 @@ arsort($niveisOrdenados);
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
     <style>
         textarea { resize: vertical; }
@@ -291,17 +292,8 @@ arsort($niveisOrdenados);
         .grid-body tr:last-child td { border-bottom: none; }
         .grid-action-cell { width: 50px; }
         .grid-risco-desc textarea { width: 100%; resize: vertical; min-height: 40px; border: 1px solid #ced4da; padding: 5px; }
-        /* A classe .searchable-select será inicializada pelo Select2 */
-        .searchable-select { width: 100%; } 
-        /* Estilos adicionais para Select2 funcionar melhor com Bootstrap */
-        .select2-container--default .select2-selection--single {
-            border: 1px solid #ced4da;
-            height: 38px;
-            padding: 5px 0 5px 5px;
-        }
-        .select2-container--default .select2-selection--single .select2-selection__arrow {
-            height: 36px;
-        }
+        .table-group-separator { background-color: #e9ecef; }
+        .grid-container { max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; }
     </style>
 </head>
 <body>
@@ -483,7 +475,7 @@ arsort($niveisOrdenados);
                         <select class="form-select searchable-select" id="newAreaId" aria-label="Selecione a Área">
                             <option value="">--- Selecione uma Área ---</option>
                             <?php foreach ($areasAtuacao as $id => $nomeHierarquico): ?>
-                                <option value="<?php echo $id; ?>">
+                                <option value="<?php echo $id; ?>" data-nome="<?php echo htmlspecialchars($nomeHierarquico); ?>">
                                     <?php echo htmlspecialchars($nomeHierarquico); ?>
                                 </option>
                             <?php endforeach; ?>
@@ -500,7 +492,7 @@ arsort($niveisOrdenados);
                         <table class="table table-sm mb-0">
                             <thead>
                                 <tr>
-                                    <th width="30%"></th> <th>Área de Atuação (Hierárquica)</th>
+                                    <th>Área de Atuação (Hierárquica)</th>
                                     <th class="grid-action-cell text-center">Ação</th>
                                 </tr>
                             </thead>
@@ -516,34 +508,14 @@ arsort($niveisOrdenados);
             <div class="tab-pane fade" id="requisitos" role="tabpanel" aria-labelledby="requisitos-tab">
                 
                 <h4 class="mb-3"><i class="fas fa-lightbulb"></i> Habilidades</h4>
-                <div class="row grid-header">
-                    <div class="col-10 mb-3">
-                        <label for="newHabilidadeId" class="form-label">Adicionar Habilidade</label>
-                        <select class="form-select searchable-select" id="newHabilidadeId" aria-label="Selecione a Habilidade">
-                            <option value="">--- Selecione uma Habilidade ---</option>
-                            <?php foreach ($habilidadesAgrupadas as $grupoNome => $habilidadesGrupo): ?>
-                                <optgroup label="<?php echo htmlspecialchars($grupoNome); ?>">
-                                    <?php foreach ($habilidadesGrupo as $id => $nome): ?>
-                                        <option value="<?php echo $id; ?>" data-group="<?php echo htmlspecialchars($grupoNome); ?>">
-                                            <?php echo htmlspecialchars($nome); ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </optgroup>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="col-2 mb-3 d-flex align-items-end">
-                        <button type="button" class="btn btn-primary w-100" id="addHabilidadeBtn">
-                            <i class="fas fa-plus"></i> Add
-                        </button>
-                    </div>
-                </div>
+                <button type="button" class="btn btn-sm btn-outline-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAssociacaoHabilidades">
+                    <i class="fas fa-plus"></i> Adicionar Habilidade
+                </button>
                 <div class="card p-0 mt-2 mb-4">
                     <div class="card-body p-0">
                         <table class="table table-sm mb-0">
                             <thead>
                                 <tr>
-                                    <th width="30%">Tipo</th>
                                     <th>Habilidade</th>
                                     <th class="grid-action-cell text-center">Ação</th>
                                 </tr>
@@ -561,7 +533,7 @@ arsort($niveisOrdenados);
                         <select class="form-select searchable-select" id="newCaracteristicaId" aria-label="Selecione a Característica">
                             <option value="">--- Selecione uma Característica ---</option>
                             <?php foreach ($caracteristicas as $id => $nome): ?>
-                                <option value="<?php echo $id; ?>">
+                                <option value="<?php echo $id; ?>" data-nome="<?php echo htmlspecialchars($nome); ?>">
                                     <?php echo htmlspecialchars($nome); ?>
                                 </option>
                             <?php endforeach; ?>
@@ -578,7 +550,6 @@ arsort($niveisOrdenados);
                         <table class="table table-sm mb-0">
                             <thead>
                                 <tr>
-                                    <th width="30%"></th>
                                     <th>Característica</th>
                                     <th class="grid-action-cell text-center">Ação</th>
                                 </tr>
@@ -596,7 +567,7 @@ arsort($niveisOrdenados);
                         <select class="form-select searchable-select" id="newCursoId" aria-label="Selecione o Curso">
                             <option value="">--- Selecione um Curso ---</option>
                             <?php foreach ($cursos as $id => $nome): ?>
-                                <option value="<?php echo $id; ?>">
+                                <option value="<?php echo $id; ?>" data-nome="<?php echo htmlspecialchars($nome); ?>">
                                     <?php echo htmlspecialchars($nome); ?>
                                 </option>
                             <?php endforeach; ?>
@@ -613,7 +584,6 @@ arsort($niveisOrdenados);
                         <table class="table table-sm mb-0">
                             <thead>
                                 <tr>
-                                    <th width="30%"></th>
                                     <th>Curso</th>
                                     <th class="grid-action-cell text-center">Ação</th>
                                 </tr>
@@ -631,7 +601,7 @@ arsort($niveisOrdenados);
                         <select class="form-select searchable-select" id="newRecursoGrupoId" aria-label="Selecione o Grupo de Recurso">
                             <option value="">--- Selecione um Grupo ---</option>
                             <?php foreach ($recursosGrupos as $id => $nome): ?>
-                                <option value="<?php echo $id; ?>">
+                                <option value="<?php echo $id; ?>" data-nome="<?php echo htmlspecialchars($nome); ?>">
                                     <?php echo htmlspecialchars($nome); ?>
                                 </option>
                             <?php endforeach; ?>
@@ -648,7 +618,6 @@ arsort($niveisOrdenados);
                         <table class="table table-sm mb-0">
                             <thead>
                                 <tr>
-                                    <th width="30%"></th>
                                     <th>Grupo de Recurso</th>
                                     <th class="grid-action-cell text-center">Ação</th>
                                 </tr>
@@ -684,7 +653,7 @@ arsort($niveisOrdenados);
                         <table class="table table-sm mb-0">
                             <thead>
                                 <tr>
-                                    <th width="30%">Tipo</th>
+                                    <th>Tipo</th>
                                     <th>Descrição Específica</th>
                                     <th class="grid-action-cell text-center">Ação</th>
                                 </tr>
@@ -730,6 +699,39 @@ arsort($niveisOrdenados);
     </form>
 </div>
 
+<div class="modal fade" id="modalAssociacaoHabilidades" tabindex="-1" aria-labelledby="modalHabilidadesLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="modalHabilidadesLabel">Adicionar Habilidade (Hard/Soft Skill)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Selecione uma ou mais habilidades (Ctrl/Shift) para incluir na lista do cargo.</p>
+                <div class="mb-3">
+                    <label for="habilidadeSelect" class="form-label">Selecione a Habilidade:</label>
+                    <select class="form-select searchable-select" id="habilidadeSelect" multiple="multiple" size="10" data-placeholder="Buscar Habilidade..." style="width: 100%;">
+                        <option value=""></option>
+                        <?php foreach ($habilidadesAgrupadas as $grupoNome => $habilidadesGrupo): ?>
+                            <optgroup label="<?php echo htmlspecialchars($grupoNome); ?>">
+                                <?php foreach ($habilidadesGrupo as $id => $nome): ?>
+                                    <option value="<?php echo $id; ?>" data-nome="<?php echo htmlspecialchars($nome); ?>" data-tipo="<?php echo htmlspecialchars($grupoNome); ?>">
+                                        <?php echo htmlspecialchars($nome); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </optgroup>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-success" id="btnAssociarHabilidade">Adicionar Selecionados</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
@@ -737,9 +739,8 @@ $(document).ready(function() {
     
     // --- 1. CONFIGURAÇÃO INICIAL E DADOS ---
     
-    // Dados de relacionamento N:M pré-carregados (convertidos para JS)
     var currentData = {
-        habilidades: <?php echo json_encode($cargoHabilidades); ?>,
+        habilidades: <?php echo json_encode($cargoHabilidades); ?>, 
         caracteristicas: <?php echo json_encode($cargoCaracteristicas); ?>,
         cursos: <?php echo json_encode($cargoCursos); ?>,
         recursosGrupos: <?php echo json_encode($cargoRecursosGrupos); ?>,
@@ -747,7 +748,6 @@ $(document).ready(function() {
         areasAtuacao: <?php echo json_encode($cargoAreas); ?>
     };
 
-    // Mapeamento dos nomes para IDs (Lookups simples e hierárquicos)
     var lookups = {
         riscos: <?php echo json_encode($riscos); ?>,
         habilidades: <?php echo json_encode($habilidades); ?>,
@@ -757,7 +757,6 @@ $(document).ready(function() {
         areasAtuacao: <?php echo json_encode($areasAtuacao); ?>
     };
     
-    // Mapeamento explícito de IDs e Nomes de Colunas para Grids Simples
     var simpleGridMaps = {
         'habilidades': {idCol: 'habilidadeId', nameCol: 'habilidadeNome'},
         'caracteristicas': {idCol: 'caracteristicaId', nameCol: 'caracteristicaNome'},
@@ -766,6 +765,8 @@ $(document).ready(function() {
         'areasAtuacao': {idCol: 'areaId', nameCol: 'areaNome'}
     };
     
+    let habilidadesAssociadas = currentData.habilidades; 
+
     // --- 2. FUNÇÕES GENÉRICAS ---
 
     function removeRow(event) {
@@ -773,131 +774,163 @@ $(document).ready(function() {
     }
     
     /**
-     * Adiciona uma linha simples para relacionamentos N:M (apenas ID).
+     * Adiciona uma linha simples para relacionamentos N:M (usada por Áreas, Características, Cursos, Recursos)
+     * AJUSTADO: Removida a lógica de coluna "Tipo" redundante.
      */
     function addSimpleGridRow(entityName, itemId, itemName, groupName = '') {
         var gridBody = document.getElementById(entityName + 'GridBody');
         var map = simpleGridMaps[entityName];
         var inputName = map.idCol + '[]'; 
         
-        // 1. Verifica se o item já foi adicionado
         var existingItem = gridBody.querySelector('tr[data-id="' + itemId + '"]');
         if (existingItem) {
-            return; // Já existe, ignora na inicialização e previne na adição manual.
+            return; 
         }
 
-        // 2. Adiciona a nova linha
         var newRow = gridBody.insertRow();
         newRow.setAttribute('data-id', itemId);
         
-        var tipoCol = '';
-        var nomeCol = '';
-
-        // Lógica para Habilidades (Agrupamento no Grid)
-        if (entityName === 'habilidades') {
-            tipoCol = `<td><strong>${groupName}</strong></td>`;
-            nomeCol = `<td>${itemName} <input type="hidden" name="${inputName}" value="${itemId}"></td>`;
-        } else {
-            // Outras grades simples (ocupam 2 colunas no HTML para alinhar com Habilidades/Riscos)
-            tipoCol = `<td></td>`; // Célula vazia para alinhar
-            nomeCol = `<td colspan="2">${itemName} <input type="hidden" name="${inputName}" value="${itemId}"></td>`;
-        }
+        // Agora apenas 2 colunas: Conteúdo Principal e Ação
         
         newRow.innerHTML = `
-            ${tipoCol}
-            ${nomeCol}
+            <td>
+                ${itemName}
+                <input type="hidden" name="${inputName}" value="${itemId}">
+            </td>
             <td class="text-center grid-action-cell">
                 <button type="button" class="btn btn-sm btn-danger remove-btn"><i class="fas fa-trash-alt"></i></button>
             </td>
         `;
-        // Adiciona evento de remoção
         newRow.querySelector('.remove-btn').addEventListener('click', removeRow);
     }
     
-    // --- 3. GESTÃO DE GRADES SIMPLES (Função de inicialização) ---
+    // --- 3. GESTÃO DA GRADE HABILIDADES (REFEITO COM AGRUPAMENTO E MODAL) ---
 
-    function initSimpleGrid(entityName, data, selectId, buttonId) {
-        var map = simpleGridMaps[entityName];
-        var idCol = map.idCol;
-        var nameCol = map.nameCol;
-        var gridBody = document.getElementById(entityName + 'GridBody');
+    /**
+     * Renderiza o conteúdo do array JS de Habilidades na tabela e insere os inputs ocultos.
+     */
+    const renderHabilidadesGrid = () => {
+        const gridBody = document.getElementById('habilidadesGridBody');
+        let html = '';
         
-        // Inicializa com dados existentes (vindos do PHP)
-        data.forEach(function(item) {
-            var itemId = item[idCol];
-            var itemName;
-            var groupName = '';
-
-            // Mapeamento explícito do nome e grupo (CORRIGIDO)
-            if (entityName === 'areasAtuacao') {
-                 // Usa o nome hierárquico completo do lookup (que é o que está no SELECT)
-                 itemName = lookups.areasAtuacao[itemId] || item.areaNome; 
-                 groupName = 'Área';
-            } else if (entityName === 'habilidades') {
-                itemName = item.habilidadeNome;
-                groupName = item.habilidadeTipo.replace('skill', ' Skill'); // Hard Skill / Soft Skill
-            } else {
-                 itemName = item[nameCol]; // Para Cursos, Caracteristicas, Grupos de Recursos
-            }
+        // 1. Ordena para melhor visualização (por tipo e depois por nome)
+        habilidadesAssociadas.sort((a, b) => {
+            const tipoA = a.habilidadeTipo || 'Outros Tipos';
+            const tipoB = b.habilidadeTipo || 'Outros Tipos';
             
-            // Verifica se o nome existe e faz o mapeamento do lookup
-            if (itemId && itemName) { 
-                 addSimpleGridRow(entityName, itemId, itemName, groupName);
+            if (tipoA.includes('Hard') && !tipoB.includes('Hard')) return -1;
+            if (!tipoA.includes('Hard') && tipoB.includes('Hard')) return 1;
+            
+            return a.habilidadeNome.localeCompare(b.habilidadeNome);
+        }); 
+
+        // 2. Agrupa para inserir separadores
+        const habilidadesAgrupadas = habilidadesAssociadas.reduce((acc, item) => {
+            let tipo = item.habilidadeTipo || 'Outros Tipos'; 
+            if (tipo === 'Hardskill') tipo = 'Hard Skills';
+            if (tipo === 'Softskill') tipo = 'Soft Skills';
+            
+            item.habilidadeTipoDisplay = tipo;
+
+            if (!acc[tipo]) acc[tipo] = [];
+            acc[tipo].push(item);
+            return acc;
+        }, {});
+
+        const gruposOrdenados = ['Hard Skills', 'Soft Skills', 'Outros Tipos']; // Prioridade de exibição
+        
+        gruposOrdenados.forEach(tipo => {
+            const grupoItens = habilidadesAgrupadas[tipo];
+            
+            if (grupoItens && grupoItens.length > 0) {
+                // Insere o separador de grupo
+                html += `
+                    <tr class="table-group-separator">
+                        <td colspan="2" class="fw-bold">
+                            <i class="fas fa-tag me-2"></i> ${tipo}
+                        </td>
+                    </tr>
+                `;
+                
+                // Insere os itens do grupo
+                grupoItens.forEach(item => {
+                    const itemId = item.habilidadeId;
+                    const itemName = item.habilidadeNome;
+
+                    html += `
+                        <tr data-id="${itemId}" data-type="habilidade">
+                            <td>
+                                ${itemName}
+                                <input type="hidden" name="habilidadeId[]" value="${itemId}">
+                            </td>
+                            <td class="text-center grid-action-cell">
+                                <button type="button" class="btn btn-sm btn-danger remove-btn-habilidade" data-id="${itemId}" title="Remover">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
             }
         });
-
-        // Evento de Adicionar
-        document.getElementById(buttonId).addEventListener('click', function() {
-            var select = document.getElementById(selectId);
-            var itemId = select.value;
-            var itemName;
-            var groupName = '';
-            
-            if (!itemId) {
-                 alert('Selecione um item para adicionar.');
-                 return;
-            }
-
-            // Mapeamento do nome de exibição (pega o texto do optgroup se for o caso)
-            var selectedOption = select.options[select.selectedIndex];
-            var optgroupLabel = selectedOption.closest('optgroup')?.label;
-            
-            if (optgroupLabel) {
-                itemName = selectedOption.text;
-                groupName = optgroupLabel; // Usa o label do grupo como tipo
-            } else {
-                itemName = selectedOption.text.replace(/--- Selecione.*---/, '').trim();
-                if (entityName === 'areasAtuacao') {
-                    // Para áreas, usa o nome hierárquico completo do SELECT
-                    itemName = lookups.areasAtuacao[itemId]; 
-                    groupName = 'Área';
-                }
-            }
-            
-            // Checagem de duplicidade no evento de adição
-            var existingItem = gridBody.querySelector('tr[data-id="' + itemId + '"]');
-
-            if (existingItem) {
-                 alert(itemName + ' já foi adicionado.');
-                 return;
-            }
-            
-            addSimpleGridRow(entityName, itemId, itemName, groupName);
-            select.value = ''; // Limpa o select
-            
-            // Força a limpeza do Select2
-            $(select).val(null).trigger('change');
+        
+        gridBody.innerHTML = html;
+        
+        // 3. Adiciona evento de remoção
+        document.querySelectorAll('.remove-btn-habilidade').forEach(button => {
+            button.addEventListener('click', function() {
+                const itemId = parseInt(this.getAttribute('data-id'));
+                habilidadesAssociadas = habilidadesAssociadas.filter(item => item.habilidadeId !== itemId);
+                renderHabilidadesGrid();
+            });
         });
-    }
-
-    // Inicialização de todas as grades simples
-    initSimpleGrid('habilidades', currentData.habilidades, 'newHabilidadeId', 'addHabilidadeBtn');
-    initSimpleGrid('caracteristicas', currentData.caracteristicas, 'newCaracteristicaId', 'addCaracteristicaBtn');
-    initSimpleGrid('cursos', currentData.cursos, 'newCursoId', 'addCursoBtn');
-    initSimpleGrid('recursosGrupos', currentData.recursosGrupos, 'newRecursoGrupoId', 'addRecursoGrupoBtn');
-    initSimpleGrid('areasAtuacao', currentData.areasAtuacao, 'newAreaId', 'addAreaBtn');
+    };
     
-    // --- 4. GESTÃO DA GRADE COMPLEXA (RISCOS) ---
+    // Função para obter dados de opções selecionadas no Select2
+    const getSelectedOptionsData = (selectId) => {
+        const selectedValues = $(`#${selectId}`).val();
+        if (!selectedValues) return [];
+        
+        const data = [];
+        const selectElement = document.getElementById(selectId);
+        
+        const values = Array.isArray(selectedValues) ? selectedValues : [selectedValues];
+        
+        values.forEach(value => {
+            const option = selectElement.querySelector(`option[value="${value}"]`);
+            if (option) {
+                data.push({
+                    habilidadeId: parseInt(value),
+                    habilidadeNome: option.getAttribute('data-nome'),
+                    habilidadeTipo: option.getAttribute('data-tipo') 
+                });
+            }
+        });
+        return data;
+    };
+
+    document.getElementById('btnAssociarHabilidade').onclick = function() {
+        const selectedItems = getSelectedOptionsData('habilidadeSelect');
+        let addedCount = 0;
+
+        selectedItems.forEach(data => {
+            const isDuplicate = habilidadesAssociadas.some(item => item.habilidadeId === data.habilidadeId);
+            
+            if (!isDuplicate) {
+                habilidadesAssociadas.push(data);
+                addedCount++;
+            }
+        });
+
+        if (addedCount > 0) {
+            renderHabilidadesGrid();
+        }
+        $('#habilidadeSelect').val(null).trigger('change');
+        bootstrap.Modal.getInstance(document.getElementById('modalAssociacaoHabilidades')).hide();
+    };
+
+
+    // --- 4. GESTÃO DA GRADE COMPLEXA (RISCOS) (MANTIDA DO GIT) ---
     
     var riscosGridBody = document.getElementById('riscosGridBody');
     var riscoNamesMap = {};
@@ -905,13 +938,9 @@ $(document).ready(function() {
         riscoNamesMap[id] = lookups.riscos[id];
     }
 
-    /**
-     * Adiciona uma linha para o relacionamento Complexo de Riscos.
-     */
     function addRiscoRow(riscoId, riscoNome, descricao) {
         if (!riscoId) return;
 
-        // Verifica se o risco já foi adicionado
         var existingRisco = riscosGridBody.querySelector('tr[data-id="' + riscoId + '"]');
         if (existingRisco) {
             return;
@@ -919,7 +948,7 @@ $(document).ready(function() {
 
         var newRow = riscosGridBody.insertRow();
         newRow.setAttribute('data-id', riscoId);
-        // Usa a textarea para permitir edição direta na grade
+        
         newRow.innerHTML = `
             <td>
                 ${riscoNome}
@@ -935,13 +964,11 @@ $(document).ready(function() {
         newRow.querySelector('.remove-btn').addEventListener('click', removeRow);
     }
     
-    // Carrega Riscos existentes na inicialização
     currentData.riscos.forEach(function(risco) {
         var riscoNome = riscoNamesMap[risco.riscoId] || 'ID Desconhecido';
         addRiscoRow(risco.riscoId, riscoNome, risco.riscoDescricao);
     });
 
-    // Evento de Adicionar Risco
     document.getElementById('addRiscoBtn').addEventListener('click', function() {
         var select = document.getElementById('newRiscoId');
         var inputDesc = document.getElementById('newRiscoDescricao');
@@ -950,25 +977,81 @@ $(document).ready(function() {
         var descricao = inputDesc.value.trim();
 
         if (riscoId) {
-            // A checagem de duplicidade é feita dentro de addRiscoRow
             addRiscoRow(riscoId, riscoNome, descricao);
-            select.value = ''; // Limpa o select
-            inputDesc.value = ''; // Limpa a descrição
+            select.value = ''; 
+            inputDesc.value = ''; 
         } else {
             alert('Selecione um Tipo de Risco.');
         }
         
-        // Força a limpeza do Select2
         $(select).val(null).trigger('change');
     });
 
-    // --- 5. Ativação da primeira aba ---
-    var firstTab = document.querySelector('#basicas-tab');
-    if (firstTab) {
-        new bootstrap.Tab(firstTab).show();
+    // --- 5. INICIALIZAÇÕES FINAIS ---
+
+    function initSimpleGrid(entityName, data, selectId, buttonId) {
+        var map = simpleGridMaps[entityName];
+        var idCol = map.idCol;
+        var nameCol = map.nameCol;
+        var gridBody = document.getElementById(entityName + 'GridBody');
+        
+        data.forEach(function(item) {
+            var itemId = item[idCol];
+            var itemName;
+            var groupName = '';
+
+            if (entityName === 'areasAtuacao') {
+                 itemName = lookups.areasAtuacao[itemId] || item.areaNome; 
+                 groupName = 'Área';
+            } else {
+                 itemName = item[nameCol]; 
+            }
+            
+            if (itemId && itemName) { 
+                 addSimpleGridRow(entityName, itemId, itemName, groupName);
+            }
+        });
+
+        document.getElementById(buttonId).addEventListener('click', function() {
+            var select = document.getElementById(selectId);
+            var itemId = select.value;
+            var itemName;
+            
+            if (!itemId) {
+                 alert('Selecione um item para adicionar.');
+                 return;
+            }
+
+            var selectedOption = select.options[select.selectedIndex];
+            var optgroupLabel = selectedOption.closest('optgroup')?.label;
+            
+            if (optgroupLabel) {
+                itemName = selectedOption.text;
+            } else {
+                itemName = selectedOption.text.replace(/--- Selecione.*---/, '').trim();
+                if (entityName === 'areasAtuacao') {
+                    itemName = lookups.areasAtuacao[itemId]; 
+                }
+            }
+            
+            var existingItem = gridBody.querySelector('tr[data-id="' + itemId + '"]');
+
+            if (existingItem) {
+                 alert(itemName + ' já foi adicionado.');
+                 return;
+            }
+            
+            addSimpleGridRow(entityName, itemId, itemName, '');
+            select.value = ''; 
+            $(select).val(null).trigger('change');
+        });
     }
-    
-    // --- 6. Ativação de Seletor com Busca (Select2) ---
+
+    // Inicialização de todas as grades simples
+    initSimpleGrid('caracteristicas', currentData.caracteristicas, 'newCaracteristicaId', 'addCaracteristicaBtn');
+    initSimpleGrid('cursos', currentData.cursos, 'newCursoId', 'addCursoBtn');
+    initSimpleGrid('recursosGrupos', currentData.recursosGrupos, 'newRecursoGrupoId', 'addRecursoGrupoBtn');
+    initSimpleGrid('areasAtuacao', currentData.areasAtuacao, 'newAreaId', 'addAreaBtn');
     
     if (typeof jQuery !== 'undefined' && typeof $.fn.select2 !== 'undefined') {
         $('.searchable-select').select2({
@@ -977,21 +1060,33 @@ $(document).ready(function() {
             placeholder: "Buscar e selecionar...",
             minimumInputLength: 2, 
             language: {
-                // Ajusta a mensagem de "Digite 2 ou mais caracteres" para Select2 (Requisito)
                 inputTooShort: function(args) {
                     var remainingChars = args.minimum - args.input.length;
                     return "Digite " + remainingChars + " ou mais caracteres para buscar.";
                 }
             },
             templateResult: function (data, container) {
-                // Se for um optgroup (Habilidades), exibe o agrupamento com o nome do item
                 if (data.element && data.element.closest('optgroup')) {
-                    // Adiciona o nome do grupo ao resultado para seletos que usam optgroup
                     return $('<span>' + data.element.closest('optgroup').label + ' > ' + data.text + '</span>');
                 }
                 return data.text;
             }
         });
+
+         $('#modalAssociacaoHabilidades .searchable-select').select2({ 
+            theme: "bootstrap-5", 
+            width: '100%', 
+            placeholder: "Buscar ou selecionar...",
+            dropdownParent: $('#modalAssociacaoHabilidades'),
+            allowClear: true
+        });
+    }
+    
+    renderHabilidadesGrid();
+
+    var firstTab = document.querySelector('#basicas-tab');
+    if (firstTab) {
+        new bootstrap.Tab(firstTab).show();
     }
 });
 </script>
