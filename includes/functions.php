@@ -400,21 +400,23 @@ function getCargoReportData(PDO $pdo, int $cargoId): ?array
 
     try {
         // 1. DADOS BÁSICOS, FAIXA SALARIAL, NÍVEL HIERÁRQUICO e SUPERVISOR (NOVOS JOINS)
+        // CORREÇÃO: Usando JOIN (INNER JOIN) para CBO e ESCOLARIDADES para forçar 
+        // a integridade e retornar null caso a FK não exista.
         $stmt = $pdo->prepare("
             SELECT 
                 c.*, 
                 e.escolaridadeTitulo,
-                b.cboCod, -- AJUSTE: Usando cboCod (antigo cboNome)
+                b.cboCod,
                 b.cboTituloOficial,
                 f.faixaNivel,               
                 f.faixaSalarioMinimo,       
                 f.faixaSalarioMaximo,
-                n.nivelOrdem,                       -- NOVO CAMPO NÍVEL
-                t.tipoNome AS tipoHierarquiaNome,   -- NOVO CAMPO TIPO
-                sup.cargoNome AS cargoSupervisorNome -- NOVO CAMPO SUPERVISOR
+                n.nivelOrdem,                       
+                t.tipoNome AS tipoHierarquiaNome,   
+                sup.cargoNome AS cargoSupervisorNome
             FROM cargos c
-            LEFT JOIN escolaridades e ON e.escolaridadeId = c.escolaridadeId
-            LEFT JOIN cbos b ON b.cboId = c.cboId
+            JOIN escolaridades e ON e.escolaridadeId = c.escolaridadeId  -- CORREÇÃO APLICADA AQUI
+            JOIN cbos b ON b.cboId = c.cboId                             -- CORREÇÃO APLICADA AQUI
             LEFT JOIN faixas_salariais f ON f.faixaId = c.faixaId
             LEFT JOIN nivel_hierarquico n ON n.nivelId = c.nivelHierarquicoId 
             LEFT JOIN tipo_hierarquia t ON t.tipoId = n.tipoId                
@@ -487,7 +489,7 @@ function getCargoReportData(PDO $pdo, int $cargoId): ?array
 
     } catch (Exception $e) {
         // Captura o erro fatal da query principal (se a conexão falhar ou se o SELECT base tiver problema)
-        error_log("Erro fatal na função principal do relatório Cargo ID {$cargoId}: " . $e->getMessage());
+        error_log("Erro FATAL (falha de QUERY/DB) ao carregar Cargo ID {$cargoId}: " . $e->getMessage());
         return null;
     }
 }

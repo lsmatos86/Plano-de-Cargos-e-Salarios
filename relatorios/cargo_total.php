@@ -60,7 +60,7 @@ function renderSingleCargoHtml(array $data, int $current_index, int $total_cargo
         </h1>
         
         <p class="cbo-detail">
-            <strong style="color: #444;">CBO:</strong> <?php echo htmlspecialchars($cargo['cboNome'] ?? 'N/A'); ?> - 
+            <strong style="color: #444;">CBO:</strong> <?php echo htmlspecialchars($cargo['cboCod'] ?? 'N/A'); ?> - 
             <?php echo htmlspecialchars($cargo['cboTituloOficial'] ?? 'Título Oficial Não Disponível'); ?>
         </p>
     

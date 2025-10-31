@@ -94,7 +94,7 @@ ob_start();
     <div class="report-header-final">
         <span class="cargo-nome-principal"><?php echo htmlspecialchars($cargo['cargoNome']); ?></span>
         <p class="cbo-detail">
-            <strong style="color: #444;">CBO:</strong> <?php echo htmlspecialchars($cargo['cboNome'] ?? 'N/A'); ?> - 
+            <strong style="color: #444;">CBO:</strong> <?php echo htmlspecialchars($cargo['cboCod'] ?? 'N/A'); ?> - 
             <?php echo htmlspecialchars($cargo['cboTituloOficial'] ?? 'Título Oficial Não Disponível'); ?>
         </p>
     </div>
