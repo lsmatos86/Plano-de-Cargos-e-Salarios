@@ -61,6 +61,7 @@ $(document).ready(function() {
         const newRow = gridBody.insertRow();
         newRow.setAttribute('data-id', itemId);
         
+        // Adiciona me-1 (margin-end: 1) para separação horizontal dos botões
         const actionHtml = hasEditButton ? 
             `<button type="button" class="btn btn-sm btn-info text-white btn-edit-${entityName} me-1" 
                 data-id="${itemId}" data-bs-toggle="modal" data-bs-target="#modalEdicao${entityName.charAt(0).toUpperCase() + entityName.slice(1)}" title="Visualizar">
