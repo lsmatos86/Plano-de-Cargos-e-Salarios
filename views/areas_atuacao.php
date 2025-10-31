@@ -18,7 +18,7 @@ $id_column = 'areaId';
 $name_column = 'areaNome';
 
 // LÓGICA DE CADASTRO/EDIÇÃO (CREATE/UPDATE) - Simplificada para demonstração
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_GET['action'])) {
     $nome = trim($_POST[$name_column] ?? '');
     $descricao = trim($_POST['areaDescricao'] ?? null);
     $areaPaiId = empty($_POST['areaPaiId']) ? null : (int)$_POST['areaPaiId'];
@@ -31,13 +31,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             if ($id > 0) {
                 // UPDATE
-                $sql = "UPDATE {$table_name} SET {$name_column} = ?, areaDescricao = ?, areaPaiId = ? WHERE {$id_column} = ?";
+                $sql = "UPDATE {$table_name} SET {$name_column} = ?, areaDescricao = ?, areaPaiId = ?, areaDataAtualizacao = CURRENT_TIMESTAMP() WHERE {$id_column} = ?";
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([$nome, $descricao, $areaPaiId, $id]);
                 $message = "Área atualizada com sucesso!";
             } else {
                 // CREATE
-                $sql = "INSERT INTO {$table_name} ({$name_column}, areaDescricao, areaPaiId) VALUES (?, ?, ?)";
+                $sql = "INSERT INTO {$table_name} ({$name_column}, areaDescricao, areaPaiId, areaDataCadastro) VALUES (?, ?, ?, CURRENT_TIMESTAMP())";
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([$nome, $descricao, $areaPaiId]);
                 $message = "Nova Área cadastrada com sucesso!";
@@ -48,6 +48,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message_type = 'danger';
         }
     }
+    // Redireciona para evitar re-submissão do formulário
+    header("Location: areas_atuacao.php?message=" . urlencode($message) . "&type={$message_type}");
+    exit;
 }
 
 // LÓGICA DE EXCLUSÃO (DELETE)
@@ -71,7 +74,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 
 // LÓGICA DE LEITURA E FILTRO (READ All)
 $params = [
-    'term' => $_GET['term'] ?? '',
+    'term' => $_GET['term'] ?? '', // CAPTURA DO TERMO DE BUSCA
     'order_by' => $_GET['order_by'] ?? $id_column,
     'sort_dir' => $_GET['sort_dir'] ?? 'ASC'
 ];
@@ -85,8 +88,10 @@ $sql = "
 ";
 $bindings = [];
 
+// LÓGICA DE BUSCA APLICADA
 if (!empty($params['term'])) {
-    $sql .= " WHERE a.areaNome LIKE ?";
+    $sql .= " WHERE a.areaNome LIKE ? OR a.areaDescricao LIKE ?";
+    $bindings[] = "%{$params['term']}%";
     $bindings[] = "%{$params['term']}%";
 }
 
@@ -215,6 +220,24 @@ if (isset($_GET['message'])) {
         </div>
 
         <div class="col-md-8">
+            <form method="GET" action="areas_atuacao.php" class="mb-3">
+                <div class="input-group">
+                    <input type="text" 
+                           name="term" 
+                           class="form-control" 
+                           placeholder="Buscar por Nome ou Descrição da Área..." 
+                           value="<?php echo htmlspecialchars($params['term']); ?>">
+                    <button class="btn btn-outline-secondary" type="submit">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    <?php if (!empty($params['term'])): ?>
+                        <a href="areas_atuacao.php" class="btn btn-outline-danger" title="Limpar Busca">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    <?php endif; ?>
+                </div>
+            </form>
+            
             <div class="card shadow-sm">
                 <div class="card-header bg-light">
                     <span class="fw-bold">Áreas Cadastradas: </span> <?php echo count($registros); ?>

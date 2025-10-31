@@ -276,7 +276,31 @@ foreach (getLookupData($pdo, 'nivel_hierarquico', 'nivelId', 'nivelOrdem') as $i
     }
 }
 arsort($niveisOrdenados); 
+
+// ----------------------------------------------------
+// 4. PREPARAÇÃO DOS DADOS JS (Global Scope)
+// ----------------------------------------------------
 ?>
+
+<script>
+    const mapToSimpleState = (data) => data.map(item => ({
+        id: item.id ? (isNaN(item.id) ? item.id : parseInt(item.id)) : null,
+        nome: item.nome, 
+        tipo: item.tipo, 
+        descricao: item.descricao, 
+        obrigatorio: item.obrigatorio, 
+        obs: item.obs
+    }));
+
+    // Inicializa as variáveis globais antes de carregar o script externo
+    window.habilidadesAssociadas = mapToSimpleState(<?php echo json_encode($cargoHabilidades); ?>);
+    window.caracteristicasAssociadas = mapToSimpleState(<?php echo json_encode($cargoCaracteristicas); ?>);
+    window.riscosAssociados = mapToSimpleState(<?php echo json_encode($cargoRiscos); ?>);
+    window.cursosAssociados = mapToSimpleState(<?php echo json_encode($cargoCursos); ?>);
+    window.recursosGruposAssociados = mapToSimpleState(<?php echo json_encode($cargoRecursosGrupos); ?>);
+    window.areasAssociadas = mapToSimpleState(<?php echo json_encode($cargoAreas); ?>);
+    window.sinonimosAssociados = mapToSimpleState(<?php echo json_encode($cargoSinonimos); ?>);
+</script>
 
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -318,9 +342,9 @@ arsort($niveisOrdenados);
 <div class="container mt-4 mb-5">
     
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <button class="btn btn-outline-secondary btn-sm" onclick="history.back()">
-            <i class="fas fa-arrow-left"></i> Voltar
-        </button>
+        <a href="cargos.php" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> Voltar para Cargos
+        </a>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="../index.php">Página Inicial</a></li>
@@ -348,9 +372,7 @@ arsort($niveisOrdenados);
             <?php echo $message; ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
-    <?php endif; ?>
-
-    <form method="POST" action="cargos_form.php" id="cargoForm">
+    <?php endif; ?> <form method="POST" action="cargos_form.php" id="cargoForm">
         <input type="hidden" name="cargoId" value="<?php echo htmlspecialchars($currentFormId); ?>">
 
         <ul class="nav nav-tabs" id="cargoTabs" role="tablist">
@@ -859,6 +881,81 @@ arsort($niveisOrdenados);
     </div>
 </div>
 
+<div class="modal fade" id="modalEdicaoHabilidade" tabindex="-1" aria-labelledby="modalEdicaoHabilidadeLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="modalEdicaoHabilidadeLabel">Editar Habilidade: <span id="habilidadeEditNome"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="habilidadeEditId">
+                <div class="mb-3">
+                    <label for="habilidadeEditNomeInput" class="form-label">Nome da Habilidade</label>
+                    <input type="text" class="form-control" id="habilidadeEditNomeInput" readonly>
+                </div>
+                <div class="mb-3">
+                    <label for="habilidadeEditTipo" class="form-label">Tipo da Habilidade</label>
+                    <input type="text" class="form-control" id="habilidadeEditTipo" readonly>
+                </div>
+                <div class="alert alert-warning">
+                    Para trocar a Habilidade, você deve remover a atual e adicionar a nova. Este modal só permite ver os detalhes.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalEdicaoCaracteristica" tabindex="-1" aria-labelledby="modalEdicaoCaracteristicaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="modalEdicaoCaracteristicaLabel">Editar Característica: <span id="caracteristicaEditNome"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="caracteristicaEditId">
+                <div class="mb-3">
+                    <label for="caracteristicaEditNomeInput" class="form-label">Nome da Característica</label>
+                    <input type="text" class="form-control" id="caracteristicaEditNomeInput" readonly>
+                </div>
+                <div class="alert alert-warning">
+                    Para trocar a Característica, você deve remover a atual e adicionar a nova. Este modal só permite ver os detalhes.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalEdicaoRecursoGrupo" tabindex="-1" aria-labelledby="modalEdicaoRecursoGrupoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="modalEdicaoRecursoGrupoLabel">Editar Grupo de Recurso: <span id="recursoGrupoEditNome"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="recursoGrupoEditId">
+                <div class="mb-3">
+                    <label for="recursoGrupoEditNomeInput" class="form-label">Nome do Grupo de Recurso</label>
+                    <input type="text" class="form-control" id="recursoGrupoEditNomeInput" readonly>
+                </div>
+                 <div class="alert alert-warning">
+                    Para trocar o Grupo de Recurso, você deve remover o atual e adicionar o novo. Este modal só permite ver os detalhes.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div class="modal fade" id="modalEdicaoCurso" tabindex="-1" aria-labelledby="modalEdicaoCursoLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -896,20 +993,7 @@ arsort($niveisOrdenados);
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <input type="hidden" id="riscoEditOriginalId"> 
-                
-                <div class="mb-3">
-                    <label for="riscoEditSelect" class="form-label">Tipo de Risco:</label>
-                    <select class="form-select searchable-select" id="riscoEditSelect" data-placeholder="Buscar Risco..." style="width: 100%;">
-                        <option value="">--- Selecione um Risco ---</option>
-                        <?php foreach ($riscos as $id => $nome): ?>
-                            <option value="<?php echo $id; ?>" data-nome="<?php echo htmlspecialchars($nome); ?>">
-                                <?php echo htmlspecialchars($nome); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                
+                <input type="hidden" id="riscoEditId">
                 <div class="mb-3">
                     <label for="riscoEditDescricao" class="form-label">Descrição da Exposição Específica</label>
                     <textarea class="form-control" id="riscoEditDescricao" rows="4" placeholder="Ex: Exposição prolongada ao sol acima de 30ºC e poeira por deslocamentos." required></textarea>
@@ -924,616 +1008,6 @@ arsort($niveisOrdenados);
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-$(document).ready(function() {
-    
-    // --- 1. VARIÁVEIS DE ESTADO (Inicializadas pelo PHP) ---
-    
-    const mapToSimpleState = (data) => data.map(item => ({
-        id: item.id ? (isNaN(item.id) ? item.id : parseInt(item.id)) : null, // Mantém strings se não forem numéricas
-        nome: item.nome, 
-        tipo: item.tipo, 
-        descricao: item.descricao, 
-        obrigatorio: item.obrigatorio, 
-        obs: item.obs
-    }));
-
-    let habilidadesAssociadas = mapToSimpleState(<?php echo json_encode($cargoHabilidades); ?>);
-    let caracteristicasAssociadas = mapToSimpleState(<?php echo json_encode($cargoCaracteristicas); ?>);
-    let riscosAssociados = mapToSimpleState(<?php echo json_encode($cargoRiscos); ?>);
-    let cursosAssociados = mapToSimpleState(<?php echo json_encode($cargoCursos); ?>);
-    let recursosGruposAssociados = mapToSimpleState(<?php echo json_encode($cargoRecursosGrupos); ?>);
-    let areasAssociadas = mapToSimpleState(<?php echo json_encode($cargoAreas); ?>);
-    let sinonimosAssociados = mapToSimpleState(<?php echo json_encode($cargoSinonimos); ?>);
-
-
-    // --- 2. FUNÇÕES GENÉRICAS E MAPAS DE ESTADO ---
-    
-    const entityMaps = {
-        habilidade: habilidadesAssociadas, caracteristica: caracteristicasAssociadas, 
-        risco: riscosAssociados, curso: cursosAssociados, 
-        recursoGrupo: recursosGruposAssociados, area: areasAssociadas,
-        sinonimo: sinonimosAssociados
-    };
-
-    const attachRemoveListeners = (entityName) => {
-        document.querySelectorAll(`[data-entity="${entityName}"]`).forEach(button => {
-            const newButton = button.cloneNode(true);
-            button.parentNode.replaceChild(newButton, button);
-            
-            newButton.addEventListener('click', function() {
-                const itemId = this.getAttribute('data-id');
-                const isNumericId = !isNaN(itemId) && itemId !== null && itemId !== '';
-
-                if (isNumericId) {
-                    entityMaps[entityName] = entityMaps[entityName].filter(item => item.id !== parseInt(itemId));
-                } else {
-                    // Lógica para IDs temporários de Sinônimos
-                    entityMaps[entityName] = entityMaps[entityName].filter(item => {
-                        const tempId = 'new-' + item.nome.replace(/\s/g, '-');
-                        return tempId !== itemId;
-                    });
-                }
-                
-                renderMaps[entityName]();
-            });
-        });
-    };
-    
-    /**
-     * Adiciona um item SIMPLES (ID/Nome) e o input oculto à grade.
-     */
-    const addSimpleGridRow = (gridBodyId, itemId, itemName, inputName) => {
-        const gridBody = document.getElementById(gridBodyId);
-        
-        // Checa por duplicidade
-        const existingItem = gridBody.querySelector(`tr[data-id="${itemId}"]`);
-        if (existingItem) {
-            return;
-        }
-
-        const newRow = gridBody.insertRow();
-        newRow.setAttribute('data-id', itemId);
-        
-        const entityName = inputName.replace('Id', '');
-
-        newRow.innerHTML = `
-            <td>
-                ${itemName}
-                <input type="hidden" name="${inputName}[]" value="${itemId}">
-            </td>
-            <td class="text-center grid-action-cell">
-                <button type="button" class="btn btn-sm btn-danger btn-remove-entity" data-id="${itemId}" data-entity="${entityName}" title="Remover">
-                    <i class="fas fa-trash-alt"></i>
-                </button>
-            </td>
-        `;
-        return newRow;
-    };
-    
-    // --- 3. FUNÇÕES DE RENDERIZAÇÃO DE GRADES ---
-
-    const normalizeTipo = (tipo) => {
-        if (tipo === 'Hardskill' || tipo === 'Hard Skills') return 'Hard Skills';
-        if (tipo === 'Softskill' || tipo === 'Soft Skills') return 'Soft Skills';
-        return 'Outros Tipos';
-    };
-
-    const renderHabilidadesGrid = () => {
-        const gridBody = document.getElementById('habilidadesGridBody');
-        let html = '';
-        
-        habilidadesAssociadas.sort((a, b) => a.nome.localeCompare(b.nome)); 
-
-        const habilidadesAgrupadas = habilidadesAssociadas.reduce((acc, item) => {
-            const tipo = normalizeTipo(item.tipo); 
-            if (!acc[tipo]) acc[tipo] = [];
-            acc[tipo].push(item);
-            return acc;
-        }, {});
-
-        const gruposOrdenados = ['Hard Skills', 'Soft Skills', 'Outros Tipos'];
-        
-        gruposOrdenados.forEach(tipo => {
-            const grupoItens = habilidadesAgrupadas[tipo];
-            
-            if (grupoItens && grupoItens.length > 0) {
-                html += `<tr class="table-group-separator"><td colspan="2" class="fw-bold"><i class="fas fa-tag me-2"></i> ${tipo}</td></tr>`;
-                
-                grupoItens.forEach(item => {
-                    const itemId = item.id;
-                    const itemName = item.nome;
-
-                    html += `
-                        <tr data-id="${itemId}" data-type="habilidade">
-                            <td>
-                                ${itemName}
-                                <input type="hidden" name="habilidadeId[]" value="${itemId}">
-                            </td>
-                            <td class="text-center grid-action-cell">
-                                <button type="button" class="btn btn-sm btn-danger btn-remove-entity" data-id="${itemId}" data-entity="habilidade" title="Remover">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    `;
-                });
-            }
-        });
-        
-        gridBody.innerHTML = html;
-        attachRemoveListeners('habilidade');
-    };
-    
-    const renderCaracteristicasGrid = () => {
-        const gridBody = document.getElementById('caracteristicasGridBody');
-        gridBody.innerHTML = '';
-        caracteristicasAssociadas.forEach(item => {
-            addSimpleGridRow('caracteristicasGridBody', item.id, item.nome, 'caracteristicaId');
-        });
-        attachRemoveListeners('caracteristica');
-    };
-
-    const renderRecursosGruposGrid = () => {
-        const gridBody = document.getElementById('recursosGruposGridBody');
-        gridBody.innerHTML = '';
-        recursosGruposAssociados.forEach(item => {
-            addSimpleGridRow('recursosGruposGridBody', item.id, item.nome, 'recursoGrupoId');
-        });
-        attachRemoveListeners('recursoGrupo');
-    };
-
-    const renderAreasAtuacaoGrid = () => {
-        const gridBody = document.getElementById('areasAtuacaoGridBody');
-        gridBody.innerHTML = '';
-        areasAssociadas.forEach(item => {
-            addSimpleGridRow('areasAtuacaoGridBody', item.id, item.nome, 'areaId');
-        });
-        attachRemoveListeners('area');
-    };
-    
-    const renderRiscosGrid = () => {
-        const gridBody = document.getElementById('riscosGridBody');
-        gridBody.innerHTML = '';
-        
-        riscosAssociados.forEach(item => {
-            const newRow = gridBody.insertRow();
-            newRow.setAttribute('data-id', item.id);
-            
-            const itemDescricao = item.descricao || '';
-            const trimmedDesc = itemDescricao.length > 50 ? itemDescricao.substring(0, 50) + '...' : itemDescricao;
-
-            newRow.innerHTML = `
-                <td>
-                    ${item.nome}
-                    <input type="hidden" name="riscoId[]" value="${item.id}">
-                </td>
-                <td>
-                    <span title="${itemDescricao}">${trimmedDesc}</span>
-                    <input type="hidden" name="riscoDescricao[]" value="${itemDescricao}">
-                </td>
-                <td class="text-center grid-action-cell">
-                    <button type="button" class="btn btn-sm btn-info text-white btn-edit-risco me-1" 
-                        data-id="${item.id}" data-bs-toggle="modal" data-bs-target="#modalEdicaoRisco" title="Editar">
-                        <i class="fas fa-pen"></i>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-danger btn-remove-entity" data-id="${item.id}" data-entity="risco" title="Remover">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
-                </td>
-            `;
-        });
-        attachRemoveListeners('risco');
-        attachEditListeners('risco'); // Anexa listeners para o botão de edição
-    };
-
-    const renderCursosGrid = () => {
-        const gridBody = document.getElementById('cursosGridBody');
-        gridBody.innerHTML = '';
-        
-        cursosAssociados.forEach(item => {
-            const isObrigatorio = item.obrigatorio === true || item.obrigatorio === 1;
-            const badgeClass = isObrigatorio ? 'bg-danger' : 'bg-secondary';
-            
-            const newRow = gridBody.insertRow();
-            newRow.setAttribute('data-id', item.id);
-            
-            const itemObs = item.obs || '';
-            const trimmedObs = itemObs.length > 30 ? itemObs.substring(0, 30) + '...' : itemObs;
-
-            newRow.innerHTML = `
-                <td>
-                    ${item.nome}
-                    <input type="hidden" name="cursoId[]" value="${item.id}">
-                </td>
-                <td>
-                    <span class="badge ${badgeClass}">${isObrigatorio ? 'OBRIGATÓRIO' : 'DESEJÁVEL'}</span>
-                    <small class="d-block text-muted" title="${itemObs}">${trimmedObs}</small>
-                    <input type="hidden" name="cursoCargoObrigatorio[]" value="${isObrigatorio ? 1 : 0}">
-                    <input type="hidden" name="cursoCargoObs[]" value="${item.obs || ''}">
-                </td>
-                <td class="text-center grid-action-cell">
-                    <button type="button" class="btn btn-sm btn-info text-white btn-edit-curso me-1" 
-                        data-id="${item.id}" data-bs-toggle="modal" data-bs-target="#modalEdicaoCurso" title="Editar">
-                        <i class="fas fa-pen"></i>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-danger btn-remove-entity" data-id="${item.id}" data-entity="curso" title="Remover">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
-                </td>
-            `;
-        });
-        attachRemoveListeners('curso');
-        attachEditListeners('curso'); // Anexa listeners para o botão de edição
-    };
-    
-    // SINÔNIMOS
-    const renderSinonimosGrid = () => {
-        const gridBody = document.getElementById('sinonimosGridBody');
-        gridBody.innerHTML = '';
-        
-        sinonimosAssociados.forEach(item => {
-            const itemId = item.id || 'new-' + item.nome.replace(/\s/g, '-'); 
-            const newRow = gridBody.insertRow();
-            newRow.setAttribute('data-id', itemId);
-            
-            newRow.innerHTML = `
-                <td>
-                    ${item.nome}
-                    <input type="hidden" name="sinonimoNome[]" value="${item.nome}">
-                </td>
-                <td class="text-center grid-action-cell">
-                    <button type="button" class="btn btn-sm btn-danger btn-remove-entity" data-id="${itemId}" data-entity="sinonimo" title="Remover">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
-                </td>
-            `;
-        });
-        attachRemoveListeners('sinonimo');
-    };
-
-    const renderMaps = {
-        habilidade: renderHabilidadesGrid, caracteristica: renderCaracteristicasGrid, 
-        risco: renderRiscosGrid, curso: renderCursosGrid, 
-        recursoGrupo: renderRecursosGruposGrid, area: renderAreasAtuacaoGrid,
-        sinonimo: renderSinonimosGrid
-    };
-
-
-    // --- 4. FUNÇÕES DE EDIÇÃO EM MODAL ---
-    
-    const attachEditListeners = (entityName) => {
-        const gridBody = document.getElementById(entityName + 'sGridBody');
-        const selector = entityName === 'curso' ? '.btn-edit-curso' : '.btn-edit-risco';
-        
-        // Remove listeners antigos para evitar execução duplicada
-        gridBody.querySelectorAll(selector).forEach(oldButton => {
-            const newButton = oldButton.cloneNode(true);
-            oldButton.parentNode.replaceChild(newButton, oldButton);
-        });
-
-        // Adiciona listeners novos
-        gridBody.querySelectorAll(selector).forEach(button => {
-            button.addEventListener('click', function(e) {
-                e.preventDefault(); // Adiciona preventDefault para evitar duplo acionamento pelo data-bs-toggle
-                const itemId = parseInt(this.getAttribute('data-id'));
-
-                if (entityName === 'curso') {
-                    setupEditCursoModal(itemId);
-                } else if (entityName === 'risco') {
-                    setupEditRiscoModal(itemId);
-                }
-            });
-        });
-    };
-
-    // 4.1. SETUP MODAL CURSO
-    const setupEditCursoModal = (id) => {
-        const item = cursosAssociados.find(i => i.id === id);
-        if (!item) return;
-
-        $('#cursoEditNome').text(item.nome);
-        $('#cursoEditId').val(item.id);
-        $('#cursoEditObrigatorio').prop('checked', item.obrigatorio === 1 || item.obrigatorio === true);
-        $('#cursoEditObs').val(item.obs || '');
-        
-        // Abre o modal
-        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalEdicaoCurso'));
-        modal.show();
-    };
-
-    // 4.2. SALVAR EDIÇÃO CURSO
-    document.getElementById('btnSalvarEdicaoCurso').onclick = function() {
-        const id = parseInt($('#cursoEditId').val());
-        const isObrigatorio = $('#cursoEditObrigatorio').prop('checked');
-        const obs = $('#cursoEditObs').val().trim();
-
-        const item = cursosAssociados.find(i => i.id === id);
-        if (item) {
-            item.obrigatorio = isObrigatorio ? 1 : 0;
-            item.obs = obs;
-            renderCursosGrid();
-            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalEdicaoCurso')).hide();
-        }
-    };
-    
-    // 4.3. SETUP MODAL RISCO
-    const setupEditRiscoModal = (id) => {
-        const item = riscosAssociados.find(i => i.id === id);
-        if (!item) return;
-
-        // Armazena o ID original, pois o usuário pode alterá-lo no select
-        $('#riscoEditOriginalId').val(item.id); 
-        
-        $('#riscoEditNome').text(item.nome);
-        
-        // Seleciona o risco atual no novo dropdown
-        // O select2 precisa ser inicializado no elemento primeiro, mas como a página
-        // já inicia o .searchable-select, basta setar o valor e forçar o trigger de 'change'
-        $('#riscoEditSelect').val(item.id).trigger('change'); 
-
-        $('#riscoEditDescricao').val(item.descricao || '');
-        
-        // Abre o modal
-        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalEdicaoRisco'));
-        modal.show();
-    };
-    
-    // 4.4. SALVAR EDIÇÃO RISCO (LÓGICA ATUALIZADA PARA PERMITIR MUDAR O TIPO DE RISCO)
-    document.getElementById('btnSalvarEdicaoRisco').onclick = function() {
-        // ID do risco ORIGINAL (o que será removido/substituído)
-        const originalId = parseInt($('#riscoEditOriginalId').val()); 
-        
-        // Novo ID e Nome do risco SELECIONADO
-        const newId = parseInt($('#riscoEditSelect').val()); 
-        const newName = $('#riscoEditSelect option:selected').attr('data-nome'); 
-        
-        const newDescricao = $('#riscoEditDescricao').val().trim();
-        
-        if (isNaN(newId) || newId <= 0 || !newDescricao) {
-            alert('Por favor, selecione um Tipo de Risco e preencha a Descrição Específica.');
-            return;
-        }
-
-        // Checa por duplicidade (Se o novo ID já existe na lista e NÃO é o item original)
-        const isDuplicate = riscosAssociados.some(item => item.id === newId && item.id !== originalId);
-        if (isDuplicate) {
-            alert('O tipo de risco selecionado já está associado a este cargo.');
-            return;
-        }
-        
-        // 1. Remove o item original da lista
-        riscosAssociados = riscosAssociados.filter(item => item.id !== originalId);
-        
-        // 2. Adiciona o novo item (com a nova descrição e possivelmente novo ID)
-        riscosAssociados.push({ id: newId, nome: newName, descricao: newDescricao });
-
-        // 3. Re-renderiza e fecha o modal
-        renderRiscosGrid();
-        
-        // FIX PARA O PROBLEMA DA CAMADA DE BLOQUEIO (BACKDROP)
-        const modalElement = document.getElementById('modalEdicaoRisco');
-        const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
-        
-        if (modalInstance) {
-            modalInstance.hide();
-        }
-        
-        // Medida de segurança (defensiva) para remover o backdrop persistente (comum em conflitos de inicialização)
-        // Usa jQuery (disponível no projeto) para limpar a classe e o backdrop
-        setTimeout(() => {
-            if ($('.modal-backdrop').length) {
-                $('.modal-backdrop').remove();
-            }
-            if ($('body').hasClass('modal-open')) {
-                $('body').removeClass('modal-open');
-                $('body').css('overflow', ''); 
-                $('body').css('padding-right', ''); 
-            }
-        }, 300); // 300ms de delay para garantir que o hide() do Bootstrap terminou a transição
-    };
-
-
-    // --- 5. LISTENERS DE ADIÇÃO (MANTIDOS) ---
-    
-    const getSelectedOptionsData = (selectId) => {
-        const selectedValues = $(`#${selectId}`).val();
-        if (!selectedValues) return [];
-        
-        const data = [];
-        const selectElement = document.getElementById(selectId);
-        const values = Array.isArray(selectedValues) ? selectedValues : [selectedValues];
-        
-        values.forEach(value => {
-            const option = selectElement.querySelector(`option[value="${value}"]`);
-            if (option) {
-                data.push({
-                    id: parseInt(value),
-                    nome: option.getAttribute('data-nome'),
-                    tipo: option.getAttribute('data-tipo')
-                });
-            }
-        });
-        return data;
-    };
-    
-    const handleMultiSelectAssociation = (selectId, stateArray, renderFunction) => {
-        const selectedItems = getSelectedOptionsData(selectId);
-        let addedCount = 0;
-
-        selectedItems.forEach(data => {
-            const isDuplicate = stateArray.some(item => item.id === data.id);
-            if (!isDuplicate) {
-                const newItem = { id: data.id, nome: data.nome, ...(data.tipo && { tipo: data.tipo }) };
-                stateArray.push(newItem);
-                addedCount++;
-            }
-        });
-
-        if (addedCount > 0) {
-            renderFunction();
-        }
-    };
-    
-    document.getElementById('btnAssociarHabilidade').onclick = function() {
-        handleMultiSelectAssociation('habilidadeSelect', habilidadesAssociadas, renderHabilidadesGrid);
-        $('#habilidadeSelect').val(null).trigger('change');
-        // FIX: Usando getOrCreateInstance
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAssociacaoHabilidades')).hide();
-    };
-    
-    document.getElementById('btnAssociarCaracteristica').onclick = function() {
-        handleMultiSelectAssociation('caracteristicaSelect', caracteristicasAssociadas, renderCaracteristicasGrid);
-        $('#caracteristicaSelect').val(null).trigger('change');
-        // FIX: Usando getOrCreateInstance
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAssociacaoCaracteristicas')).hide();
-    };
-
-    document.getElementById('btnAssociarRecursosGrupos').onclick = function() {
-        handleMultiSelectAssociation('recursosGruposSelect', recursosGruposAssociados, renderRecursosGruposGrid);
-        $('#recursosGruposSelect').val(null).trigger('change');
-        // FIX: Usando getOrCreateInstance
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAssociacaoRecursosGrupos')).hide();
-    };
-
-    document.getElementById('btnAssociarAreasAtuacao').onclick = function() {
-        handleMultiSelectAssociation('areasAtuacaoSelect', areasAssociadas, renderAreasAtuacaoGrid);
-        $('#areasAtuacaoSelect').val(null).trigger('change');
-        // FIX: Usando getOrCreateInstance
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAssociacaoAreasAtuacao')).hide();
-    };
-
-    document.getElementById('btnAssociarRisco').onclick = function() {
-        const data = getSelectedOptionsData('riscoSelect')[0];
-        const descricao = document.getElementById('riscoDescricaoInput').value.trim();
-
-        if (data && descricao) {
-            const isDuplicate = riscosAssociados.some(item => item.id === data.id);
-            if (!isDuplicate) {
-                riscosAssociados.push({ id: data.id, nome: data.nome, descricao: descricao });
-                renderRiscosGrid();
-                
-                document.getElementById('riscoDescricaoInput').value = '';
-                $('#riscoSelect').val(null).trigger('change');
-                // FIX: Usando getOrCreateInstance
-                bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAssociacaoRiscos')).hide();
-            } else {
-                alert('Este tipo de risco já foi associado.');
-            }
-        } else {
-            alert('Por favor, selecione um Risco e preencha a Descrição Específica.');
-        }
-    };
-    
-    document.getElementById('btnAssociarCurso').onclick = function() {
-        const selectedItems = getSelectedOptionsData('cursoSelect');
-        const isObrigatorio = document.getElementById('cursoObrigatorioInput').checked;
-        const obs = document.getElementById('cursoObsInput').value.trim();
-        let addedCount = 0;
-
-        selectedItems.forEach(data => {
-            const isDuplicate = cursosAssociados.some(item => item.id === data.id);
-            
-            if (!isDuplicate) {
-                cursosAssociados.push({
-                    id: data.id,
-                    nome: data.nome,
-                    obrigatorio: isObrigatorio ? 1 : 0, 
-                    obs: obs
-                });
-                addedCount++;
-            }
-        });
-
-        if (addedCount > 0) {
-            renderCursosGrid();
-        }
-        
-        document.getElementById('cursoObsInput').value = '';
-        document.getElementById('cursoObrigatorioInput').checked = false;
-        $('#cursoSelect').val(null).trigger('change');
-        // FIX: Usando getOrCreateInstance
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAssociacaoCursos')).hide();
-    };
-    
-    document.getElementById('btnAddSinonimo').onclick = function() {
-        const input = document.getElementById('sinonimoInput');
-        const nome = input.value.trim();
-
-        if (nome) {
-            const isDuplicate = sinonimosAssociados.some(item => item.nome.toLowerCase() === nome.toLowerCase());
-
-            if (!isDuplicate) {
-                sinonimosAssociados.push({ id: null, nome: nome }); 
-                renderSinonimosGrid();
-                input.value = ''; 
-            } else {
-                alert('Sinônimo já adicionado.');
-            }
-        } else {
-            alert('Digite um nome válido.');
-        }
-    };
-
-
-    // --- 6. INICIALIZAÇÃO GERAL ---
-
-    function initSelect2() {
-        $('.searchable-select').select2({
-            theme: "bootstrap-5",
-            width: '100%',
-            placeholder: "Buscar e selecionar...",
-            minimumInputLength: 2, 
-            dropdownParent: $('body'),
-            language: {
-                inputTooShort: (args) => `Digite ${args.minimum - args.input.length} ou mais caracteres para buscar.`,
-            },
-            templateResult: (data, container) => {
-                if (data.element && data.element.closest('optgroup')) {
-                    return $('<span>' + data.element.closest('optgroup').label + ' > ' + data.text + '</span>');
-                }
-                return data.text;
-            }
-        });
-        
-        const initModalSelect2 = (selector, parentId) => {
-             $(selector).select2({ 
-                theme: "bootstrap-5", 
-                width: '100%', 
-                placeholder: "Buscar ou selecionar...",
-                dropdownParent: $(parentId),
-                allowClear: true
-            });
-        };
-        
-        initModalSelect2('#habilidadeSelect', '#modalAssociacaoHabilidades');
-        initModalSelect2('#caracteristicaSelect', '#modalAssociacaoCaracteristicas');
-        // Inicializa o novo campo de edição de risco
-        initModalSelect2('#riscoEditSelect', '#modalEdicaoRisco'); 
-        initModalSelect2('#riscoSelect', '#modalAssociacaoRiscos');
-        initModalSelect2('#cursoSelect', '#modalAssociacaoCursos');
-        initModalSelect2('#recursosGruposSelect', '#modalAssociacaoRecursosGrupos');
-        initModalSelect2('#areasAtuacaoSelect', '#modalAssociacaoAreasAtuacao');
-    }
-    
-    // Renderiza dados existentes
-    renderHabilidadesGrid();
-    renderCaracteristicasGrid();
-    renderRiscosGrid();
-    renderCursosGrid();
-    renderRecursosGruposGrid();
-    renderAreasAtuacaoGrid();
-    renderSinonimosGrid(); 
-    
-    // Executa Select2
-    initSelect2();
-
-    // Ativação da primeira aba
-    var firstTab = document.querySelector('#basicas-tab');
-    if (firstTab) {
-        new bootstrap.Tab(firstTab).show();
-    }
-});
-</script>
+<script src="../scripts/cargos_form.js"></script>
 </body>
 </html>
