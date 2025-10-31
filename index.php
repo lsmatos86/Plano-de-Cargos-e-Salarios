@@ -1,8 +1,13 @@
 <?php
 // Arquivo: index.php (Dashboard de Estatísticas + Menu Organizado)
 
+// 1. Inclusão de arquivos
+require_once 'vendor/autoload.php';
 require_once 'config.php';
-require_once 'includes/functions.php'; 
+require_once 'includes/functions.php'; // Apenas para autenticação
+
+// 2. Importa o Repositório de Lookup
+use App\Repository\LookupRepository;
 
 // Redireciona para o login se o usuário não estiver autenticado (Segurança)
 if (!isUserLoggedIn()) {
@@ -10,33 +15,30 @@ if (!isUserLoggedIn()) {
     exit;
 }
 
-$pdo = getDbConnection();
+// ----------------------------------------------------
+// LÓGICA: Obter Contagens (REFATORADO)
+// ----------------------------------------------------
+
+// Instancia o repositório
+$lookupRepo = new LookupRepository();
+
+// A função local 'countRecords' foi removida.
+// Agora usamos o método do repositório.
+$stats = [
+    'cargos' => $lookupRepo->countRecords('cargos'),
+    'habilidades' => $lookupRepo->countRecords('habilidades'),
+    'caracteristicas' => $lookupRepo->countRecords('caracteristicas'),
+    'riscos' => $lookupRepo->countRecords('riscos'),
+    'usuarios' => $lookupRepo->countRecords('usuarios'),
+    'cursos' => $lookupRepo->countRecords('cursos'),
+    'areas_atuacao' => $lookupRepo->countRecords('areas_atuacao'),
+    'niveis_hierarquia' => $lookupRepo->countRecords('nivel_hierarquico'),
+    'faixas_salariais' => $lookupRepo->countRecords('faixas_salariais'),
+];
+
+// Obtém o nome do usuário da sessão (mantido)
 $username = $_SESSION['username'] ?? 'Usuário';
 
-// ----------------------------------------------------
-// LÓGICA: Obter Contagens (Mantida)
-// ----------------------------------------------------
-function countRecords(PDO $pdo, string $tableName): int {
-    try {
-        $stmt = $pdo->query("SELECT COUNT(*) FROM {$tableName}");
-        return (int)$stmt->fetchColumn();
-    } catch (Exception $e) {
-        return 0;
-    }
-}
-
-// Contagens expandidas para novas tabelas (Assumindo Faixas, Áreas, Tipos, Níveis)
-$stats = [
-    'cargos' => countRecords($pdo, 'cargos'),
-    'habilidades' => countRecords($pdo, 'habilidades'),
-    'caracteristicas' => countRecords($pdo, 'caracteristicas'),
-    'riscos' => countRecords($pdo, 'riscos'),
-    'usuarios' => countRecords($pdo, 'usuarios'),
-    'cursos' => countRecords($pdo, 'cursos'),
-    'areas_atuacao' => countRecords($pdo, 'areas_atuacao'),
-    'niveis_hierarquia' => countRecords($pdo, 'nivel_hierarquico'),
-    'faixas_salariais' => countRecords($pdo, 'faixas_salariais'),
-];
 ?>
 
 <!DOCTYPE html>
@@ -214,7 +216,8 @@ $stats = [
             </div>
         </div>
 
-    </div> </div>
+    </div> 
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
