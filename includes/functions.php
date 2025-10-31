@@ -401,7 +401,7 @@ function getCargoReportData(PDO $pdo, int $cargoId): ?array
     try {
         // 1. DADOS BÁSICOS, FAIXA SALARIAL, NÍVEL HIERÁRQUICO e SUPERVISOR (NOVOS JOINS)
         // CORREÇÃO: Usando JOIN (INNER JOIN) para CBO e ESCOLARIDADES para forçar 
-        // a integridade e retornar null caso a FK não exista.
+        // a integridade e retornar null caso a FK não exista (solução para o erro reportado).
         $stmt = $pdo->prepare("
             SELECT 
                 c.*, 
@@ -415,8 +415,8 @@ function getCargoReportData(PDO $pdo, int $cargoId): ?array
                 t.tipoNome AS tipoHierarquiaNome,   
                 sup.cargoNome AS cargoSupervisorNome
             FROM cargos c
-            JOIN escolaridades e ON e.escolaridadeId = c.escolaridadeId  -- CORREÇÃO APLICADA AQUI
-            JOIN cbos b ON b.cboId = c.cboId                             -- CORREÇÃO APLICADA AQUI
+            JOIN escolaridades e ON e.escolaridadeId = c.escolaridadeId  
+            JOIN cbos b ON b.cboId = c.cboId                             
             LEFT JOIN faixas_salariais f ON f.faixaId = c.faixaId
             LEFT JOIN nivel_hierarquico n ON n.nivelId = c.nivelHierarquicoId 
             LEFT JOIN tipo_hierarquia t ON t.tipoId = n.tipoId                
@@ -504,7 +504,8 @@ function getRiscoIcon(string $riscoNome): string {
         'Químico' => '<i class="fas fa-flask" style="color:#09f;"></i>',
         'Ergonômico' => '<i class="fas fa-chair" style="color:#888;"></i>',
         'Psicossocial' => '<i class="fas fa-brain" style="color:#e66;"></i>',
-        'Acidental' => '<i class="fas fa-exclamation-triangle" style="color:#f00;"></i>'
+        'Acidental' => '<i class="fas fa-exclamation-triangle" style="color:#f00;"></i>',
+        'Biológico' => '<i class="fas fa-biohazard" style="color:#228B22;"></i>' // NOVO RISCO BIOLÓGICO ADICIONADO
     ];
     return $map[$riscoNome] ?? '<i class="fas fa-dot-circle" style="color:#999;"></i>';
 }

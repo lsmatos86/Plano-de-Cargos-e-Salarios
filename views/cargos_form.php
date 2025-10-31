@@ -896,7 +896,20 @@ arsort($niveisOrdenados);
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <input type="hidden" id="riscoEditId">
+                <input type="hidden" id="riscoEditOriginalId"> 
+                
+                <div class="mb-3">
+                    <label for="riscoEditSelect" class="form-label">Tipo de Risco:</label>
+                    <select class="form-select searchable-select" id="riscoEditSelect" data-placeholder="Buscar Risco..." style="width: 100%;">
+                        <option value="">--- Selecione um Risco ---</option>
+                        <?php foreach ($riscos as $id => $nome): ?>
+                            <option value="<?php echo $id; ?>" data-nome="<?php echo htmlspecialchars($nome); ?>">
+                                <?php echo htmlspecialchars($nome); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                
                 <div class="mb-3">
                     <label for="riscoEditDescricao" class="form-label">Descrição da Exposição Específica</label>
                     <textarea class="form-control" id="riscoEditDescricao" rows="4" placeholder="Ex: Exposição prolongada ao sol acima de 30ºC e poeira por deslocamentos." required></textarea>
@@ -1202,7 +1215,7 @@ $(document).ready(function() {
         // Adiciona listeners novos
         gridBody.querySelectorAll(selector).forEach(button => {
             button.addEventListener('click', function(e) {
-                e.preventDefault();
+                e.preventDefault(); // Adiciona preventDefault para evitar duplo acionamento pelo data-bs-toggle
                 const itemId = parseInt(this.getAttribute('data-id'));
 
                 if (entityName === 'curso') {
@@ -1225,7 +1238,7 @@ $(document).ready(function() {
         $('#cursoEditObs').val(item.obs || '');
         
         // Abre o modal
-        const modal = new bootstrap.Modal(document.getElementById('modalEdicaoCurso'));
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalEdicaoCurso'));
         modal.show();
     };
 
@@ -1240,7 +1253,7 @@ $(document).ready(function() {
             item.obrigatorio = isObrigatorio ? 1 : 0;
             item.obs = obs;
             renderCursosGrid();
-            bootstrap.Modal.getInstance(document.getElementById('modalEdicaoCurso')).hide();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalEdicaoCurso')).hide();
         }
     };
     
@@ -1249,30 +1262,75 @@ $(document).ready(function() {
         const item = riscosAssociados.find(i => i.id === id);
         if (!item) return;
 
+        // Armazena o ID original, pois o usuário pode alterá-lo no select
+        $('#riscoEditOriginalId').val(item.id); 
+        
         $('#riscoEditNome').text(item.nome);
-        $('#riscoEditId').val(item.id);
+        
+        // Seleciona o risco atual no novo dropdown
+        // O select2 precisa ser inicializado no elemento primeiro, mas como a página
+        // já inicia o .searchable-select, basta setar o valor e forçar o trigger de 'change'
+        $('#riscoEditSelect').val(item.id).trigger('change'); 
+
         $('#riscoEditDescricao').val(item.descricao || '');
         
         // Abre o modal
-        const modal = new bootstrap.Modal(document.getElementById('modalEdicaoRisco'));
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalEdicaoRisco'));
         modal.show();
     };
     
-    // 4.4. SALVAR EDIÇÃO RISCO
+    // 4.4. SALVAR EDIÇÃO RISCO (LÓGICA ATUALIZADA PARA PERMITIR MUDAR O TIPO DE RISCO)
     document.getElementById('btnSalvarEdicaoRisco').onclick = function() {
-        const id = parseInt($('#riscoEditId').val());
-        const descricao = $('#riscoEditDescricao').val().trim();
-
-        if (descricao) {
-            const item = riscosAssociados.find(i => i.id === id);
-            if (item) {
-                item.descricao = descricao;
-                renderRiscosGrid();
-                bootstrap.Modal.getInstance(document.getElementById('modalEdicaoRisco')).hide();
-            }
-        } else {
-            alert('A descrição do risco é obrigatória.');
+        // ID do risco ORIGINAL (o que será removido/substituído)
+        const originalId = parseInt($('#riscoEditOriginalId').val()); 
+        
+        // Novo ID e Nome do risco SELECIONADO
+        const newId = parseInt($('#riscoEditSelect').val()); 
+        const newName = $('#riscoEditSelect option:selected').attr('data-nome'); 
+        
+        const newDescricao = $('#riscoEditDescricao').val().trim();
+        
+        if (isNaN(newId) || newId <= 0 || !newDescricao) {
+            alert('Por favor, selecione um Tipo de Risco e preencha a Descrição Específica.');
+            return;
         }
+
+        // Checa por duplicidade (Se o novo ID já existe na lista e NÃO é o item original)
+        const isDuplicate = riscosAssociados.some(item => item.id === newId && item.id !== originalId);
+        if (isDuplicate) {
+            alert('O tipo de risco selecionado já está associado a este cargo.');
+            return;
+        }
+        
+        // 1. Remove o item original da lista
+        riscosAssociados = riscosAssociados.filter(item => item.id !== originalId);
+        
+        // 2. Adiciona o novo item (com a nova descrição e possivelmente novo ID)
+        riscosAssociados.push({ id: newId, nome: newName, descricao: newDescricao });
+
+        // 3. Re-renderiza e fecha o modal
+        renderRiscosGrid();
+        
+        // FIX PARA O PROBLEMA DA CAMADA DE BLOQUEIO (BACKDROP)
+        const modalElement = document.getElementById('modalEdicaoRisco');
+        const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
+        
+        if (modalInstance) {
+            modalInstance.hide();
+        }
+        
+        // Medida de segurança (defensiva) para remover o backdrop persistente (comum em conflitos de inicialização)
+        // Usa jQuery (disponível no projeto) para limpar a classe e o backdrop
+        setTimeout(() => {
+            if ($('.modal-backdrop').length) {
+                $('.modal-backdrop').remove();
+            }
+            if ($('body').hasClass('modal-open')) {
+                $('body').removeClass('modal-open');
+                $('body').css('overflow', ''); 
+                $('body').css('padding-right', ''); 
+            }
+        }, 300); // 300ms de delay para garantir que o hide() do Bootstrap terminou a transição
     };
 
 
@@ -1320,25 +1378,29 @@ $(document).ready(function() {
     document.getElementById('btnAssociarHabilidade').onclick = function() {
         handleMultiSelectAssociation('habilidadeSelect', habilidadesAssociadas, renderHabilidadesGrid);
         $('#habilidadeSelect').val(null).trigger('change');
-        bootstrap.Modal.getInstance(document.getElementById('modalAssociacaoHabilidades')).hide();
+        // FIX: Usando getOrCreateInstance
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAssociacaoHabilidades')).hide();
     };
     
     document.getElementById('btnAssociarCaracteristica').onclick = function() {
         handleMultiSelectAssociation('caracteristicaSelect', caracteristicasAssociadas, renderCaracteristicasGrid);
         $('#caracteristicaSelect').val(null).trigger('change');
-        bootstrap.Modal.getInstance(document.getElementById('modalAssociacaoCaracteristicas')).hide();
+        // FIX: Usando getOrCreateInstance
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAssociacaoCaracteristicas')).hide();
     };
 
     document.getElementById('btnAssociarRecursosGrupos').onclick = function() {
         handleMultiSelectAssociation('recursosGruposSelect', recursosGruposAssociados, renderRecursosGruposGrid);
         $('#recursosGruposSelect').val(null).trigger('change');
-        bootstrap.Modal.getInstance(document.getElementById('modalAssociacaoRecursosGrupos')).hide();
+        // FIX: Usando getOrCreateInstance
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAssociacaoRecursosGrupos')).hide();
     };
 
     document.getElementById('btnAssociarAreasAtuacao').onclick = function() {
         handleMultiSelectAssociation('areasAtuacaoSelect', areasAssociadas, renderAreasAtuacaoGrid);
         $('#areasAtuacaoSelect').val(null).trigger('change');
-        bootstrap.Modal.getInstance(document.getElementById('modalAssociacaoAreasAtuacao')).hide();
+        // FIX: Usando getOrCreateInstance
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAssociacaoAreasAtuacao')).hide();
     };
 
     document.getElementById('btnAssociarRisco').onclick = function() {
@@ -1353,7 +1415,8 @@ $(document).ready(function() {
                 
                 document.getElementById('riscoDescricaoInput').value = '';
                 $('#riscoSelect').val(null).trigger('change');
-                bootstrap.Modal.getInstance(document.getElementById('modalAssociacaoRiscos')).hide();
+                // FIX: Usando getOrCreateInstance
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAssociacaoRiscos')).hide();
             } else {
                 alert('Este tipo de risco já foi associado.');
             }
@@ -1389,7 +1452,8 @@ $(document).ready(function() {
         document.getElementById('cursoObsInput').value = '';
         document.getElementById('cursoObrigatorioInput').checked = false;
         $('#cursoSelect').val(null).trigger('change');
-        bootstrap.Modal.getInstance(document.getElementById('modalAssociacaoCursos')).hide();
+        // FIX: Usando getOrCreateInstance
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAssociacaoCursos')).hide();
     };
     
     document.getElementById('btnAddSinonimo').onclick = function() {
@@ -1444,6 +1508,8 @@ $(document).ready(function() {
         
         initModalSelect2('#habilidadeSelect', '#modalAssociacaoHabilidades');
         initModalSelect2('#caracteristicaSelect', '#modalAssociacaoCaracteristicas');
+        // Inicializa o novo campo de edição de risco
+        initModalSelect2('#riscoEditSelect', '#modalEdicaoRisco'); 
         initModalSelect2('#riscoSelect', '#modalAssociacaoRiscos');
         initModalSelect2('#cursoSelect', '#modalAssociacaoCursos');
         initModalSelect2('#recursosGruposSelect', '#modalAssociacaoRecursosGrupos');
