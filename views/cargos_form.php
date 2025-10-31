@@ -1,7 +1,17 @@
 <?php
 // Arquivo: views/cargos_form.php (Formulário de Cadastro e Edição de Cargos)
 
+// 1. Incluir Autoload e Config
+require_once '../vendor/autoload.php';
 require_once '../config.php';
+
+// 2. Importar as classes
+use App\Repository\LookupRepository;
+use App\Repository\HabilidadeRepository;
+use App\Repository\AreaRepository;
+use App\Repository\CargoRepository; // <-- Importa o CargoRepository
+
+// 3. Incluir functions.php (ainda necessário para login e POST)
 require_once '../includes/functions.php';
 
 if (!isUserLoggedIn()) {
@@ -9,7 +19,7 @@ if (!isUserLoggedIn()) {
     exit;
 }
 
-$pdo = getDbConnection();
+$pdo = getDbConnection(); // <-- AINDA NECESSÁRIO para a lógica de POST
 $message = '';
 $message_type = '';
 
@@ -17,34 +27,33 @@ $message_type = '';
 $originalId = (int)($_GET['id'] ?? 0);
 $action = $_GET['action'] ?? '';
 
-// Definindo o modo da página
 $isDuplicating = $action === 'duplicate' && $originalId > 0;
 $isEditing = !$isDuplicating && $originalId > 0;
-
-// O ID que será enviado no formulário (0 para novo/duplicação, ou o ID existente para edição)
 $currentFormId = $isEditing ? $originalId : 0; 
-$cargoId = $originalId; // ID usado para buscar os dados
-
+$cargoId = $originalId; 
 $page_title = $isDuplicating ? 'Duplicar Cargo (Novo Registro)' : ($isEditing ? 'Editar Cargo' : 'Novo Cargo');
 
 // ----------------------------------------------------
-// 1. CARREGAMENTO DOS LOOKUPS MESTRES
+// 1. CARREGAMENTO DOS LOOKUPS MESTRES (REFATORADO no Passo 9)
 // ----------------------------------------------------
-// AJUSTE: Renomeado cboNome para cboCod na chamada da função
-$cbos = getLookupData($pdo, 'cbos', 'cboId', 'cboCod', 'cboTituloOficial'); 
-$escolaridades = getLookupData($pdo, 'escolaridades', 'escolaridadeId', 'escolaridadeTitulo');
-// Habilidades agrupadas e simples (para select e lookup)
-$habilidadesAgrupadas = getHabilidadesGrouped($pdo);
-$habilidades = getLookupData($pdo, 'habilidades', 'habilidadeId', 'habilidadeNome'); 
-$caracteristicas = getLookupData($pdo, 'caracteristicas', 'caracteristicaId', 'caracteristicaNome');
-$riscos = getLookupData($pdo, 'riscos', 'riscoId', 'riscoNome'); 
-$cursos = getLookupData($pdo, 'cursos', 'cursoId', 'cursoNome');
-$recursosGrupos = getLookupData($pdo, 'recursos_grupos', 'recursoGrupoId', 'recursoGrupoNome');
+$lookupRepo = new LookupRepository();
+$habilidadeRepo = new HabilidadeRepository();
+$areaRepo = new AreaRepository();
+$cargoRepo = new CargoRepository(); // <-- Instancia o CargoRepository
 
-// Novos lookups de Hierarquia e Salário
-$faixasSalariais = getLookupData($pdo, 'faixas_salariais', 'faixaId', 'faixaNivel');
-$areasAtuacao = getAreaHierarchyLookup($pdo); 
-$cargosSupervisor = getLookupData($pdo, 'cargos', 'cargoId', 'cargoNome');
+$cbos = $lookupRepo->getLookup('cbos', 'cboId', 'cboCod', 'cboTituloOficial'); 
+$escolaridades = $lookupRepo->getLookup('escolaridades', 'escolaridadeId', 'escolaridadeTitulo');
+$habilidadesAgrupadas = $habilidadeRepo->getGroupedLookup();
+$habilidades = $lookupRepo->getLookup('habilidades', 'habilidadeId', 'habilidadeNome'); 
+$caracteristicas = $lookupRepo->getLookup('caracteristicas', 'caracteristicaId', 'caracteristicaNome');
+$riscos = $lookupRepo->getLookup('riscos', 'riscoId', 'riscoNome'); 
+$cursos = $lookupRepo->getLookup('cursos', 'cursoId', 'cursoNome');
+$recursosGrupos = $lookupRepo->getLookup('recursos_grupos', 'recursoGrupoId', 'recursoGrupoNome');
+$faixasSalariais = $lookupRepo->getLookup('faixas_salariais', 'faixaId', 'faixaNivel');
+$cargosSupervisor = $lookupRepo->getLookup('cargos', 'cargoId', 'cargoNome');
+
+$areasAtuacao = $areaRepo->getHierarchyLookup(); 
+$niveisOrdenados = $lookupRepo->getNivelHierarquicoLookup();
 
 // --- Variáveis de estado do Formulário ---
 $cargo = [];
@@ -58,54 +67,23 @@ $cargoSinonimos = [];
 
 
 // ----------------------------------------------------
-// 2. BUSCA DADOS PARA EDIÇÃO OU DUPLICAÇÃO
+// 2. BUSCA DADOS PARA EDIÇÃO OU DUPLICAÇÃO (REFATORADO - PASSO 10)
 // ----------------------------------------------------
 if ($isEditing || $isDuplicating) {
     try {
-        $stmt = $pdo->prepare("SELECT * FROM cargos WHERE cargoId = ?");
-        $stmt->execute([$cargoId]); 
-        $cargo = $stmt->fetch();
+        // Toda a lógica de busca foi movida para o repositório!
+        $cargoData = $cargoRepo->findFormData($cargoId); 
 
-        if ($cargo) {
-            
-            // SINÔNIMOS (Livre texto)
-            $stmt = $pdo->prepare("SELECT cargoSinonimoId AS id, cargoSinonimoNome AS nome FROM cargo_sinonimos WHERE cargoId = ?");
-            $stmt->execute([$cargoId]);
-            $cargoSinonimos = $stmt->fetchAll(PDO::FETCH_ASSOC); 
-
-            // RISCOS (COMPLEX N:M): Busca ID, Nome, Descricao
-            $stmt = $pdo->prepare("SELECT rc.riscoId AS id, r.riscoNome AS nome, rc.riscoDescricao AS descricao FROM riscos_cargo rc JOIN riscos r ON r.riscoId = rc.riscoId WHERE rc.cargoId = ?");
-            $stmt->execute([$cargoId]);
-            $cargoRiscos = $stmt->fetchAll(PDO::FETCH_ASSOC); 
-            
-            // ÁREAS DE ATUAÇÃO (SIMPLE N:M): Busca ID, Nome
-            $stmt = $pdo->prepare("SELECT ca.areaId AS id, a.areaNome AS nome FROM cargos_area ca JOIN areas_atuacao a ON a.areaId = ca.areaId WHERE ca.cargoId = ?");
-            $stmt->execute([$cargoId]);
-            $cargoAreas = $stmt->fetchAll(PDO::FETCH_ASSOC); 
-            
-            // HABILIDADES (SIMPLE N:M): Busca ID, Nome, Tipo
-            $stmt = $pdo->prepare("SELECT hc.habilidadeId AS id, h.habilidadeNome AS nome, h.habilidadeTipo AS tipo FROM habilidades_cargo hc JOIN habilidades h ON h.habilidadeId = hc.habilidadeId WHERE hc.cargoId = ?");
-            $stmt->execute([$cargoId]);
-            $cargoHabilidades = $stmt->fetchAll(PDO::FETCH_ASSOC); 
-            
-            // CARACTERÍSTICAS (SIMPLE N:M): Busca ID, Nome
-            $stmt = $pdo->prepare("SELECT cc.caracteristicaId AS id, c.caracteristicaNome AS nome FROM caracteristicas_cargo cc JOIN caracteristicas c ON c.caracteristicaId = cc.caracteristicaId WHERE cc.cargoId = ?");
-            $stmt->execute([$cargoId]);
-            $cargoCaracteristicas = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // CURSOS (COMPLEX N:M): Busca ID, Nome, Obrigatório, Observação
-            $stmt = $pdo->prepare("SELECT curc.cursoId AS id, cur.cursoNome AS nome, curc.cursoCargoObrigatorio AS obrigatorio, curc.cursoCargoObs AS obs FROM cursos_cargo curc JOIN cursos cur ON cur.cursoId = curc.cursoId WHERE curc.cargoId = ?");
-            $stmt->execute([$cargoId]);
-            // Converte o campo 'obrigatorio' (0/1) para boolean para o JS
-            $cargoCursos = array_map(function($curso) {
-                $curso['obrigatorio'] = (bool)$curso['obrigatorio'];
-                return $curso;
-            }, $stmt->fetchAll(PDO::FETCH_ASSOC));
-            
-            // GRUPOS DE RECURSOS (SIMPLE N:M): Busca ID, Nome
-            $stmt = $pdo->prepare("SELECT rgc.recursoGrupoId AS id, rg.recursoGrupoNome AS nome FROM recursos_grupos_cargo rgc JOIN recursos_grupos rg ON rg.recursoGrupoId = rgc.recursoGrupoId WHERE rgc.cargoId = ?");
-            $stmt->execute([$cargoId]);
-            $cargoRecursosGrupos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if ($cargoData) {
+            // Preenche as variáveis que o formulário espera
+            $cargo = $cargoData['cargo'];
+            $cargoSinonimos = $cargoData['sinonimos'];
+            $cargoRiscos = $cargoData['riscos'];
+            $cargoAreas = $cargoData['areas'];
+            $cargoHabilidades = $cargoData['habilidades'];
+            $cargoCaracteristicas = $cargoData['caracteristicas'];
+            $cargoCursos = $cargoData['cursos'];
+            $cargoRecursosGrupos = $cargoData['recursos_grupos'];
 
             if ($isDuplicating) {
                 $cargo['cargoNome'] = ($cargo['cargoNome'] ?? 'Cargo Duplicado') . ' (CÓPIA)';
@@ -125,7 +103,7 @@ if ($isEditing || $isDuplicating) {
 
 
 // ----------------------------------------------------
-// 3. LÓGICA DE SALVAMENTO (POST)
+// 3. LÓGICA DE SALVAMENTO (POST) (Ainda procedural - Próximo Passo)
 // ----------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cargoNome'])) {
     
@@ -264,18 +242,6 @@ if (isset($_GET['message'])) {
     $message = htmlspecialchars($_GET['message']);
     $message_type = htmlspecialchars($_GET['type'] ?? 'info');
 }
-
-// Carrega os Níveis Hierárquicos já ordenados (mantido)
-$niveisOrdenados = [];
-foreach (getLookupData($pdo, 'nivel_hierarquico', 'nivelId', 'nivelOrdem') as $id => $ordem) {
-    $stmt = $pdo->prepare("SELECT nivelOrdem, nivelDescricao FROM nivel_hierarquico WHERE nivelId = ?");
-    $stmt->execute([$id]);
-    $nivelData = $stmt->fetch();
-    if ($nivelData) {
-        $niveisOrdenados[$id] = "{$nivelData['nivelOrdem']}º - " . ($nivelData['nivelDescricao'] ?? 'N/A');
-    }
-}
-arsort($niveisOrdenados); 
 
 // ----------------------------------------------------
 // 4. PREPARAÇÃO DOS DADOS JS (Global Scope)

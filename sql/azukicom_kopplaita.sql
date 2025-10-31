@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Tempo de geração: 31/10/2025 às 05:25
+-- Tempo de geração: 31/10/2025 às 21:26
 -- Versão do servidor: 10.4.32-MariaDB
 -- Versão do PHP: 8.2.12
 
@@ -233,7 +233,10 @@ CREATE TABLE `nivel_hierarquico` (
   `nivelOrdem` int(5) NOT NULL,
   `nivelDescricao` varchar(100) DEFAULT NULL,
   `nivelDataCadastro` timestamp NOT NULL DEFAULT current_timestamp(),
-  `nivelDataAtualizacao` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `nivelDataAtualizacao` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `nivelAtribuicoes` text DEFAULT NULL,
+  `nivelAutonomia` text DEFAULT NULL,
+  `nivelQuandoUtilizar` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -309,7 +312,7 @@ CREATE TABLE `recurso_grupo_recurso` (
 
 CREATE TABLE `riscos` (
   `riscoId` int(5) NOT NULL,
-  `riscoNome` enum('Físico','Químico','Ergonômico','Psicossocial','Acidental') NOT NULL
+  `riscoNome` enum('Físico','Químico','Ergonômico','Psicossocial','Acidental','Biológico') NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -336,6 +339,7 @@ CREATE TABLE `riscos_cargo` (
 CREATE TABLE `tipo_hierarquia` (
   `tipoId` int(5) NOT NULL,
   `tipoNome` varchar(64) NOT NULL,
+  `tipoDescricao` varchar(255) DEFAULT NULL,
   `tipoDataCadastro` timestamp NOT NULL DEFAULT current_timestamp(),
   `tipoDataAtualizacao` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -467,7 +471,6 @@ ALTER TABLE `habilidades_cargo`
 --
 ALTER TABLE `nivel_hierarquico`
   ADD PRIMARY KEY (`nivelId`),
-  ADD UNIQUE KEY `uk_nivel_ordem` (`nivelOrdem`),
   ADD KEY `fk_nivel_tipo` (`tipoId`);
 
 --

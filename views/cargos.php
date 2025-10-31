@@ -1,7 +1,14 @@
 <?php
-// Arquivo: views/cargos.php (Listagem e Gerenciamento de Cargos)
+// Arquivo: views/cargos.php (Listagem e Gerenciamento de Cargos - REFATORADO)
 
+// 1. Incluir Autoload e Config
+require_once '../vendor/autoload.php';
 require_once '../config.php';
+
+// 2. Importar as classes
+use App\Repository\CargoRepository;
+
+// 3. Incluir functions.php (ainda necessário para login e getSortDirection)
 require_once '../includes/functions.php';
 
 if (!isUserLoggedIn()) {
@@ -10,33 +17,18 @@ if (!isUserLoggedIn()) {
 }
 
 $page_title = 'Gerenciamento de Cargos';
-$pdo = getDbConnection();
 $message = '';
 $message_type = '';
-$table_name = 'cargos';
-$id_column = 'cargoId';
-$name_column = 'cargoNome';
+$cargoRepo = new CargoRepository(); // Instancia o repositório
 
 // ----------------------------------------------------
-// 1. LÓGICA DE EXCLUSÃO (DELETE)
+// 1. LÓGICA DE EXCLUSÃO (DELETE) - (Já refatorado no passo anterior)
 // ----------------------------------------------------
 if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
     $id = (int)$_GET['id'];
     
     try {
-        $pdo->beginTransaction();
-        
-        // 1. Limpa todas as referências nas tabelas de junção usando a nova função
-        $cleaned = clearCargoRelationships($pdo, $id);
-
-        if (!$cleaned) {
-             throw new Exception("Falha ao limpar relacionamentos N:M.");
-        }
-
-        // 2. Exclui o cargo principal (a função deleteRecord agora valida o nome da tabela)
-        $deleted = deleteRecord($pdo, $table_name, $id_column, $id);
-        
-        $pdo->commit();
+        $deleted = $cargoRepo->delete($id);
         
         if ($deleted) {
             $message = "Cargo ID {$id} excluído com sucesso!";
@@ -47,7 +39,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
         }
 
     } catch (Exception $e) {
-        $pdo->rollBack();
         $message = "Erro fatal ao excluir: " . $e->getMessage();
         $message_type = 'danger';
     }
@@ -58,101 +49,39 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 }
 
 // ----------------------------------------------------
-// 2. LÓGICA DE LEITURA, FILTRO E PAGINAÇÃO (READ All)
+// 2. LÓGICA DE LEITURA, FILTRO E PAGINAÇÃO (READ All) - REFATORADO
 // ----------------------------------------------------
-// 2.1. Configuração da Paginação
-$itemsPerPage = 10;
-$currentPage = (int)($_GET['page'] ?? 1);
-$currentPage = max(1, $currentPage); 
-$offset = ($currentPage - 1) * $itemsPerPage;
 
-// 2.2. Parâmetros de Filtro e Ordenação
+// 2.1. Parâmetros de Filtro e Ordenação
 $params = [
     'term' => $_GET['term'] ?? '',
-    'order_by' => $_GET['order_by'] ?? $id_column,
-    'sort_dir' => $_GET['sort_dir'] ?? 'ASC'
+    'order_by' => $_GET['order_by'] ?? 'c.cargoId',
+    'sort_dir' => $_GET['sort_dir'] ?? 'ASC',
+    'page' => $_GET['page'] ?? 1,
+    'limit' => 10 // Define o limite de itens por página
 ];
 
-$all_bindings = []; 
-$term = "%{$params['term']}%";
-
-// 2.3. Query para Contagem Total (para Paginação)
-$count_sql = "
-    SELECT COUNT(c.cargoId)
-    FROM cargos c
-    LEFT JOIN escolaridades e ON e.escolaridadeId = c.escolaridadeId
-    LEFT JOIN cbos b ON b.cboId = c.cboId
-";
-$count_bindings = [];
-
-if (!empty($params['term'])) {
-    // CORREÇÃO: Usando named parameters para o filtro em COUNT
-    $count_sql .= " WHERE c.cargoNome LIKE :term1 OR c.cargoResumo LIKE :term2 OR b.cboTituloOficial LIKE :term3"; 
-    $count_bindings[':term1'] = $term;
-    $count_bindings[':term2'] = $term;
-    $count_bindings[':term3'] = $term;
-}
-
+// 2.2. Busca os dados usando o Repositório
 try {
-    $count_stmt = $pdo->prepare($count_sql);
-    $count_stmt->execute($count_bindings); 
-    $totalRecords = (int)$count_stmt->fetchColumn();
-} catch (\PDOException $e) {
-    $totalRecords = 0;
-}
+    $result = $cargoRepo->findAllPaginated($params);
+    
+    $registros = $result['data'];
+    $totalRecords = $result['total'];
+    $totalPages = $result['totalPages'];
+    $currentPage = $result['currentPage'];
 
-$totalPages = ceil($totalRecords / $itemsPerPage);
-if ($currentPage > $totalPages && $totalPages > 0) {
-    $currentPage = $totalPages;
-    $offset = ($currentPage - 1) * $itemsPerPage;
-} elseif ($totalRecords === 0) {
-    $currentPage = 1;
-    $offset = 0;
-}
-
-
-// 2.4. Query Principal com JOINs, Filtro, Ordenação e PAGINAÇÃO
-$sql = "
-    SELECT 
-        c.cargoId, c.cargoNome, c.cargoResumo, c.cargoDataAtualizacao,
-        b.cboTituloOficial -- AJUSTE: Buscando o título oficial para exibição
-    FROM cargos c
-    LEFT JOIN escolaridades e ON e.escolaridadeId = c.escolaridadeId
-    LEFT JOIN cbos b ON b.cboId = c.cboId
-";
-
-if (!empty($params['term'])) {
-    // AJUSTE: Filtra também pelo novo campo cboTituloOficial
-    $sql .= " WHERE c.cargoNome LIKE :term1 OR c.cargoResumo LIKE :term2 OR b.cboTituloOficial LIKE :term3";
-    $all_bindings[':term1'] = $term; 
-    $all_bindings[':term2'] = $term;
-    $all_bindings[':term3'] = $term;
-}
-
-// 2.5. Validação de Colunas 
-$validColumns = ['c.cargoId', 'c.cargoNome', 'b.cboTituloOficial', 'c.cargoDataAtualizacao'];
-$orderBy = in_array($params['order_by'], $validColumns) ? $params['order_by'] : 'c.cargoId';
-$sortDir = in_array(strtoupper($params['sort_dir']), ['ASC', 'DESC']) ? $params['sort_dir'] : 'ASC';
-
-$sql .= " ORDER BY {$orderBy} {$sortDir}";
-$sql .= " LIMIT :limit OFFSET :offset"; 
-
-// Adiciona os bindings de paginação ao array unificado
-$all_bindings[':limit'] = $itemsPerPage;
-$all_bindings[':offset'] = $offset;
-
-try {
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($all_bindings); 
-    $registros = $stmt->fetchAll();
-} catch (\PDOException $e) {
+} catch (Exception $e) {
     $registros = [];
-    $message = "Erro ao carregar dados: Verifique a integridade das FKs. Erro: " . $e->getMessage();
+    $totalRecords = 0;
+    $totalPages = 1;
+    $currentPage = 1;
+    $message = "Erro ao carregar dados: " . $e->getMessage();
     $message_type = 'danger';
 }
 
+
 // Verifica e exibe mensagens após redirecionamento
-if (isset($_GET['message'])) {
+if (isset($_GET['message']) && empty($message)) {
     $message = htmlspecialchars($_GET['message']);
     $message_type = htmlspecialchars($_GET['type'] ?? 'info');
 }

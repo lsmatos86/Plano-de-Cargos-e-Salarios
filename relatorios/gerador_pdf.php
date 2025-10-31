@@ -1,18 +1,31 @@
 <?php
-// Arquivo: relatorios/gerador_pdf.php (Layout Rígido para Impressão - FINAL ESTÁVEL)
+// Arquivo: relatorios/gerador_pdf.php (Refatorado)
 
-require_once '../config.php';
-require_once '../includes/functions.php';
-require_once 'pdf_generator.php'; 
+// 1. Inclua o autoload do Composer
+require_once '../vendor/autoload.php';
+require_once '../config.php'; // (Ainda precisamos das constantes de config)
 
-if (!isUserLoggedIn()) {
+// 2. Importe a classe que você quer usar
+use App\Repository\CargoRepository;
+
+// 3. Inclua functions.php APENAS para a autenticação (por enquanto)
+require_once '../includes/functions.php'; 
+require_once 'pdf_generator.php';
+
+if (!isUserLoggedIn()) { // <-- Esta função ainda está em functions.php
     die("Acesso Negado.");
 }
 
-$pdo = getDbConnection();
 $cargo_id = (int)($_GET['id'] ?? 0);
 
-$data = getCargoReportData($pdo, $cargo_id);
+// 4. Use a nova classe!
+try {
+    $cargoRepository = new CargoRepository(); // <-- OOP
+    $data = $cargoRepository->findReportData($cargo_id); // <-- OOP
+
+} catch (\Exception $e) {
+    die("Erro ao gerar relatório: " . $e->getMessage());
+}
 
 if (!$data) {
     die("Erro: Cargo ID {$cargo_id} não encontrado ou dados insuficientes.");

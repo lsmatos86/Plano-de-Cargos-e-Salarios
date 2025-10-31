@@ -1,0 +1,380 @@
+<?php
+// Arquivo: src/Repository/CargoRepository.php
+
+namespace App\Repository;
+
+use App\Core\Database;
+use PDO;
+use Exception; // Importa a classe Exception global
+
+/**
+ * Lida com todas as operações de banco de dados para a entidade Cargo.
+ */
+class CargoRepository
+{
+    private PDO $pdo;
+
+    public function __construct()
+    {
+        $this->pdo = Database::getConnection();
+    }
+
+    /**
+     * NOVO MÉTODO (Passo 11)
+     * Salva (cria ou atualiza) um cargo e todas as suas relações N:M.
+     * (Migrado de views/cargos_form.php)
+     *
+     * @param array $postData Os dados vindo diretamente do $_POST.
+     * @return int O ID do cargo salvo.
+     * @throws Exception Se a validação falhar ou o salvamento falhar.
+     */
+    public function save(array $postData): int
+    {
+        // 1. Captura dos Dados Principais
+        $data = [
+            'cargoNome' => trim($postData['cargoNome'] ?? ''),
+            'cargoDescricao' => trim($postData['cargoDescricao'] ?? null),
+            'cboId' => trim($postData['cboId'] ?? 0),
+            'cargoResumo' => trim($postData['cargoResumo'] ?? null),
+            'escolaridadeId' => (int)($postData['escolaridadeId'] ?? 0),
+            'cargoExperiencia' => trim($postData['cargoExperiencia'] ?? null),
+            'cargoCondicoes' => trim($postData['cargoCondicoes'] ?? null),
+            'cargoComplexidade' => trim($postData['cargoComplexidade'] ?? null),
+            'cargoResponsabilidades' => trim($postData['cargoResponsabilidades'] ?? null),
+            'faixaId' => empty($postData['faixaId']) ? null : (int)$postData['faixaId'],
+            'nivelHierarquicoId' => empty($postData['nivelHierarquicoId']) ? null : (int)$postData['nivelHierarquicoId'],
+            'cargoSupervisorId' => empty($postData['cargoSupervisorId']) ? null : (int)$postData['cargoSupervisorId'],
+        ];
+
+        // 2. Validação (Poderia ser movida para uma classe de Serviço/Validador no futuro)
+        if (empty($data['cargoNome']) || empty($data['cboId']) || $data['escolaridadeId'] <= 0) {
+            throw new Exception("Os campos Nome do Cargo, CBO e Escolaridade são obrigatórios.");
+        }
+
+        // 3. Captura dos Dados de Relacionamento
+        $cargoIdSubmissao = (int)($postData['cargoId'] ?? 0);
+        $isUpdating = $cargoIdSubmissao > 0;
+
+        $relacionamentosSimples = [
+            'cargos_area' => ['coluna' => 'areaId', 'valores' => (array)($postData['areaId'] ?? [])],
+            'habilidades_cargo' => ['coluna' => 'habilidadeId', 'valores' => (array)($postData['habilidadeId'] ?? [])],
+            'caracteristicas_cargo' => ['coluna' => 'caracteristicaId', 'valores' => (array)($postData['caracteristicaId'] ?? [])],
+            'recursos_grupos_cargo' => ['coluna' => 'recursoGrupoId', 'valores' => (array)($postData['recursoGrupoId'] ?? [])],
+        ];
+
+        $riscosInput = [
+            'riscoId' => (array)($postData['riscoId'] ?? []),
+            'riscoDescricao' => (array)($postData['riscoDescricao'] ?? []),
+        ];
+
+        $cursosInput = [
+            'cursoId' => (array)($postData['cursoId'] ?? []),
+            'cursoCargoObrigatorio' => (array)($postData['cursoCargoObrigatorio'] ?? []),
+            'cursoCargoObs' => (array)($postData['cursoCargoObs'] ?? []),
+        ];
+
+        $sinonimosInput = (array)($postData['sinonimoNome'] ?? []);
+
+        // 4. Inicia a Transação
+        $this->pdo->beginTransaction();
+        try {
+            // 5. Salva o Cargo Principal (UPDATE ou CREATE)
+            $fields = array_keys($data);
+            $bindings = array_values($data);
+
+            if ($isUpdating) {
+                $sql_fields = implode(' = ?, ', $fields) . ' = ?';
+                $sql = "UPDATE cargos SET {$sql_fields}, cargoDataAtualizacao = CURRENT_TIMESTAMP() WHERE cargoId = ?";
+                $bindings[] = $cargoIdSubmissao;
+                $stmt = $this->pdo->prepare($sql);
+                $stmt->execute($bindings);
+                $novoCargoId = $cargoIdSubmissao;
+            } else {
+                $sql_fields = implode(', ', $fields);
+                $placeholders = implode(', ', array_fill(0, count($fields), '?'));
+                $sql = "INSERT INTO cargos ({$sql_fields}) VALUES ({$placeholders})";
+                $stmt = $this->pdo->prepare($sql);
+                $stmt->execute($bindings);
+                $novoCargoId = $this->pdo->lastInsertId();
+            }
+
+            // 6. Salva Relacionamentos N:M Simples
+            foreach ($relacionamentosSimples as $tableName => $rel) {
+                $column = $rel['coluna'];
+                $valores = $rel['valores'];
+                $this->pdo->prepare("DELETE FROM {$tableName} WHERE cargoId = ?")->execute([$novoCargoId]);
+                if (!empty($valores)) {
+                    $insert_sql = "INSERT INTO {$tableName} (cargoId, {$column}) VALUES (?, ?)";
+                    $stmt_rel = $this->pdo->prepare($insert_sql);
+                    foreach ($valores as $valorId) {
+                        $stmt_rel->execute([$novoCargoId, $valorId]);
+                    }
+                }
+            }
+
+            // 7. Salva Riscos (Complexo)
+            $this->pdo->prepare("DELETE FROM riscos_cargo WHERE cargoId = ?")->execute([$novoCargoId]);
+            if (!empty($riscosInput['riscoId'])) {
+                $sql_risco = "INSERT INTO riscos_cargo (cargoId, riscoId, riscoDescricao) VALUES (?, ?, ?)";
+                $stmt_risco = $this->pdo->prepare($sql_risco);
+                for ($i = 0; $i < count($riscosInput['riscoId']); $i++) {
+                    $stmt_risco->execute([$novoCargoId, (int)$riscosInput['riscoId'][$i], $riscosInput['riscoDescricao'][$i] ?? '']);
+                }
+            }
+
+            // 8. Salva Cursos (Complexo)
+            $this->pdo->prepare("DELETE FROM cursos_cargo WHERE cargoId = ?")->execute([$novoCargoId]);
+            if (!empty($cursosInput['cursoId'])) {
+                $sql_curso = "INSERT INTO cursos_cargo (cargoId, cursoId, cursoCargoObrigatorio, cursoCargoObs) VALUES (?, ?, ?, ?)";
+                $stmt_curso = $this->pdo->prepare($sql_curso);
+                for ($i = 0; $i < count($cursosInput['cursoId']); $i++) {
+                    $obrigatorio = (int)($cursosInput['cursoCargoObrigatorio'][$i] ?? 0);
+                    $obs = $cursosInput['cursoCargoObs'][$i] ?? '';
+                    $stmt_curso->execute([$novoCargoId, (int)$cursosInput['cursoId'][$i], $obrigatorio, $obs]);
+                }
+            }
+
+            // 9. Salva Sinônimos
+            $this->pdo->prepare("DELETE FROM cargo_sinonimos WHERE cargoId = ?")->execute([$novoCargoId]);
+            if (!empty($sinonimosInput)) {
+                $sql_sin = "INSERT INTO cargo_sinonimos (cargoId, cargoSinonimoNome) VALUES (?, ?)";
+                $stmt_sin = $this->pdo->prepare($sql_sin);
+                foreach ($sinonimosInput as $sinonimoNome) {
+                    $stmt_sin->execute([$novoCargoId, trim($sinonimoNome)]);
+                }
+            }
+
+            // 10. Commita a Transação
+            $this->pdo->commit();
+            return $novoCargoId;
+
+        } catch (Exception $e) {
+            $this->pdo->rollBack();
+            // Propaga a exceção para a View (Controller) tratar
+            throw new Exception("Erro fatal ao salvar no banco: " . $e->getMessage());
+        }
+    }
+
+
+    /**
+     * Busca todos os dados de um cargo e suas relações para popular o formulário.
+     * (Migrado de views/cargos_form.php)
+     */
+    public function findFormData(int $cargoId): ?array
+    {
+        // ... (código do findFormData que já migrámos) ...
+        $data = [
+            'cargo' => null, 'sinonimos' => [], 'riscos' => [], 'areas' => [],
+            'habilidades' => [], 'caracteristicas' => [], 'cursos' => [],
+            'recursos_grupos' => []
+        ];
+        try {
+            // 1. Busca Cargo Principal
+            $stmt = $this->pdo->prepare("SELECT * FROM cargos WHERE cargoId = ?");
+            $stmt->execute([$cargoId]);
+            $cargo = $stmt->fetch();
+            if (!$cargo) return null;
+            $data['cargo'] = $cargo;
+
+            // 2. SINÔNIMOS
+            $stmt = $this->pdo->prepare("SELECT cargoSinonimoId AS id, cargoSinonimoNome AS nome FROM cargo_sinonimos WHERE cargoId = ?");
+            $stmt->execute([$cargoId]);
+            $data['sinonimos'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // 3. RISCOS
+            $stmt = $this->pdo->prepare("SELECT rc.riscoId AS id, r.riscoNome AS nome, rc.riscoDescricao AS descricao FROM riscos_cargo rc JOIN riscos r ON r.riscoId = rc.riscoId WHERE rc.cargoId = ?");
+            $stmt->execute([$cargoId]);
+            $data['riscos'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // 4. ÁREAS
+            $stmt = $this->pdo->prepare("SELECT ca.areaId AS id, a.areaNome AS nome FROM cargos_area ca JOIN areas_atuacao a ON a.areaId = ca.areaId WHERE ca.cargoId = ?");
+            $stmt->execute([$cargoId]);
+            $data['areas'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // 5. HABILIDADES
+            $stmt = $this->pdo->prepare("SELECT hc.habilidadeId AS id, h.habilidadeNome AS nome, h.habilidadeTipo AS tipo FROM habilidades_cargo hc JOIN habilidades h ON h.habilidadeId = hc.habilidadeId WHERE hc.cargoId = ?");
+            $stmt->execute([$cargoId]);
+            $data['habilidades'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // 6. CARACTERÍSTICAS
+            $stmt = $this->pdo->prepare("SELECT cc.caracteristicaId AS id, c.caracteristicaNome AS nome FROM caracteristicas_cargo cc JOIN caracteristicas c ON c.caracteristicaId = cc.caracteristicaId WHERE cc.cargoId = ?");
+            $stmt->execute([$cargoId]);
+            $data['caracteristicas'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // 7. CURSOS
+            $stmt = $this->pdo->prepare("SELECT curc.cursoId AS id, cur.cursoNome AS nome, curc.cursoCargoObrigatorio AS obrigatorio, curc.cursoCargoObs AS obs FROM cursos_cargo curc JOIN cursos cur ON cur.cursoId = curc.cursoId WHERE curc.cargoId = ?");
+            $stmt->execute([$cargoId]);
+            $data['cursos'] = array_map(function ($curso) {
+                $curso['obrigatorio'] = (bool)$curso['obrigatorio'];
+                return $curso;
+            }, $stmt->fetchAll(PDO::FETCH_ASSOC));
+
+            // 8. GRUPOS DE RECURSOS
+            $stmt = $this->pdo->prepare("SELECT rgc.recursoGrupoId AS id, rg.recursoGrupoNome AS nome FROM recursos_grupos_cargo rgc JOIN recursos_grupos rg ON rg.recursoGrupoId = rgc.recursoGrupoId WHERE rgc.cargoId = ?");
+            $stmt->execute([$cargoId]);
+            $data['recursos_grupos'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            return $data;
+        } catch (\PDOException $e) {
+            error_log("Erro ao carregar dados do formulário para o Cargo ID {$cargoId}: " . $e->getMessage());
+            return null;
+        }
+    }
+
+
+    /**
+     * Busca cargos de forma paginada, com filtro e ordenação.
+     * (Migrado de views/cargos.php)
+     */
+    public function findAllPaginated(array $params = []): array
+    {
+        // ... (código do findAllPaginated que já migrámos) ...
+        $itemsPerPage = (int)($params['limit'] ?? 10);
+        $currentPage = (int)($params['page'] ?? 1);
+        $currentPage = max(1, $currentPage); 
+        $term = $params['term'] ?? '';
+        $sqlTerm = "%{$term}%";
+        $all_bindings = [];
+        $count_sql = "SELECT COUNT(c.cargoId) FROM cargos c LEFT JOIN cbos b ON b.cboId = c.cboId";
+        $count_bindings = [];
+        if (!empty($term)) {
+            $count_sql .= " WHERE c.cargoNome LIKE :term1 OR c.cargoResumo LIKE :term2 OR b.cboTituloOficial LIKE :term3";
+            $count_bindings[':term1'] = $sqlTerm;
+            $count_bindings[':term2'] = $sqlTerm;
+            $count_bindings[':term3'] = $sqlTerm;
+        }
+        try {
+            $count_stmt = $this->pdo->prepare($count_sql);
+            $count_stmt->execute($count_bindings);
+            $totalRecords = (int)$count_stmt->fetchColumn();
+        } catch (\PDOException $e) {
+            error_log("Erro ao contar cargos: " . $e->getMessage());
+            $totalRecords = 0;
+        }
+        $totalPages = $totalRecords > 0 ? ceil($totalRecords / $itemsPerPage) : 1;
+        if ($currentPage > $totalPages) {
+            $currentPage = $totalPages;
+        }
+        $offset = ($currentPage - 1) * $itemsPerPage;
+        $sql = "SELECT c.cargoId, c.cargoNome, c.cargoResumo, c.cargoDataAtualizacao, b.cboTituloOficial FROM cargos c LEFT JOIN cbos b ON b.cboId = c.cboId";
+        if (!empty($term)) {
+            $sql .= " WHERE c.cargoNome LIKE :term1 OR c.cargoResumo LIKE :term2 OR b.cboTituloOficial LIKE :term3";
+            $all_bindings[':term1'] = $sqlTerm;
+            $all_bindings[':term2'] = $sqlTerm;
+            $all_bindings[':term3'] = $sqlTerm;
+        }
+        $orderBy = $params['order_by'] ?? 'c.cargoId';
+        $sortDir = $params['sort_dir'] ?? 'ASC';
+        $validColumns = ['c.cargoId', 'c.cargoNome', 'b.cboTituloOficial', 'c.cargoDataAtualizacao'];
+        $orderBy = in_array($orderBy, $validColumns) ? $orderBy : 'c.cargoId';
+        $sortDir = in_array(strtoupper($sortDir), ['ASC', 'DESC']) ? strtoupper($sortDir) : 'ASC';
+        $sql .= " ORDER BY {$orderBy} {$sortDir} LIMIT :limit OFFSET :offset";
+        $all_bindings[':limit'] = $itemsPerPage;
+        $all_bindings[':offset'] = $offset;
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->bindParam(':limit', $all_bindings[':limit'], PDO::PARAM_INT);
+            $stmt->bindParam(':offset', $all_bindings[':offset'], PDO::PARAM_INT);
+            if (!empty($term)) {
+                $stmt->bindParam(':term1', $all_bindings[':term1']);
+                $stmt->bindParam(':term2', $all_bindings[':term2']);
+                $stmt->bindParam(':term3', $all_bindings[':term3']);
+            }
+            $stmt->execute();
+            $registros = $stmt->fetchAll();
+        } catch (\PDOException $e) {
+            error_log("Erro ao buscar cargos: " . $e->getMessage() . " SQL: " . $sql);
+            $registros = [];
+        }
+        return ['data' => $registros, 'total' => $totalRecords, 'totalPages' => $totalPages, 'currentPage' => $currentPage];
+    }
+
+
+    /**
+     * Remove todas as referências de um Cargo em suas tabelas de junção N:M.
+     * (Migrado de clearCargoRelationships em functions.php)
+     */
+    public function clearRelationships(int $cargoId): bool
+    {
+        // ... (código do clearRelationships que já migrámos) ...
+        $joinTables = ['habilidades_cargo', 'caracteristicas_cargo', 'riscos_cargo', 'cargo_sinonimos', 'cursos_cargo', 'recursos_grupos_cargo', 'cargos_area'];
+        $success = true;
+        foreach ($joinTables as $table) {
+            try {
+                $stmt = $this->pdo->prepare("DELETE FROM {$table} WHERE cargoId = ?");
+                $stmt->execute([$cargoId]);
+            } catch (\PDOException $e) {
+                error_log("Falha ao limpar relacionamento N:M na tabela {$table} para Cargo ID {$cargoId}: " . $e->getMessage());
+                $success = false;
+            }
+        }
+        return $success;
+    }
+
+    /**
+     * Exclui um cargo e todas as suas relações.
+     * (Combina a lógica de deleteRecord e a lógica de transação de cargos.php)
+     */
+    public function delete(int $id): int
+    {
+        // ... (código do delete que já migrámos) ...
+        $this->pdo->beginTransaction();
+        try {
+            $cleaned = $this->clearRelationships($id);
+            if (!$cleaned) {
+                throw new \Exception("Falha ao limpar relacionamentos N:M para o Cargo ID {$id}.");
+            }
+            $stmt = $this->pdo->prepare("DELETE FROM cargos WHERE cargoId = ?");
+            $stmt->execute([$id]);
+            $rowCount = $stmt->rowCount();
+            $this->pdo->commit();
+            return $rowCount;
+        } catch (\Exception $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Carrega todos os dados de um cargo para relatórios.
+     * (Este método já foi migrado no passo anterior)
+     */
+    public function findReportData(int $cargoId): ?array
+    {
+        // ... (código do findReportData que já migrámos) ...
+        if ($cargoId <= 0) return null;
+        $data = [];
+        try {
+            $stmt = $this->pdo->prepare("SELECT c.*, e.escolaridadeTitulo, b.cboCod, b.cboTituloOficial, f.faixaNivel, f.faixaSalarioMinimo, f.faixaSalarioMaximo, n.nivelOrdem, t.tipoNome AS tipoHierarquiaNome, sup.cargoNome AS cargoSupervisorNome FROM cargos c JOIN escolaridades e ON e.escolaridadeId = c.escolaridadeId JOIN cbos b ON b.cboId = c.cboId LEFT JOIN faixas_salariais f ON f.faixaId = c.faixaId LEFT JOIN nivel_hierarquico n ON n.nivelId = c.nivelHierarquicoId LEFT JOIN tipo_hierarquia t ON t.tipoId = n.tipoId LEFT JOIN cargos sup ON sup.cargoId = c.cargoSupervisorId WHERE c.cargoId = ?");
+            $stmt->execute([$cargoId]);
+            $cargo = $stmt->fetch();
+            if (!$cargo) return null;
+            $data['cargo'] = $cargo;
+            $stmt_hab = $this->pdo->prepare("SELECT h.habilidadeNome, h.habilidadeTipo, h.habilidadeDescricao FROM habilidades_cargo hc JOIN habilidades h ON h.habilidadeId = hc.habilidadeId WHERE hc.cargoId = ? ORDER BY h.habilidadeTipo DESC, h.habilidadeNome ASC");
+            $stmt_hab->execute([$cargoId]);
+            $data['habilidades'] = $stmt_hab->fetchAll();
+            $stmt_car = $this->pdo->prepare("SELECT c.caracteristicaNome, c.caracteristicaDescricao FROM caracteristicas_cargo cc JOIN caracteristicas c ON c.caracteristicaId = cc.caracteristicaId WHERE cc.cargoId = ? ORDER BY c.caracteristicaNome ASC");
+            $stmt_car->execute([$cargoId]);
+            $data['caracteristicas'] = $stmt_car->fetchAll();
+            $stmt_ris = $this->pdo->prepare("SELECT r.riscoNome, rc.riscoDescricao FROM riscos_cargo rc JOIN riscos r ON r.riscoId = rc.riscoId WHERE rc.cargoId = ? ORDER BY r.riscoNome ASC");
+            $stmt_ris->execute([$cargoId]);
+            $data['riscos'] = $stmt_ris->fetchAll();
+            $stmt_cur = $this->pdo->prepare("SELECT cur.cursoNome, c_c.cursoCargoObrigatorio, c_c.cursoCargoObs FROM cursos_cargo c_c JOIN cursos cur ON cur.cursoId = c_c.cursoId WHERE c_c.cargoId = ? ORDER BY c_c.cursoCargoObrigatorio DESC, cur.cursoNome ASC");
+            $stmt_cur->execute([$cargoId]);
+            $data['cursos'] = $stmt_cur->fetchAll();
+            $stmt_sin = $this->pdo->prepare("SELECT cargoSinonimoNome FROM cargo_sinonimos WHERE cargoId = ?");
+            $stmt_sin->execute([$cargoId]);
+            $data['sinonimos'] = $stmt_sin->fetchAll(PDO::FETCH_COLUMN);
+            $stmt_rec = $this->pdo->prepare("SELECT rg.recursoGrupoNome FROM recursos_grupos_cargo rcg JOIN recursos_grupos rg ON rg.recursoGrupoId = rcg.recursoGrupoId WHERE rcg.cargoId = ? ORDER BY rg.recursoGrupoNome ASC");
+            $stmt_rec->execute([$cargoId]);
+            $data['recursos_grupos'] = $stmt_rec->fetchAll(PDO::FETCH_COLUMN);
+            $stmt_areas = $this->pdo->prepare("SELECT a.areaNome FROM cargos_area ca JOIN areas_atuacao a ON a.areaId = ca.areaId WHERE ca.cargoId = ? ORDER BY a.areaNome ASC");
+            $stmt_areas->execute([$cargoId]);
+            $data['areas_atuacao'] = $stmt_areas->fetchAll(PDO::FETCH_COLUMN);
+            return $data;
+        } catch (\Exception $e) {
+            error_log("Erro FATAL (falha de QUERY/DB) ao carregar Cargo ID {$cargoId}: " . $e->getMessage());
+            return null;
+        }
+    }
+}
