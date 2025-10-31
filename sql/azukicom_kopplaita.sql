@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Tempo de geração: 30/10/2025 às 22:38
+-- Tempo de geração: 31/10/2025 às 02:33
 -- Versão do servidor: 10.4.32-MariaDB
 -- Versão do PHP: 8.2.12
 
@@ -20,6 +20,21 @@ SET time_zone = "+00:00";
 --
 -- Banco de dados: `azukicom_kopplaita`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `areas_atuacao`
+--
+
+CREATE TABLE `areas_atuacao` (
+  `areaId` int(5) NOT NULL,
+  `areaPaiId` int(5) DEFAULT NULL,
+  `areaNome` varchar(100) NOT NULL,
+  `areaDescricao` text DEFAULT NULL,
+  `areaDataCadastro` timestamp NOT NULL DEFAULT current_timestamp(),
+  `areaDataAtualizacao` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -60,12 +75,27 @@ CREATE TABLE `cargos` (
   `cboId` int(5) NOT NULL,
   `cargoResumo` text DEFAULT NULL,
   `escolaridadeId` int(5) NOT NULL,
+  `faixaId` int(5) DEFAULT NULL,
+  `nivelHierarquicoId` int(5) DEFAULT NULL,
+  `cargoSupervisorId` int(5) DEFAULT NULL,
   `cargoExperiencia` text DEFAULT NULL,
   `cargoCondicoes` text DEFAULT NULL,
   `cargoComplexidade` text DEFAULT NULL,
   `cargoResponsabilidades` text DEFAULT NULL,
   `cargoDataCadastro` timestamp NOT NULL DEFAULT current_timestamp(),
   `cargoDataAtualizacao` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `cargos_area`
+--
+
+CREATE TABLE `cargos_area` (
+  `cargoAreaId` int(5) NOT NULL,
+  `cargoId` int(5) NOT NULL,
+  `areaId` int(5) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -139,6 +169,21 @@ CREATE TABLE `escolaridades` (
 -- --------------------------------------------------------
 
 --
+-- Estrutura para tabela `faixas_salariais`
+--
+
+CREATE TABLE `faixas_salariais` (
+  `faixaId` int(5) NOT NULL,
+  `faixaNivel` varchar(64) NOT NULL,
+  `faixaSalarioMinimo` decimal(10,2) DEFAULT NULL,
+  `faixaSalarioMaximo` decimal(10,2) DEFAULT NULL,
+  `faixaDataCadastro` timestamp NOT NULL DEFAULT current_timestamp(),
+  `faixaDataAtualizacao` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Estrutura para tabela `familia_cbo`
 --
 
@@ -174,6 +219,21 @@ CREATE TABLE `habilidades_cargo` (
   `habilidadeCargoId` int(5) NOT NULL,
   `cargoId` int(5) NOT NULL,
   `habilidadeId` int(5) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `nivel_hierarquico`
+--
+
+CREATE TABLE `nivel_hierarquico` (
+  `nivelId` int(5) NOT NULL,
+  `tipoId` int(5) NOT NULL,
+  `nivelOrdem` int(5) NOT NULL,
+  `nivelDescricao` varchar(100) DEFAULT NULL,
+  `nivelDataCadastro` timestamp NOT NULL DEFAULT current_timestamp(),
+  `nivelDataAtualizacao` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -270,6 +330,19 @@ CREATE TABLE `riscos_cargo` (
 -- --------------------------------------------------------
 
 --
+-- Estrutura para tabela `tipo_hierarquia`
+--
+
+CREATE TABLE `tipo_hierarquia` (
+  `tipoId` int(5) NOT NULL,
+  `tipoNome` varchar(64) NOT NULL,
+  `tipoDataCadastro` timestamp NOT NULL DEFAULT current_timestamp(),
+  `tipoDataAtualizacao` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Estrutura para tabela `usuarios`
 --
 
@@ -285,6 +358,14 @@ CREATE TABLE `usuarios` (
 --
 -- Índices para tabelas despejadas
 --
+
+--
+-- Índices de tabela `areas_atuacao`
+--
+ALTER TABLE `areas_atuacao`
+  ADD PRIMARY KEY (`areaId`),
+  ADD UNIQUE KEY `areaNome` (`areaNome`),
+  ADD KEY `fk_area_pai` (`areaPaiId`);
 
 --
 -- Índices de tabela `caracteristicas`
@@ -306,7 +387,19 @@ ALTER TABLE `caracteristicas_cargo`
 ALTER TABLE `cargos`
   ADD PRIMARY KEY (`cargoId`),
   ADD KEY `fk_cargos_cbo` (`cboId`),
-  ADD KEY `fk_cargos_escolaridade` (`escolaridadeId`);
+  ADD KEY `fk_cargos_escolaridade` (`escolaridadeId`),
+  ADD KEY `fk_cargos_faixa_salario` (`faixaId`),
+  ADD KEY `fk_cargos_nivel_hierarquico` (`nivelHierarquicoId`),
+  ADD KEY `fk_cargos_supervisor` (`cargoSupervisorId`);
+
+--
+-- Índices de tabela `cargos_area`
+--
+ALTER TABLE `cargos_area`
+  ADD PRIMARY KEY (`cargoAreaId`),
+  ADD UNIQUE KEY `uk_cargo_area` (`cargoId`,`areaId`),
+  ADD KEY `fk_cargos_area_cargo` (`cargoId`),
+  ADD KEY `fk_cargos_area_area` (`areaId`);
 
 --
 -- Índices de tabela `cargo_sinonimos`
@@ -343,6 +436,13 @@ ALTER TABLE `escolaridades`
   ADD PRIMARY KEY (`escolaridadeId`);
 
 --
+-- Índices de tabela `faixas_salariais`
+--
+ALTER TABLE `faixas_salariais`
+  ADD PRIMARY KEY (`faixaId`),
+  ADD UNIQUE KEY `faixaNivel` (`faixaNivel`);
+
+--
 -- Índices de tabela `familia_cbo`
 --
 ALTER TABLE `familia_cbo`
@@ -361,6 +461,14 @@ ALTER TABLE `habilidades_cargo`
   ADD PRIMARY KEY (`habilidadeCargoId`),
   ADD KEY `fk_habilidades_cargo_habilidade` (`habilidadeId`),
   ADD KEY `fk_habilidades_cargo_cargo` (`cargoId`);
+
+--
+-- Índices de tabela `nivel_hierarquico`
+--
+ALTER TABLE `nivel_hierarquico`
+  ADD PRIMARY KEY (`nivelId`),
+  ADD UNIQUE KEY `uk_nivel_ordem` (`nivelOrdem`),
+  ADD KEY `fk_nivel_tipo` (`tipoId`);
 
 --
 -- Índices de tabela `recursos`
@@ -413,6 +521,13 @@ ALTER TABLE `riscos_cargo`
   ADD KEY `fk_riscos_cargo_cargo` (`cargoId`);
 
 --
+-- Índices de tabela `tipo_hierarquia`
+--
+ALTER TABLE `tipo_hierarquia`
+  ADD PRIMARY KEY (`tipoId`),
+  ADD UNIQUE KEY `tipoNome` (`tipoNome`);
+
+--
 -- Índices de tabela `usuarios`
 --
 ALTER TABLE `usuarios`
@@ -422,6 +537,12 @@ ALTER TABLE `usuarios`
 --
 -- AUTO_INCREMENT para tabelas despejadas
 --
+
+--
+-- AUTO_INCREMENT de tabela `areas_atuacao`
+--
+ALTER TABLE `areas_atuacao`
+  MODIFY `areaId` int(5) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT de tabela `caracteristicas`
@@ -440,6 +561,12 @@ ALTER TABLE `caracteristicas_cargo`
 --
 ALTER TABLE `cargos`
   MODIFY `cargoId` int(5) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT de tabela `cargos_area`
+--
+ALTER TABLE `cargos_area`
+  MODIFY `cargoAreaId` int(5) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT de tabela `cargo_sinonimos`
@@ -472,6 +599,12 @@ ALTER TABLE `escolaridades`
   MODIFY `escolaridadeId` int(5) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT de tabela `faixas_salariais`
+--
+ALTER TABLE `faixas_salariais`
+  MODIFY `faixaId` int(5) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT de tabela `familia_cbo`
 --
 ALTER TABLE `familia_cbo`
@@ -488,6 +621,12 @@ ALTER TABLE `habilidades`
 --
 ALTER TABLE `habilidades_cargo`
   MODIFY `habilidadeCargoId` int(5) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT de tabela `nivel_hierarquico`
+--
+ALTER TABLE `nivel_hierarquico`
+  MODIFY `nivelId` int(5) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT de tabela `recursos`
@@ -532,6 +671,12 @@ ALTER TABLE `riscos_cargo`
   MODIFY `riscoCargoId` int(5) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT de tabela `tipo_hierarquia`
+--
+ALTER TABLE `tipo_hierarquia`
+  MODIFY `tipoId` int(5) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT de tabela `usuarios`
 --
 ALTER TABLE `usuarios`
@@ -540,6 +685,12 @@ ALTER TABLE `usuarios`
 --
 -- Restrições para tabelas despejadas
 --
+
+--
+-- Restrições para tabelas `areas_atuacao`
+--
+ALTER TABLE `areas_atuacao`
+  ADD CONSTRAINT `fk_area_pai` FOREIGN KEY (`areaPaiId`) REFERENCES `areas_atuacao` (`areaId`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --
 -- Restrições para tabelas `caracteristicas_cargo`
@@ -553,7 +704,17 @@ ALTER TABLE `caracteristicas_cargo`
 --
 ALTER TABLE `cargos`
   ADD CONSTRAINT `fk_cargos_cbo` FOREIGN KEY (`cboId`) REFERENCES `cbos` (`cboId`),
-  ADD CONSTRAINT `fk_cargos_escolaridade` FOREIGN KEY (`escolaridadeId`) REFERENCES `escolaridades` (`escolaridadeId`);
+  ADD CONSTRAINT `fk_cargos_escolaridade` FOREIGN KEY (`escolaridadeId`) REFERENCES `escolaridades` (`escolaridadeId`),
+  ADD CONSTRAINT `fk_cargos_faixa_salario` FOREIGN KEY (`faixaId`) REFERENCES `faixas_salariais` (`faixaId`),
+  ADD CONSTRAINT `fk_cargos_nivel_hierarquico` FOREIGN KEY (`nivelHierarquicoId`) REFERENCES `nivel_hierarquico` (`nivelId`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_cargos_supervisor` FOREIGN KEY (`cargoSupervisorId`) REFERENCES `cargos` (`cargoId`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+--
+-- Restrições para tabelas `cargos_area`
+--
+ALTER TABLE `cargos_area`
+  ADD CONSTRAINT `fk_cargos_area_area` FOREIGN KEY (`areaId`) REFERENCES `areas_atuacao` (`areaId`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_cargos_area_cargo` FOREIGN KEY (`cargoId`) REFERENCES `cargos` (`cargoId`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Restrições para tabelas `cargo_sinonimos`
@@ -580,6 +741,12 @@ ALTER TABLE `cursos_cargo`
 ALTER TABLE `habilidades_cargo`
   ADD CONSTRAINT `fk_habilidades_cargo_cargo` FOREIGN KEY (`cargoId`) REFERENCES `cargos` (`cargoId`),
   ADD CONSTRAINT `fk_habilidades_cargo_habilidade` FOREIGN KEY (`habilidadeId`) REFERENCES `habilidades` (`habilidadeId`);
+
+--
+-- Restrições para tabelas `nivel_hierarquico`
+--
+ALTER TABLE `nivel_hierarquico`
+  ADD CONSTRAINT `fk_nivel_tipo` FOREIGN KEY (`tipoId`) REFERENCES `tipo_hierarquia` (`tipoId`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Restrições para tabelas `recursos_cargo`
