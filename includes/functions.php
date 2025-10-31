@@ -7,9 +7,11 @@
 const ALLOWED_TABLES = [
     'cargos', 'escolaridades', 'cbos', 'caracteristicas', 'cursos', 'riscos', 
     'habilidades', 'usuarios', 'familia_cbo', 'recursos', 'recursos_grupos',
-    'faixas_salariais', 'areas_atuacao', 'cargos_area',
-    'tipo_hierarquia',                  // <-- NOVA TABELA
-    'nivel_hierarquico',                // <-- NOVA TABELA
+    'faixas_salariais',             // <-- TABELA NOVA (FAIXAS SALARIAIS)
+    'areas_atuacao',                // <-- TABELA NOVA (ÁREAS)
+    'cargos_area',                  // <-- TABELA NOVA (JUNÇÃO DE CARGOS X ÁREAS)
+    'tipo_hierarquia',              // <-- TABELA NOVA (TIPO HIERÁRQUICO)
+    'nivel_hierarquico',            // <-- TABELA NOVA (NÍVEL HIERÁRQUICO)
     'habilidades_cargo', 'caracteristicas_cargo', 'riscos_cargo', 'cursos_cargo', 
     'cargo_sinonimos', 'recursos_grupos_cargo', 'recurso_grupo_recurso'
 ];
@@ -286,7 +288,7 @@ function getLookupData(PDO $pdo, string $tableName, string $idColumn, string $na
 // ----------------------------------------------------
 /**
  * Retorna as opções válidas para um campo ENUM do MySQL.
- * @param PDO $pdo A conexão PDO ativa.
+ * @param PDO $pdo O conexão PDO ativa.
  * @param string $tableName O nome da tabela.
  * @param string $columnName O nome da coluna ENUM.
  * @return array Uma lista de strings com os valores ENUM.
@@ -304,7 +306,7 @@ function getEnumOptions(PDO $pdo, string $tableName, string $columnName): array
         if (isset($row['Type']) && strpos($row['Type'], 'enum') !== false) {
             $enum_string = $row['Type'];
             $matches = [];
-            preg_match_match_all('/\'([^\']+)\'/', $enum_string, $matches);
+            preg_match_all('/\'([^\']+)\'/', $enum_string, $matches);
             return $matches[1];
         }
     } catch (PDOException $e) {
@@ -413,9 +415,9 @@ function getCargoReportData(PDO $pdo, int $cargoId): ?array
             LEFT JOIN escolaridades e ON e.escolaridadeId = c.escolaridadeId
             LEFT JOIN cbos b ON b.cboId = c.cboId
             LEFT JOIN faixas_salariais f ON f.faixaId = c.faixaId
-            LEFT JOIN nivel_hierarquico n ON n.nivelId = c.nivelHierarquicoId -- NOVO JOIN DE NÍVEL
-            LEFT JOIN tipo_hierarquia t ON t.tipoId = n.tipoId                -- NOVO JOIN DE TIPO
-            LEFT JOIN cargos sup ON sup.cargoId = c.cargoSupervisorId         -- NOVO JOIN DE SUPERVISOR (Autocorrelação)
+            LEFT JOIN nivel_hierarquico n ON n.nivelId = c.nivelHierarquicoId 
+            LEFT JOIN tipo_hierarquia t ON t.tipoId = n.tipoId                
+            LEFT JOIN cargos sup ON sup.cargoId = c.cargoSupervisorId         
             WHERE c.cargoId = ?
         ");
         $stmt->execute([$cargoId]);
@@ -568,4 +570,48 @@ function buildAreaHierarchy(array $flatList, $parentId = null): array
         }
     }
     return $branch;
+}
+
+// ----------------------------------------------------
+// 11. FUNÇÃO AUXILIAR PARA AGRUPAR HABILIDADES (NOVO)
+// ----------------------------------------------------
+
+/**
+ * Retorna as habilidades agrupadas por Hardskill e Softskill.
+ * Usado para popular o SELECT com OPTGROUP.
+ * Assume que a tabela 'habilidades' tem a coluna 'habilidadeTipo'.
+ * @param PDO $pdo A conexão PDO ativa.
+ * @return array Um array aninhado [tipo => [id => nome]]
+ */
+function getHabilidadesGrouped(PDO $pdo): array
+{
+    try {
+        // Busca todas as habilidades, ordenando pelo tipo (DESC para garantir Hardskill primeiro)
+        $stmt = $pdo->query("SELECT habilidadeId, habilidadeNome, habilidadeTipo FROM habilidades ORDER BY habilidadeTipo DESC, habilidadeNome ASC");
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $grouped = [];
+        foreach ($results as $row) {
+            $tipo = $row['habilidadeTipo'];
+            // Se o campo for nulo/vazio, padroniza para "Outros"
+            $tipo = empty($tipo) ? 'Outros' : $tipo; 
+            
+            if (!isset($grouped[$tipo])) {
+                $grouped[$tipo] = [];
+            }
+            $grouped[$tipo][$row['habilidadeId']] = $row['habilidadeNome'];
+        }
+        
+        // Garante a ordem Hard Skills, Soft Skills, Outros
+        $final_grouped = [];
+        if (isset($grouped['Hardskill'])) { $final_grouped['Hard Skills'] = $grouped['Hardskill']; }
+        if (isset($grouped['Softskill'])) { $final_grouped['Soft Skills'] = $grouped['Softskill']; }
+        if (isset($grouped['Outros'])) { $final_grouped['Outros Tipos'] = $grouped['Outros']; }
+        
+        return $final_grouped;
+        
+    } catch (PDOException $e) {
+        error_log("Erro ao buscar habilidades agrupadas: " . $e->getMessage());
+        return [];
+    }
 }
