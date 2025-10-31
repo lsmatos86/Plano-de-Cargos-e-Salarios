@@ -53,11 +53,11 @@ $cargoCaracteristicas = [];
 $cargoRiscos = []; 
 $cargoCursos = [];
 $cargoRecursosGrupos = [];
-$cargoSinonimos = []; // NOVO: Sinônimos
+$cargoSinonimos = [];
 
 
 // ----------------------------------------------------
-// 2. BUSCA DADOS PARA EDIÇÃO OU DUPLICAÇÃO (Adaptado para o novo formato)
+// 2. BUSCA DADOS PARA EDIÇÃO OU DUPLICAÇÃO
 // ----------------------------------------------------
 if ($isEditing || $isDuplicating) {
     try {
@@ -72,7 +72,7 @@ if ($isEditing || $isDuplicating) {
             $stmt->execute([$cargoId]);
             $cargoSinonimos = $stmt->fetchAll(PDO::FETCH_ASSOC); 
 
-            // RISCOS (COMPLEX N:M): Busca ID, Descricao
+            // RISCOS (COMPLEX N:M): Busca ID, Nome, Descricao
             $stmt = $pdo->prepare("SELECT rc.riscoId AS id, r.riscoNome AS nome, rc.riscoDescricao AS descricao FROM riscos_cargo rc JOIN riscos r ON r.riscoId = rc.riscoId WHERE rc.cargoId = ?");
             $stmt->execute([$cargoId]);
             $cargoRiscos = $stmt->fetchAll(PDO::FETCH_ASSOC); 
@@ -134,9 +134,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cargoNome'])) {
     // 3.1 Captura dos Dados Principais (omitido para brevidade)
     $data = [
         'cargoNome' => trim($_POST['cargoNome'] ?? ''), 'cargoDescricao' => trim($_POST['cargoDescricao'] ?? null),
-        'cboId' => (int)($_POST['cboId'] ?? 0), 'cargoResumo' => trim($_POST['cargoResumo'] ?? null),
-        'escolaridadeId' => (int)($_POST['escolaridadeId'] ?? 0), 'cargoExperiencia' => trim($_POST['cargoExperiencia'] ?? null),
-        'cargoCondicoes' => trim($_POST['cargoCondicoes'] ?? null), 'cargoComplexidade' => trim($_POST['cargoComplexidade'] ?? null),
+        'cboId' => trim($_POST['cboId'] ?? 0), // CBO agora é string (XXXX-YY)
+        'cargoResumo' => trim($_POST['cargoResumo'] ?? null),
+        'escolaridadeId' => (int)($_POST['escolaridadeId'] ?? 0), 
+        'cargoExperiencia' => trim($_POST['cargoExperiencia'] ?? null),
+        'cargoCondicoes' => trim($_POST['cargoCondicoes'] ?? null), 
+        'cargoComplexidade' => trim($_POST['cargoComplexidade'] ?? null),
         'cargoResponsabilidades' => trim($_POST['cargoResponsabilidades'] ?? null),
         'faixaId' => empty($_POST['faixaId']) ? null : (int)$_POST['faixaId'],
         'nivelHierarquicoId' => empty($_POST['nivelHierarquicoId']) ? null : (int)$_POST['nivelHierarquicoId'],
@@ -163,9 +166,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cargoNome'])) {
         'cursoCargoObs' => (array)($_POST['cursoCargoObs'] ?? []),
     ];
 
-    $sinonimosInput = (array)($_POST['sinonimoNome'] ?? []); // NOVO: Sinônimos
+    $sinonimosInput = (array)($_POST['sinonimoNome'] ?? []); // Sinônimos
     
-    if (empty($data['cargoNome']) || $data['cboId'] <= 0 || $data['escolaridadeId'] <= 0) {
+    if (empty($data['cargoNome']) || empty($data['cboId']) || $data['escolaridadeId'] <= 0) {
         $message = "Os campos Nome do Cargo, CBO e Escolaridade são obrigatórios.";
         $message_type = 'danger';
         $cargo = array_merge($cargo, $_POST);
@@ -226,7 +229,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cargoNome'])) {
                 }
             }
             
-            // 3.7 SALVAMENTO DOS SINÔNIMOS (NOVO)
+            // 3.7 SALVAMENTO DOS SINÔNIMOS
             $pdo->prepare("DELETE FROM cargo_sinonimos WHERE cargoId = ?")->execute([$novoCargoId]);
             if (!empty($sinonimosInput)) {
                 $sql_sin = "INSERT INTO cargo_sinonimos (cargoId, cargoSinonimoNome) VALUES (?, ?)";
@@ -388,7 +391,7 @@ arsort($niveisOrdenados);
                         <select class="form-select searchable-select" id="cboId" name="cboId" required>
                             <option value="">--- Selecione o CBO ---</option>
                             <?php foreach ($cbos as $id => $nome): ?>
-                                <option value="<?php echo $id; ?>" <?php echo (int)($cargo['cboId'] ?? 0) === (int)$id ? 'selected' : ''; ?>>
+                                <option value="<?php echo $id; ?>" <?php echo (isset($cargo['cboId']) && $cargo['cboId'] == $id) ? 'selected' : ''; ?>>
                                     <?php echo htmlspecialchars($nome); ?>
                                 </option>
                             <?php endforeach; ?>
@@ -859,7 +862,14 @@ $(document).ready(function() {
     
     // --- 1. VARIÁVEIS DE ESTADO (Inicializadas pelo PHP) ---
     
-    const mapToSimpleState = (data) => data.map(item => ({id: item.id ? parseInt(item.id) : null, nome: item.nome, tipo: item.tipo, descricao: item.descricao, obrigatorio: item.obrigatorio, obs: item.obs}));
+    const mapToSimpleState = (data) => data.map(item => ({
+        id: item.id ? (isNaN(item.id) ? item.id : parseInt(item.id)) : null, // Mantém strings se não forem numéricas
+        nome: item.nome, 
+        tipo: item.tipo, 
+        descricao: item.descricao, 
+        obrigatorio: item.obrigatorio, 
+        obs: item.obs
+    }));
 
     let habilidadesAssociadas = mapToSimpleState(<?php echo json_encode($cargoHabilidades); ?>);
     let caracteristicasAssociadas = mapToSimpleState(<?php echo json_encode($cargoCaracteristicas); ?>);
@@ -867,7 +877,7 @@ $(document).ready(function() {
     let cursosAssociados = mapToSimpleState(<?php echo json_encode($cargoCursos); ?>);
     let recursosGruposAssociados = mapToSimpleState(<?php echo json_encode($cargoRecursosGrupos); ?>);
     let areasAssociadas = mapToSimpleState(<?php echo json_encode($cargoAreas); ?>);
-    let sinonimosAssociados = mapToSimpleState(<?php echo json_encode($cargoSinonimos); ?>); // NOVO
+    let sinonimosAssociados = mapToSimpleState(<?php echo json_encode($cargoSinonimos); ?>);
 
 
     // --- 2. FUNÇÕES GENÉRICAS E MAPAS DE ESTADO ---
@@ -886,18 +896,16 @@ $(document).ready(function() {
             
             newButton.addEventListener('click', function() {
                 const itemId = this.getAttribute('data-id');
-                
-                // Se o ID for numérico, usa parseInt. Se for 'new-...', usa o nome
                 const isNumericId = !isNaN(itemId) && itemId !== null && itemId !== '';
 
                 if (isNumericId) {
                     entityMaps[entityName] = entityMaps[entityName].filter(item => item.id !== parseInt(itemId));
                 } else {
-                    // Para Sinônimos (que podem ter IDs temporários baseados no nome)
-                    const itemNome = entityMaps[entityName].find(item => item.id === null && ('new-' + item.nome.replace(/\s/g, '-') === itemId))?.nome;
-                    if (itemNome) {
-                        entityMaps[entityName] = entityMaps[entityName].filter(item => item.nome !== itemNome);
-                    }
+                    // Lógica para IDs temporários de Sinônimos
+                    entityMaps[entityName] = entityMaps[entityName].filter(item => {
+                        const tempId = 'new-' + item.nome.replace(/\s/g, '-');
+                        return tempId !== itemId;
+                    });
                 }
                 
                 renderMaps[entityName]();
@@ -905,9 +913,13 @@ $(document).ready(function() {
         });
     };
     
-    const addSimpleGridRow = (gridBodyId, itemId, itemName, inputName, isComplex = false) => {
+    /**
+     * Adiciona um item SIMPLES (ID/Nome) e o input oculto à grade.
+     */
+    const addSimpleGridRow = (gridBodyId, itemId, itemName, inputName) => {
         const gridBody = document.getElementById(gridBodyId);
         
+        // Checa por duplicidade
         const existingItem = gridBody.querySelector(`tr[data-id="${itemId}"]`);
         if (existingItem) {
             return;
@@ -916,7 +928,6 @@ $(document).ready(function() {
         const newRow = gridBody.insertRow();
         newRow.setAttribute('data-id', itemId);
         
-        // Input Name format
         const entityName = inputName.replace('Id', '');
 
         newRow.innerHTML = `
@@ -1028,7 +1039,7 @@ $(document).ready(function() {
                     <input type="hidden" name="riscoId[]" value="${item.id}">
                 </td>
                 <td>
-                    <textarea name="riscoDescricao[]" placeholder="Descreva a exposição específica" class="form-control form-control-sm" rows="1">${item.descricao}</textarea>
+                    <textarea name="riscoDescricao[]" placeholder="Descreva a exposição específica" class="form-control form-control-sm" rows="1">${item.descricao || ''}</textarea>
                 </td>
                 <td class="text-center grid-action-cell">
                     <button type="button" class="btn btn-sm btn-danger btn-remove-entity" data-id="${item.id}" data-entity="risco" title="Remover">
@@ -1072,7 +1083,7 @@ $(document).ready(function() {
         attachRemoveListeners('curso');
     };
     
-    // 3.7. SINÔNIMOS (NOVO)
+    // SINÔNIMOS
     const renderSinonimosGrid = () => {
         const gridBody = document.getElementById('sinonimosGridBody');
         gridBody.innerHTML = '';
@@ -1108,7 +1119,6 @@ $(document).ready(function() {
 
     // --- 4. LISTENERS DOS MODAIS E INPUTS ---
     
-    // Função auxiliar para obter dados de select2 (usada nos modais)
     const getSelectedOptionsData = (selectId) => {
         const selectedValues = $(`#${selectId}`).val();
         if (!selectedValues) return [];
@@ -1229,7 +1239,7 @@ $(document).ready(function() {
         bootstrap.Modal.getInstance(document.getElementById('modalAssociacaoCursos')).hide();
     };
     
-    // 4.7. SINÔNIMOS (NOVO)
+    // 4.7. SINÔNIMOS
     document.getElementById('btnAddSinonimo').onclick = function() {
         const input = document.getElementById('sinonimoInput');
         const nome = input.value.trim();
@@ -1238,8 +1248,6 @@ $(document).ready(function() {
             const isDuplicate = sinonimosAssociados.some(item => item.nome.toLowerCase() === nome.toLowerCase());
 
             if (!isDuplicate) {
-                // ID temporário para exclusão no frontend (se for um novo item)
-                const tempId = 'new-' + nome.replace(/\s/g, '-'); 
                 sinonimosAssociados.push({ id: null, nome: nome }); 
                 renderSinonimosGrid();
                 input.value = ''; 
@@ -1297,7 +1305,7 @@ $(document).ready(function() {
     renderCursosGrid();
     renderRecursosGruposGrid();
     renderAreasAtuacaoGrid();
-    renderSinonimosGrid(); // NOVO
+    renderSinonimosGrid(); 
     
     // Executa Select2
     initSelect2();

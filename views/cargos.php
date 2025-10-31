@@ -18,7 +18,7 @@ $id_column = 'cargoId';
 $name_column = 'cargoNome';
 
 // ----------------------------------------------------
-// 1. LÓGICA DE EXCLUSÃO (DELETE) - Aprimorada com função de limpeza
+// 1. LÓGICA DE EXCLUSÃO (DELETE)
 // ----------------------------------------------------
 if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
     $id = (int)$_GET['id'];
@@ -58,12 +58,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 }
 
 // ----------------------------------------------------
-// 2. LÓGICA DE LEITURA, FILTRO E PAGINAÇÃO (READ All) - Aprimorada
+// 2. LÓGICA DE LEITURA, FILTRO E PAGINAÇÃO (READ All)
 // ----------------------------------------------------
 // 2.1. Configuração da Paginação
 $itemsPerPage = 10;
 $currentPage = (int)($_GET['page'] ?? 1);
-$currentPage = max(1, $currentPage); // Garante que a página seja no mínimo 1
+$currentPage = max(1, $currentPage); 
 $offset = ($currentPage - 1) * $itemsPerPage;
 
 // 2.2. Parâmetros de Filtro e Ordenação
@@ -72,6 +72,9 @@ $params = [
     'order_by' => $_GET['order_by'] ?? $id_column,
     'sort_dir' => $_GET['sort_dir'] ?? 'ASC'
 ];
+
+$all_bindings = []; 
+$term = "%{$params['term']}%";
 
 // 2.3. Query para Contagem Total (para Paginação)
 $count_sql = "
@@ -83,21 +86,22 @@ $count_sql = "
 $count_bindings = [];
 
 if (!empty($params['term'])) {
-    $count_sql .= " WHERE c.cargoNome LIKE ? OR c.cargoResumo LIKE ?";
-    $count_bindings[] = "%{$params['term']}%";
-    $count_bindings[] = "%{$params['term']}%";
+    // CORREÇÃO: Usando named parameters para o filtro em COUNT
+    $count_sql .= " WHERE c.cargoNome LIKE :term1 OR c.cargoResumo LIKE :term2 OR b.cboTituloOficial LIKE :term3"; 
+    $count_bindings[':term1'] = $term;
+    $count_bindings[':term2'] = $term;
+    $count_bindings[':term3'] = $term;
 }
 
 try {
     $count_stmt = $pdo->prepare($count_sql);
-    $count_stmt->execute($count_bindings);
+    $count_stmt->execute($count_bindings); 
     $totalRecords = (int)$count_stmt->fetchColumn();
 } catch (\PDOException $e) {
     $totalRecords = 0;
 }
 
 $totalPages = ceil($totalRecords / $itemsPerPage);
-// Garante que o offset é válido mesmo se a URL for manipulada
 if ($currentPage > $totalPages && $totalPages > 0) {
     $currentPage = $totalPages;
     $offset = ($currentPage - 1) * $itemsPerPage;
@@ -111,41 +115,35 @@ if ($currentPage > $totalPages && $totalPages > 0) {
 $sql = "
     SELECT 
         c.cargoId, c.cargoNome, c.cargoResumo, c.cargoDataAtualizacao,
-        b.cboNome
+        b.cboTituloOficial -- AJUSTE: Buscando o título oficial para exibição
     FROM cargos c
     LEFT JOIN escolaridades e ON e.escolaridadeId = c.escolaridadeId
     LEFT JOIN cbos b ON b.cboId = c.cboId
 ";
-$bindings = [];
 
 if (!empty($params['term'])) {
-    $sql .= " WHERE c.cargoNome LIKE ? OR c.cargoResumo LIKE ?";
-    $bindings[] = "%{$params['term']}%";
-    $bindings[] = "%{$params['term']}%";
+    // AJUSTE: Filtra também pelo novo campo cboTituloOficial
+    $sql .= " WHERE c.cargoNome LIKE :term1 OR c.cargoResumo LIKE :term2 OR b.cboTituloOficial LIKE :term3";
+    $all_bindings[':term1'] = $term; 
+    $all_bindings[':term2'] = $term;
+    $all_bindings[':term3'] = $term;
 }
 
-// 2.5. Validação de Colunas (Removida a ordenação por escolaridade)
-$validColumns = ['c.cargoId', 'c.cargoNome', 'b.cboNome', 'c.cargoDataAtualizacao'];
+// 2.5. Validação de Colunas 
+$validColumns = ['c.cargoId', 'c.cargoNome', 'b.cboTituloOficial', 'c.cargoDataAtualizacao'];
 $orderBy = in_array($params['order_by'], $validColumns) ? $params['order_by'] : 'c.cargoId';
 $sortDir = in_array(strtoupper($params['sort_dir']), ['ASC', 'DESC']) ? $params['sort_dir'] : 'ASC';
 
 $sql .= " ORDER BY {$orderBy} {$sortDir}";
-$sql .= " LIMIT :limit OFFSET :offset"; // Adiciona LIMIT e OFFSET
+$sql .= " LIMIT :limit OFFSET :offset"; 
+
+// Adiciona os bindings de paginação ao array unificado
+$all_bindings[':limit'] = $itemsPerPage;
+$all_bindings[':offset'] = $offset;
 
 try {
     $stmt = $pdo->prepare($sql);
-    
-    // Vincula os parâmetros de filtro (se existirem)
-    $bindIndex = 1;
-    foreach ($bindings as $value) {
-        $stmt->bindValue($bindIndex++, $value);
-    }
-
-    // Vincula os parâmetros de paginação (usando nomeclatura para segurança)
-    $stmt->bindValue(':limit', $itemsPerPage, PDO::PARAM_INT);
-    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-    
-    $stmt->execute();
+    $stmt->execute($all_bindings); 
     $registros = $stmt->fetchAll();
 } catch (\PDOException $e) {
     $registros = [];
@@ -216,7 +214,7 @@ if (isset($_GET['message'])) {
         </div>
         <div class="col-md-8">
             <form method="GET" class="d-flex">
-                <input type="search" name="term" class="form-control me-2" placeholder="Filtrar por Nome ou Resumo do Cargo" value="<?php echo htmlspecialchars($params['term']); ?>">
+                <input type="search" name="term" class="form-control me-2" placeholder="Filtrar por Nome, Resumo ou CBO Oficial" value="<?php echo htmlspecialchars($params['term']); ?>">
                 <input type="hidden" name="order_by" value="<?php echo htmlspecialchars($params['order_by']); ?>">
                 <input type="hidden" name="sort_dir" value="<?php echo htmlspecialchars($params['sort_dir']); ?>">
                 
@@ -251,7 +249,7 @@ if (isset($_GET['message'])) {
                         ?>
                         <th><?php echo createSortLink('c.cargoId', 'ID', $params); ?></th>
                         <th><?php echo createSortLink('c.cargoNome', 'Cargo', $params); ?></th>
-                        <th><?php echo createSortLink('b.cboNome', 'CBO', $params); ?></th>
+                        <th><?php echo createSortLink('b.cboTituloOficial', 'CBO Oficial', $params); ?></th>
                         <th class="action-cell text-center">Ações</th>
                     </tr>
                 </thead>
@@ -261,7 +259,7 @@ if (isset($_GET['message'])) {
                             <tr>
                                 <td><?php echo htmlspecialchars($row['cargoId']); ?></td>
                                 <td><strong class="text-primary"><?php echo htmlspecialchars($row['cargoNome']); ?></strong></td> 
-                                <td><?php echo htmlspecialchars($row['cboNome'] ?? 'N/A'); ?></td>
+                                <td><?php echo htmlspecialchars($row['cboTituloOficial'] ?? 'N/A'); ?></td>
                                 <td class="action-cell text-center">
                                     
                                     <a href="../relatorios/cargo_individual.php?id=<?php echo $row['cargoId']; ?>&format=html" 

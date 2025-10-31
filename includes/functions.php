@@ -258,9 +258,10 @@ function getLookupData(PDO $pdo, string $tableName, string $idColumn, string $na
     try {
         $selectFields = $idColumn . ', ' . $nameColumn;
         
-        // Se for a tabela CBO, concatena o código (cboNome) e o título oficial
+        // AJUSTE: Se for a tabela CBO, concatena o ID (cboId) e o título oficial (cboTituloOficial)
         if ($concatColumn && $tableName === 'cbos') {
-            $selectFields = "{$idColumn}, CONCAT({$nameColumn}, ' - ', {$concatColumn}) AS display_name";
+            // CONCATENANDO o ID (cboId - XXXX-YY) com o Título Oficial (cboTituloOficial)
+            $selectFields = "{$idColumn}, CONCAT({$idColumn}, ' - ', {$concatColumn}) AS display_name"; 
             $nameColumn = 'display_name'; // Usa o alias para o fetch
         }
 
