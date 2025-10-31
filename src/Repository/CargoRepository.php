@@ -504,3 +504,4 @@ class CargoRepository
             return null;
         }
     }
+}
