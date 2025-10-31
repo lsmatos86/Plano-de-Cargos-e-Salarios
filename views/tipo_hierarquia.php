@@ -17,11 +17,17 @@ $table_name = 'tipo_hierarquia';
 $id_column = 'tipoId';
 $name_column = 'tipoNome';
 
+// VARIÁVEIS DE COLUNA CORRIGIDAS PARA REFLETIR NOMENCLATURA PADRÃO NO BANCO
+$description_column = 'tipoDescricao'; 
+$creation_date_column = 'tipoDataCadastro'; 
+$date_update_column = 'tipoDataAtualizacao'; 
+
 // ----------------------------------------------------
 // 1. LÓGICA DE CADASTRO/EDIÇÃO (CREATE/UPDATE)
 // ----------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nome = trim($_POST[$name_column] ?? '');
+    $descricao = trim($_POST[$description_column] ?? null);
     $id = (int)($_POST[$id_column] ?? 0);
 
     if (empty($nome)) {
@@ -31,13 +37,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             if ($id > 0) {
                 // UPDATE
-                $sql = "UPDATE {$table_name} SET {$name_column} = ? WHERE {$id_column} = ?";
+                $sql = "UPDATE {$table_name} SET {$name_column} = ?, {$description_column} = ?, {$date_update_column} = CURRENT_TIMESTAMP() WHERE {$id_column} = ?";
                 $stmt = $pdo->prepare($sql);
-                $stmt->execute([$nome, $id]);
+                $stmt->execute([$nome, $descricao, $id]);
                 $message = "Tipo de Hierarquia atualizado com sucesso!";
             } else {
-                // CREATE - Utilizando a função genérica que usa Prepared Statements
-                $success = insertSimpleRecord($pdo, $table_name, $name_column, $nome);
+                // CREATE - Utilizando Prepared Statements para múltiplos campos
+                $sql = "INSERT INTO {$table_name} ({$name_column}, {$description_column}, {$creation_date_column}) VALUES (?, ?, CURRENT_TIMESTAMP())"; // Define DataCadastro no insert
+                $stmt = $pdo->prepare($sql);
+                $success = $stmt->execute([$nome, $descricao]);
                 
                 if ($success) {
                     $message = "Novo Tipo de Hierarquia cadastrado com sucesso!";
@@ -48,7 +56,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $message_type = 'success';
         } catch (PDOException $e) {
-            $message = "Erro ao salvar: O nome do Tipo de Hierarquia pode já existir. " . $e->getMessage();
+            $error_info = $e->errorInfo[1] ?? 0;
+            if ($error_info == 1062) { // Código de erro MySQL para chave duplicada
+                $message = "Erro ao salvar: O nome do Tipo de Hierarquia já existe.";
+            } else {
+                $message = "Erro ao salvar: " . $e->getMessage();
+            }
             $message_type = 'danger';
         }
     }
@@ -88,15 +101,19 @@ $params = [
     'sort_dir' => $_GET['sort_dir'] ?? 'ASC'
 ];
 
-$sql = "SELECT * FROM {$table_name}";
+// CORREÇÃO: Usando as variáveis de coluna corrigidas para o SELECT
+$sql = "SELECT {$id_column}, {$name_column}, {$description_column}, {$creation_date_column}, {$date_update_column} FROM {$table_name}";
 $bindings = [];
 
 if (!empty($params['term'])) {
-    $sql .= " WHERE {$name_column} LIKE ?";
+    // Busca agora também pela descrição
+    $sql .= " WHERE {$name_column} LIKE ? OR {$description_column} LIKE ?";
+    $bindings[] = "%{$params['term']}%";
     $bindings[] = "%{$params['term']}%";
 }
 
-$validColumns = [$id_column, $name_column, $id_column.'DataCadastro', $id_column.'DataAtualizacao'];
+// CORREÇÃO: Usando as variáveis de coluna corrigidas na validação de ordenação
+$validColumns = [$id_column, $name_column, $description_column, $creation_date_column, $date_update_column];
 $orderBy = in_array($params['order_by'], $validColumns) ? $params['order_by'] : $name_column;
 $sortDir = in_array(strtoupper($params['sort_dir']), ['ASC', 'DESC']) ? $params['sort_dir'] : 'ASC';
 
@@ -131,7 +148,8 @@ if (isset($_GET['message'])) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style>
-        .short-text { max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .short-text { max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block;}
+        .description-cell { max-width: 300px; } /* Ajuste para melhor visualização da descrição */
     </style>
 </head>
 <body>
@@ -172,7 +190,7 @@ if (isset($_GET['message'])) {
         <div class="col-md-4">
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-primary text-white">
-                    <?php echo $tipoToEdit ? 'Editar: ' . htmlspecialchars($tipoToEdit[$name_column]) : 'Novo Tipo de Hierarquia'; ?>
+                    <?php echo $tipoToEdit ? 'Editar: ' . htmlspecialchars($tipoToEdit[$name_column] ?? '') : 'Novo Tipo de Hierarquia'; ?>
                 </div>
                 <div class="card-body">
                     <form method="POST" action="tipo_hierarquia.php">
@@ -183,7 +201,13 @@ if (isset($_GET['message'])) {
                             <input type="text" class="form-control" id="<?php echo $name_column; ?>" name="<?php echo $name_column; ?>" value="<?php echo htmlspecialchars($tipoToEdit[$name_column] ?? ''); ?>" required>
                             <div class="form-text">Ex: Estratégico, Tático, Operacional.</div>
                         </div>
-
+                        
+                        <div class="mb-3">
+                            <label for="<?php echo $description_column; ?>" class="form-label">Descrição</label>
+                            <textarea class="form-control" id="<?php echo $description_column; ?>" name="<?php echo $description_column; ?>" rows="3"><?php echo htmlspecialchars($tipoToEdit[$description_column] ?? ''); ?></textarea>
+                            <div class="form-text">Detalhes sobre este tipo hierárquico.</div>
+                        </div>
+                        
                         <button type="submit" class="btn btn-primary w-100">
                             <i class="fas fa-save"></i> <?php echo $tipoToEdit ? 'Salvar Alterações' : 'Cadastrar'; ?>
                         </button>
@@ -208,6 +232,7 @@ if (isset($_GET['message'])) {
                             <tr>
                                 <th>ID</th>
                                 <th>Nome</th>
+                                <th>Descrição</th> 
                                 <th><i class="fas fa-calendar-alt"></i> Atualização</th>
                                 <th class="text-center">Ações</th>
                             </tr>
@@ -218,7 +243,14 @@ if (isset($_GET['message'])) {
                                     <tr>
                                         <td><?php echo htmlspecialchars($row[$id_column]); ?></td>
                                         <td><strong class="text-primary"><?php echo htmlspecialchars($row[$name_column]); ?></strong></td>
-                                        <td><?php echo (new DateTime($row[$id_column.'DataAtualizacao']))->format('d/m/Y H:i'); ?></td>
+                                        <td class="description-cell">
+                                            <span class="short-text" title="<?php echo htmlspecialchars($row[$description_column] ?? ''); ?>">
+                                                <?php echo htmlspecialchars($row[$description_column] ?? 'N/A'); ?>
+                                            </span>
+                                        </td> 
+                                        
+                                        <td><?php echo (new DateTime($row[$date_update_column] ?? $row[$creation_date_column] ?? 'now'))->format('d/m/Y H:i'); ?></td>
+                                        
                                         <td class="text-center">
                                             <a href="tipo_hierarquia.php?id=<?php echo $row[$id_column]; ?>" 
                                                 class="btn btn-sm btn-info text-white" 
@@ -235,8 +267,8 @@ if (isset($_GET['message'])) {
                                     </tr>
                                 <?php endforeach; ?>
                             <?php else: ?>
-                                <tr>
-                                    <td colspan="4" class="text-center">Nenhum registro encontrado.</td>
+                                <tr class="text-center">
+                                    <td colspan="5">Nenhum registro encontrado.</td>
                                 </tr>
                             <?php endif; ?>
                         </tbody>

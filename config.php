@@ -13,3 +13,12 @@ define('DB_CHARSET', 'utf8mb4');
 
 // Nota: As funções de conexão (getDbConnection) e autenticação (authenticateUser, isUserLoggedIn)
 // foram movidas para 'includes/functions.php' para manter este arquivo limpo e focado em constantes.
+
+// ----------------------------------------------------
+// 2. CONFIGURAÇÃO DE FUSO HORÁRIO (Timezone)
+// ----------------------------------------------------
+// Garante que o PHP utilize o fuso horário correto para todas as operações com data e hora.
+date_default_timezone_set('America/Bahia'); // AJUSTADO PARA O FUSO HORÁRIO DA BAHIA
+
+// Nota: As funções de conexão (getDbConnection) e autenticação (authenticateUser, isUserLoggedIn)
+// foram movidas para 'includes/functions.php' para manter este arquivo limpo e focado em constantes.
