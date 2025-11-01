@@ -1,2 +1,2 @@
-# Palno de Cargos e Salarios
+# Plano de Cargos e Salarios
 
