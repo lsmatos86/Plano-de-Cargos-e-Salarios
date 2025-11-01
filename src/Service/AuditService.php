@@ -8,6 +8,7 @@ use PDO;
 
 /**
  * Classe para gerenciar o registro de logs de auditoria.
+ * (Versão corrigida com nomes de colunas em Português)
  */
 class AuditService
 {
@@ -16,51 +17,55 @@ class AuditService
     public function __construct()
     {
         // Pega a instância do banco de dados
-        $this->db = Database::getInstance();
+        // (Assumindo que sua classe Database tem um método estático getConnection ou getInstance)
+        // Vou usar o padrão do seu CargoRepository.php original:
+        $this->db = Database::getConnection(); 
     }
 
     /**
      * Registra um evento de auditoria no banco de dados.
      *
-     * @param string $action Ação realizada (ex: CREATE, UPDATE, DELETE)
-     * @param string|null $tableName A tabela afetada (ex: 'cargos')
-     * @param int|null $recordId O ID do registro afetado
-     * @param array|null $jsonData Dados contextuais (ex: $_POST) para salvar como JSON
+     * @param string $acao Ação realizada (ex: CREATE, UPDATE, DELETE)
+     * @param string|null $nomeTabela A tabela afetada (ex: 'cargos')
+     * @param int|null $idRegistro O ID do registro afetado
+     * @param array|null $dadosJson Dados contextuais (ex: $_POST) para salvar como JSON
      */
-    public function log(string $action, ?string $tableName = null, ?int $recordId = null, ?array $jsonData = null): void
+    public function log(string $acao, ?string $nomeTabela = null, ?int $idRegistro = null, ?array $dadosJson = null): void
     {
-        // Tenta obter o usuário da sessão
-        $userId = $_SESSION['user_id'] ?? null; // Assumindo que você armazena 'user_id' na sessão
-        $username = $_SESSION['username'] ?? 'System'; // Assumindo que você armazena 'username'
+        // Usa os nomes de sessão do seu functions.php
+        $usuarioId = $_SESSION['user_id'] ?? null; 
+        $nomeUsuario = $_SESSION['username'] ?? 'System';
 
         // Converte os dados para JSON, se existirem
         $json = null;
-        if ($jsonData !== null) {
+        if ($dadosJson !== null) {
             // Remove dados sensíveis (como senhas) antes de logar
-            unset($jsonData['password']);
-            unset($jsonData['confirm_password']);
+            unset($dadosJson['password']);
+            unset($dadosJson['confirm_password']);
+            unset($dadosJson['senha']); // Garantia
             
-            $json = json_encode($jsonData, JSON_UNESCAPED_UNICODE);
+            $json = json_encode($dadosJson, JSON_UNESCAPED_UNICODE);
         }
 
         try {
-            $sql = "INSERT INTO audit_log (userId, username, action, tableName, recordId, jsonData, timestamp) 
-                    VALUES (:userId, :username, :action, :tableName, :recordId, :jsonData, NOW())";
+            // SQL ATUALIZADO com colunas em Português
+            $sql = "INSERT INTO audit_log (usuarioId, nomeUsuario, acao, nomeTabela, idRegistro, dadosJson, dataHora) 
+                    VALUES (:usuarioId, :nomeUsuario, :acao, :nomeTabela, :idRegistro, :dadosJson, NOW())";
             
             $stmt = $this->db->prepare($sql);
             
-            $stmt->bindParam(':userId', $userId, PDO::PARAM_INT);
-            $stmt->bindParam(':username', $username, PDO::PARAM_STR);
-            $stmt->bindParam(':action', $action, PDO::PARAM_STR);
-            $stmt->bindParam(':tableName', $tableName, PDO::PARAM_STR);
-            $stmt->bindParam(':recordId', $recordId, PDO::PARAM_INT);
-            $stmt->bindParam(':jsonData', $json, PDO::PARAM_STR);
+            // Bind dos parâmetros ATUALIZADO
+            $stmt->bindParam(':usuarioId', $usuarioId, PDO::PARAM_INT);
+            $stmt->bindParam(':nomeUsuario', $nomeUsuario, PDO::PARAM_STR);
+            $stmt->bindParam(':acao', $acao, PDO::PARAM_STR);
+            $stmt->bindParam(':nomeTabela', $nomeTabela, PDO::PARAM_STR);
+            $stmt->bindParam(':idRegistro', $idRegistro, PDO::PARAM_INT);
+            $stmt->bindParam(':dadosJson', $json, PDO::PARAM_STR);
             
             $stmt->execute();
 
         } catch (\Exception $e) {
             // Em um sistema real, você deveria logar este erro em um arquivo
-            // em vez de interromper a execução.
             // Por enquanto, vamos apenas ignorar para não quebrar a aplicação principal.
             error_log('Falha ao registrar log de auditoria: ' . $e->getMessage());
         }

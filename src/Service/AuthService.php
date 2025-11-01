@@ -8,6 +8,7 @@ use PDO;
 
 /**
  * Classe para gerenciar Autenticação e Autorização (Permissões).
+ * (Versão corrigida com nomes de colunas em Português)
  */
 class AuthService
 {
@@ -16,7 +17,8 @@ class AuthService
 
     public function __construct()
     {
-        $this->db = Database::getInstance();
+        // Pega a conexão PDO da nossa classe de Database
+        $this->db = Database::getConnection();
     }
 
     /**
@@ -27,18 +29,18 @@ class AuthService
      */
     public function userCan(string $permissionName): bool
     {
-        $userId = $_SESSION['user_id'] ?? null;
-        if ($userId === null) {
+        // Usa o 'user_id' da sessão, como definido em functions.php
+        $usuarioId = $_SESSION['user_id'] ?? null;
+        if ($usuarioId === null) {
             return false; // Não logado, não pode fazer nada
         }
 
         // 1. Carrega as permissões do usuário (com cache)
         if ($this->userPermissions === null) {
-            $this->loadUserPermissions($userId);
+            $this->loadUserPermissions($usuarioId);
         }
 
         // 2. Verifica se a permissão existe no array
-        // Usamos array_key_exists para performance
         return isset($this->userPermissions[$permissionName]);
     }
 
@@ -46,26 +48,26 @@ class AuthService
      * Carrega todas as permissões do usuário logado e as armazena
      * na propriedade $userPermissions para cache.
      */
-    private function loadUserPermissions(int $userId): void
+    private function loadUserPermissions(int $usuarioId): void
     {
         $this->userPermissions = [];
         
+        // SQL CORRIGIDO: Usa 'ur.usuarioId' para corresponder à tabela user_roles
         $sql = "SELECT DISTINCT p.permissionName
                 FROM permissions p
                 JOIN role_permissions rp ON p.permissionId = rp.permissionId
                 JOIN user_roles ur ON rp.roleId = ur.roleId
-                WHERE ur.userId = :userId";
+                WHERE ur.usuarioId = :usuarioId"; // <-- CORREÇÃO APLICADA AQUI
         
         try {
             $stmt = $this->db->prepare($sql);
-            $stmt->bindParam(':userId', $userId, PDO::PARAM_INT);
+            $stmt->bindParam(':usuarioId', $usuarioId, PDO::PARAM_INT); // <-- CORREÇÃO APLICADA AQUI
             $stmt->execute();
             
             $permissions = $stmt->fetchAll(PDO::FETCH_COLUMN);
             
             // Transforma ['cargos:edit', 'cargos:view']
             // em ['cargos:edit' => true, 'cargos:view' => true]
-            // para buscas rápidas com isset()
             $this->userPermissions = array_flip($permissions);
 
         } catch (\Exception $e) {
@@ -80,9 +82,9 @@ class AuthService
     public function refreshPermissions(): void
     {
         $this->userPermissions = null;
-        $userId = $_SESSION['user_id'] ?? null;
-        if ($userId) {
-            $this->loadUserPermissions($userId);
+        $usuarioId = $_SESSION['user_id'] ?? null;
+        if ($usuarioId) {
+            $this->loadUserPermissions($usuarioId);
         }
     }
 
