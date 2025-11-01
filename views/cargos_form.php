@@ -233,8 +233,23 @@ if (isset($_GET['message'])) {
     </div>
     
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="mb-0"><?php echo $page_title; ?></h1>
         
+        <h1 class="mb-0">
+            <?php if ($isEditing && isset($cargo['cargoNome'])): ?>
+                
+                <?php echo htmlspecialchars($originalId); ?> - <?php echo htmlspecialchars($cargo['cargoNome']); ?>
+                
+                <small class="text-primary fw-normal ms-2">
+                    (editando)
+                    <i class="fas fa-pencil-alt ms-1"></i>
+                </small>
+
+            <?php else: ?>
+                
+                <?php echo $page_title; ?>
+                
+            <?php endif; ?>
+        </h1>
         <?php if ($isEditing && $originalId > 0): ?>
              <a href="cargos_form.php?id=<?php echo $originalId; ?>&action=duplicate" 
                 class="btn btn-warning btn-sm" 
@@ -886,6 +901,5 @@ if (isset($_GET['message'])) {
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="../scripts/cargos_form.js"></script>
-</body>
+<script src="../scripts/cargos_form.js?v=4"></script> </body>
 </html>

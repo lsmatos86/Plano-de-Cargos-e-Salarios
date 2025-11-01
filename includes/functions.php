@@ -2,11 +2,28 @@
 // Arquivo: includes/functions.php
 // Este arquivo DEVE ser incluído APÓS o config.php e o vendor/autoload.php
 
-// Importa a classe de Database para ser usada na autenticação
+// Importa as classes necessárias
 use App\Core\Database;
+use App\Service\AuthService;
+use App\Service\AuditService;
+
+// --- 1. INICIALIZAÇÃO DA SESSÃO E SERVIÇOS GLOBAIS ---
+
+// Inicia a sessão no início de todos os arquivos protegidos
+startSession();
+
+/** @var AuthService|null $authService */
+$authService = null;
+if (isUserLoggedIn()) { // Verifica se o usuário já está logado
+    // Se estiver logado, cria a instância do serviço de autorização
+    // para ser usada em toda a aplicação (ex: cargos_form.php)
+    $authService = new AuthService();
+}
+
+
+// --- 2. CONSTANTES E VALIDAÇÕES (Mantidas) ---
 
 // Lista de tabelas mestras permitidas.
-// Mantida pois os Repositórios (LookupRepository, etc.) ainda a utilizam para validação.
 const ALLOWED_TABLES = [
     'cargos', 'escolaridades', 'cbos', 'caracteristicas', 'cursos', 'riscos', 
     'habilidades', 'usuarios', 'familia_cbo', 'recursos', 'recursos_grupos',
@@ -21,34 +38,20 @@ const ALLOWED_TABLES = [
 
 /**
  * Valida se um nome de tabela é seguro.
- * (Mantido, pois é usado pelos Repositórios)
  */
 function isValidTableName(string $tableName): bool {
     return in_array(strtolower($tableName), ALLOWED_TABLES);
 }
 
 // ----------------------------------------------------
-// FUNÇÕES DE BANCO DE DADOS REMOVIDAS
+// FUNÇÕES DE BANCO DE DADOS REMOVIDAS (Como no original)
 // ----------------------------------------------------
-//
-// REMOVIDO: getDbConnection() (Substituído por App\Core\Database::getConnection())
-// REMOVIDO: insertSimpleRecord() (Substituído pelos métodos save() dos Repositórios)
-// REMOVIDO: getRecords() (Substituído pelos métodos findAllPaginated() dos Repositórios)
-// REMOVIDO: countRecordsWithFilter() (Substituído pelos métodos findAllPaginated() dos Repositórios)
-// REMOVIDO: deleteRecord() (Substituído pelos métodos delete() dos Repositórios)
-// REMOVIDO: clearCargoRelationships() (Movido para CargoRepository)
-// REMOVIDO: getLookupData() (Movido para LookupRepository)
-// REMOVIDO: getEnumOptions() (Movido para os Repositórios específicos, ex: RiscoRepository)
-// REMOVIDO: getCargoReportData() (Movido para CargoRepository)
-// REMOVIDO: getAreaHierarchyLookup() (Movido para AreaRepository)
-// REMOVIDO: buildAreaHierarchy() (Movido para AreaRepository)
-// REMOVIDO: getHabilidadesGrouped() (Movido para HabilidadeRepository)
-//
+// ... (comentários de funções removidas) ...
 // ----------------------------------------------------
 
 
 // ----------------------------------------------------
-// 7. FUNÇÕES DE AUTENTICAÇÃO E SESSÃO (MANTIDAS)
+// 7. FUNÇÕES DE AUTENTICAÇÃO E SESSÃO (AJUSTADAS)
 // ----------------------------------------------------
 /**
  * Inicia a sessão se ainda não estiver ativa.
@@ -60,35 +63,45 @@ function startSession() {
 }
 
 /**
- * Autentica o usuário usando email e verifica o hash da senha no banco de dados.
- * (MODIFICADA para usar App\Core\Database)
+ * Autentica o usuário e REGISTRA LOG de sucesso ou falha.
  *
  * @param string $email O email/username fornecido.
  * @param string $password A senha bruta fornecida.
  * @return bool True se o login for bem-sucedido.
  */
 function authenticateUser($email, $password) {
-    startSession();
-
+    // A sessão já foi iniciada no topo do arquivo.
+    $pdo = null;
     try {
-        // Usa a nova classe de Database
         $pdo = Database::getConnection(); 
-        
         $stmt = $pdo->prepare("SELECT usuarioId, nome, email, senha, ativo FROM usuarios WHERE email = ? AND ativo = TRUE");
         $stmt->execute([$email]);
         $user = $stmt->fetch();
     } catch (PDOException $e) {
+        // Erro de banco de dados
         return false;
     }
 
-    // Verifica se o usuário existe e se a senha corresponde ao hash armazenado
+    // Instancia o serviço de auditoria para registrar a tentativa
+    $auditService = new AuditService();
+
+    // Verifica se o usuário existe e se a senha corresponde
     if ($user && password_verify($password, $user['senha'])) {
         $_SESSION['logged_in'] = true;
         $_SESSION['user_id'] = $user['usuarioId'];
         $_SESSION['username'] = $user['nome']; 
         $_SESSION['user_email'] = $user['email'];
+        
+        // --- LOG DE AUDITORIA (SUCESSO) ---
+        $auditService->log('LOGIN_SUCCESS', 'usuarios', $user['usuarioId'], ['email' => $email]);
+        
         return true;
     }
+    
+    // --- LOG DE AUDITORIA (FALHA) ---
+    // Registra a tentativa falha (usuário não encontrado ou senha errada)
+    $auditService->log('LOGIN_FAIL', 'usuarios', null, ['email' => $email]);
+
     return false;
 }
 
@@ -97,7 +110,7 @@ function authenticateUser($email, $password) {
  * @return bool
  */
 function isUserLoggedIn() {
-    startSession();
+    // startSession(); // REMOVIDO - Já é chamado no topo do arquivo.
     return isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true;
 }
 
