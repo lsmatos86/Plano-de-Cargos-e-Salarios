@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Tempo de geração: 31/10/2025 às 21:26
+-- Tempo de geração: 01/11/2025 às 21:58
 -- Versão do servidor: 10.4.32-MariaDB
 -- Versão do PHP: 8.2.12
 
@@ -34,6 +34,23 @@ CREATE TABLE `areas_atuacao` (
   `areaDescricao` text DEFAULT NULL,
   `areaDataCadastro` timestamp NOT NULL DEFAULT current_timestamp(),
   `areaDataAtualizacao` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `audit_log`
+--
+
+CREATE TABLE `audit_log` (
+  `logId` int(11) NOT NULL,
+  `usuarioId` int(11) DEFAULT NULL COMMENT 'ID do usuário (da tabela usuarios)',
+  `nomeUsuario` varchar(100) DEFAULT NULL COMMENT 'Nome do usuário (para referência rápida)',
+  `acao` varchar(50) NOT NULL COMMENT 'Ex: CREATE, UPDATE, DELETE, LOGIN_SUCCESS, LOGIN_FAIL',
+  `nomeTabela` varchar(100) DEFAULT NULL COMMENT 'Tabela afetada (ex: cargos, usuarios)',
+  `idRegistro` int(11) DEFAULT NULL COMMENT 'ID do registro afetado',
+  `dadosJson` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT 'Dados antigos ou novos (JSON)' CHECK (json_valid(`dadosJson`)),
+  `dataHora` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -242,6 +259,18 @@ CREATE TABLE `nivel_hierarquico` (
 -- --------------------------------------------------------
 
 --
+-- Estrutura para tabela `permissions`
+--
+
+CREATE TABLE `permissions` (
+  `permissionId` int(11) NOT NULL,
+  `permissionName` varchar(100) NOT NULL COMMENT 'Ex: cargos:create, cargos:edit, usuarios:manage',
+  `permissionDescription` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Estrutura para tabela `recursos`
 --
 
@@ -333,6 +362,29 @@ CREATE TABLE `riscos_cargo` (
 -- --------------------------------------------------------
 
 --
+-- Estrutura para tabela `roles`
+--
+
+CREATE TABLE `roles` (
+  `roleId` int(11) NOT NULL,
+  `roleName` varchar(100) NOT NULL,
+  `roleDescription` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `role_permissions`
+--
+
+CREATE TABLE `role_permissions` (
+  `roleId` int(11) NOT NULL,
+  `permissionId` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Estrutura para tabela `tipo_hierarquia`
 --
 
@@ -342,6 +394,17 @@ CREATE TABLE `tipo_hierarquia` (
   `tipoDescricao` varchar(255) DEFAULT NULL,
   `tipoDataCadastro` timestamp NOT NULL DEFAULT current_timestamp(),
   `tipoDataAtualizacao` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `user_roles`
+--
+
+CREATE TABLE `user_roles` (
+  `usuarioId` int(11) NOT NULL COMMENT 'Chave estrangeira de usuarios.usuarioId',
+  `roleId` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -370,6 +433,15 @@ ALTER TABLE `areas_atuacao`
   ADD PRIMARY KEY (`areaId`),
   ADD UNIQUE KEY `areaNome` (`areaNome`),
   ADD KEY `fk_area_pai` (`areaPaiId`);
+
+--
+-- Índices de tabela `audit_log`
+--
+ALTER TABLE `audit_log`
+  ADD PRIMARY KEY (`logId`),
+  ADD KEY `idx_userId` (`usuarioId`),
+  ADD KEY `idx_tableName_recordId` (`nomeTabela`,`idRegistro`),
+  ADD KEY `idx_timestamp` (`dataHora`);
 
 --
 -- Índices de tabela `caracteristicas`
@@ -474,6 +546,13 @@ ALTER TABLE `nivel_hierarquico`
   ADD KEY `fk_nivel_tipo` (`tipoId`);
 
 --
+-- Índices de tabela `permissions`
+--
+ALTER TABLE `permissions`
+  ADD PRIMARY KEY (`permissionId`),
+  ADD UNIQUE KEY `permissionName` (`permissionName`);
+
+--
 -- Índices de tabela `recursos`
 --
 ALTER TABLE `recursos`
@@ -524,11 +603,32 @@ ALTER TABLE `riscos_cargo`
   ADD KEY `fk_riscos_cargo_cargo` (`cargoId`);
 
 --
+-- Índices de tabela `roles`
+--
+ALTER TABLE `roles`
+  ADD PRIMARY KEY (`roleId`),
+  ADD UNIQUE KEY `roleName` (`roleName`);
+
+--
+-- Índices de tabela `role_permissions`
+--
+ALTER TABLE `role_permissions`
+  ADD PRIMARY KEY (`roleId`,`permissionId`),
+  ADD KEY `permissionId` (`permissionId`);
+
+--
 -- Índices de tabela `tipo_hierarquia`
 --
 ALTER TABLE `tipo_hierarquia`
   ADD PRIMARY KEY (`tipoId`),
   ADD UNIQUE KEY `tipoNome` (`tipoNome`);
+
+--
+-- Índices de tabela `user_roles`
+--
+ALTER TABLE `user_roles`
+  ADD PRIMARY KEY (`usuarioId`,`roleId`),
+  ADD KEY `roleId` (`roleId`);
 
 --
 -- Índices de tabela `usuarios`
@@ -546,6 +646,12 @@ ALTER TABLE `usuarios`
 --
 ALTER TABLE `areas_atuacao`
   MODIFY `areaId` int(5) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT de tabela `audit_log`
+--
+ALTER TABLE `audit_log`
+  MODIFY `logId` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT de tabela `caracteristicas`
@@ -632,6 +738,12 @@ ALTER TABLE `nivel_hierarquico`
   MODIFY `nivelId` int(5) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT de tabela `permissions`
+--
+ALTER TABLE `permissions`
+  MODIFY `permissionId` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT de tabela `recursos`
 --
 ALTER TABLE `recursos`
@@ -672,6 +784,12 @@ ALTER TABLE `riscos`
 --
 ALTER TABLE `riscos_cargo`
   MODIFY `riscoCargoId` int(5) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT de tabela `roles`
+--
+ALTER TABLE `roles`
+  MODIFY `roleId` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT de tabela `tipo_hierarquia`
@@ -778,6 +896,20 @@ ALTER TABLE `recurso_grupo_recurso`
 ALTER TABLE `riscos_cargo`
   ADD CONSTRAINT `fk_riscos_cargo_cargo` FOREIGN KEY (`cargoId`) REFERENCES `cargos` (`cargoId`),
   ADD CONSTRAINT `fk_riscos_cargo_risco` FOREIGN KEY (`riscoId`) REFERENCES `riscos` (`riscoId`);
+
+--
+-- Restrições para tabelas `role_permissions`
+--
+ALTER TABLE `role_permissions`
+  ADD CONSTRAINT `role_permissions_ibfk_1` FOREIGN KEY (`roleId`) REFERENCES `roles` (`roleId`) ON DELETE CASCADE,
+  ADD CONSTRAINT `role_permissions_ibfk_2` FOREIGN KEY (`permissionId`) REFERENCES `permissions` (`permissionId`) ON DELETE CASCADE;
+
+--
+-- Restrições para tabelas `user_roles`
+--
+ALTER TABLE `user_roles`
+  ADD CONSTRAINT `user_roles_ibfk_1` FOREIGN KEY (`usuarioId`) REFERENCES `usuarios` (`usuarioId`) ON DELETE CASCADE,
+  ADD CONSTRAINT `user_roles_ibfk_2` FOREIGN KEY (`roleId`) REFERENCES `roles` (`roleId`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
