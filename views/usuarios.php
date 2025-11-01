@@ -16,7 +16,7 @@ if (!isUserLoggedIn()) {
 }
 // $authService foi instanciado em functions.php
 // Apenas quem pode gerenciar usuários pode ver esta página
-$authService->checkAndFail('usuarios:manage', '../painel.php');
+$authService->checkAndFail('usuarios:manage', '../index.php');
 
 // 4. INICIALIZAÇÃO DE VARIÁVEIS
 $page_title = "Gestão de Usuários";

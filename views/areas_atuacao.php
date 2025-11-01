@@ -1,44 +1,57 @@
 <?php
-// Arquivo: views/areas_atuacao.php (REFATORADO)
+// Arquivo: views/areas_atuacao.php (REFATORADO COM HEADER/FOOTER)
 
 // 1. Inclusão de arquivos
 require_once '../vendor/autoload.php';
 require_once '../config.php';
-require_once '../includes/functions.php'; // (Ainda necessário para isUserLoggedIn)
+require_once '../includes/functions.php'; // Para login e helpers
 
 // 2. Importa o novo Repositório
 use App\Repository\AreaRepository;
 
-// Redireciona para o login se o usuário não estiver autenticado
+// 3. Segurança
 if (!isUserLoggedIn()) {
     header('Location: ../login.php');
     exit;
 }
+// (OPCIONAL - Verificação de permissão)
+$authService->checkAndFail('areas:manage', '../index.php?error=Acesso+negado');
 
-// Configurações
-$page_title = 'Gerenciamento de Áreas de Atuação';
+
+// 4. Definições da Página (para o header.php)
+$page_title = 'Gestão de Áreas de Atuação';
+$root_path = '../'; 
+$breadcrumb_items = [
+    'Dashboard' => '../index.php',
+    'Gestão de Áreas' => null // Página ativa
+];
+// NOVO: Informa ao footer.php qual script JS carregar
+$page_scripts = ['../scripts/areas_atuacao.js'];
+
+
+// Configurações específicas desta tabela
 $id_column = 'areaId';
 $name_column = 'areaNome';
+$parent_id_column = 'areaPaiId'; // Coluna para a hierarquia
+
 $message = '';
 $message_type = '';
-$error_data = []; // Armazena dados do POST em caso de erro
 
 // Instancia o Repositório
 $repo = new AreaRepository();
 
 // ----------------------------------------------------
-// LÓGICA DE CRUD (CREATE/UPDATE/DELETE) - REFATORADO
+// LÓGICA DE CRUD (CREATE/UPDATE/DELETE)
 // ----------------------------------------------------
 try {
     // 1. Lógica de CREATE/UPDATE (POST)
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_GET['action'])) {
-        $nome = trim($_POST[$name_column] ?? '');
-        $id = (int)($_POST[$id_column] ?? 0);
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+        $titulo = trim($_POST[$name_column] ?? '');
         
-        $repo->save($_POST); // O repositório lida com insert/update e validação
+        $repo->save($_POST); // O repositório lida com insert/update
         
-        $action_desc = ($id > 0) ? 'atualizada' : 'cadastrada';
-        $message = "Área '{$nome}' {$action_desc} com sucesso!";
+        $action_desc = ($_POST['action'] === 'insert') ? 'cadastrada' : 'atualizada';
+        $message = "Área '{$titulo}' {$action_desc} com sucesso!";
         $message_type = 'success';
     }
 
@@ -48,262 +61,239 @@ try {
         $deleted = $repo->delete($id);
         
         if ($deleted) {
-            $message = "Área ID {$id} excluída com sucesso! Áreas filhas (se existiam) foram movidas para o Nível Raiz.";
+            $message = "Área ID {$id} excluída com sucesso!";
             $message_type = 'success';
         } else {
             $message = "Erro: Área ID {$id} não encontrada ou já excluída.";
             $message_type = 'danger';
         }
         
-        // Redireciona para limpar a URL após a ação
         header("Location: areas_atuacao.php?message=" . urlencode($message) . "&type={$message_type}");
         exit;
     }
 
 } catch (Exception $e) {
-    // Captura qualquer exceção do Repositório (validação, FK, DB)
     $message = $e->getMessage();
     $message_type = 'danger';
-    $error_data = $_POST; // Salva dados para repopular o formulário
 }
 
-// Mensagens vindas de um redirecionamento
+// Mensagens vindas de um redirecionamento (ex: após delete)
 if (empty($message) && isset($_GET['message'])) {
     $message = htmlspecialchars($_GET['message']);
     $message_type = htmlspecialchars($_GET['type'] ?? 'info');
 }
 
 // ----------------------------------------------------
-// LÓGICA DE LEITURA (READ) - REFATORADO
+// LÓGICA DE LEITURA (READ)
 // ----------------------------------------------------
-// Carrega a árvore hierárquica
-$areaTree = $repo->findAllHierarchical();
+// 1. Parâmetros de Filtro e Ordenação
+$params = [
+    'term' => $_GET['term'] ?? '',
+    'sort_col' => $_GET['sort_col'] ?? $id_column,
+    'sort_dir' => $_GET['sort_dir'] ?? 'ASC',
+    'page' => $_GET['page'] ?? 1,
+    'limit' => 10
+];
 
-// Carrega o lookup para o <select> do formulário
-// (Exclui a área atual da lista de pais em caso de edição)
-$id_para_editar = (int)($_GET['edit_id'] ?? $error_data[$id_column] ?? 0);
-$areasLookup = $repo->getHierarchyLookup();
-if ($id_para_editar > 0 && isset($areasLookup[$id_para_editar])) {
-    // Remove a própria área da lista de pais disponíveis
-    unset($areasLookup[$id_para_editar]);
+// 2. Busca os dados
+try {
+    $repoParams = [
+        'term' => $params['term'],
+        'order_by' => $params['sort_col'], 
+        'sort_dir' => $params['sort_dir'],
+        'page' => $params['page'],
+        'limit' => $params['limit']
+    ];
+
+    $result = $repo->findAllPaginated($repoParams);
+    
+    $registros = $result['data'];
+    $totalRecords = $result['total'];
+    $totalPages = $result['totalPages'];
+    $currentPage = $result['currentPage'];
+    
+    // Busca todas as áreas para o <select> do "Pai"
+    $todasAreas = $repo->findAllSimple();
+
+} catch (Exception $e) {
+    $registros = [];
+    $totalRecords = 0;
+    $totalPages = 1;
+    $currentPage = 1;
+    $todasAreas = []; // Garante que o array exista
+    $message = "Erro ao carregar dados: " . $e->getMessage();
+    $message_type = 'danger';
 }
 
-// Dados para preencher o formulário (em caso de edição ou erro)
-$formData = [];
-if (!empty($error_data)) {
-    $formData = $error_data; // Repopula com dados do POST que falhou
-} elseif (isset($_GET['edit_id']) && $id_para_editar > 0) {
-    // Busca dados para edição
-    try {
-        $stmt = Database::getConnection()->prepare("SELECT * FROM areas_atuacao WHERE areaId = ?");
-        $stmt->execute([$id_para_editar]);
-        $formData = $stmt->fetch() ?: [];
-    } catch (Exception $e) {
-        $message = "Erro ao carregar dados para edição: " . $e->getMessage();
-        $message_type = 'danger';
-    }
-}
 
+// 7. Inclui o Header
+include '../includes/header.php';
 ?>
 
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $page_title; ?></title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <style>
-        .short-text { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .table-hierarquia .area-level-1 { font-weight: bold; }
-        .table-hierarquia .area-level-2 { padding-left: 2rem; }
-        .table-hierarquia .area-level-3 { padding-left: 4rem; font-style: italic; }
-        .table-hierarquia .area-level-4 { padding-left: 6rem; font-style: italic; color: #555; }
-        .table-hierarquia .area-level-default { padding-left: 8rem; font-size: 0.9em; }
-    </style>
-</head>
-<body>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0"><?php echo $page_title; ?></h1>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#cadastroModal" id="btnNovoCadastro">
+        <i class="fas fa-plus"></i> Nova Área
+    </button>
+</div>
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-success">
-    <div class="container-fluid container">
-        <a class="navbar-brand" href="../index.php">ITACITRUS | Início</a>
-        <div class="d-flex">
-            <span class="navbar-text me-3 text-white">Olá, <?php echo htmlspecialchars($_SESSION['username'] ?? 'Usuário'); ?></span>
-            <a href="../logout.php" class="btn btn-outline-light btn-sm">Sair</a>
+<?php if ($message): ?>
+    <div class="alert alert-<?php echo $message_type; ?> alert-dismissible fade show" role="alert">
+        <?php echo $message; ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+<?php endif; ?>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-white py-3">
+        <form method="GET" class="d-flex">
+            <input type="search" name="term" class="form-control me-2" placeholder="Filtrar por nome da área..." value="<?php echo htmlspecialchars($params['term']); ?>">
+            <input type="hidden" name="sort_col" value="<?php echo htmlspecialchars($params['sort_col']); ?>">
+            <input type="hidden" name="sort_dir" value="<?php echo htmlspecialchars($params['sort_dir']); ?>">
+            
+            <button class="btn btn-outline-secondary" type="submit"><i class="fas fa-search"></i></button>
+            <?php if (!empty($params['term'])): ?>
+                <a href="areas_atuacao.php" class="btn btn-outline-danger ms-2" title="Limpar Filtro"><i class="fas fa-times"></i></a>
+            <?php endif; ?>
+        </form>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover table-sm mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th><?php echo createSortLink($id_column, 'ID', $params); ?></th>
+                        <th><?php echo createSortLink($name_column, 'Nome da Área', $params); ?></th>
+                        <th><?php echo createSortLink('areaPaiNome', 'Área Pai', $params); ?></th>
+                        <th width="150px" class="text-center">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (count($registros) > 0): ?>
+                        <?php foreach ($registros as $row): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($row[$id_column]); ?></td>
+                                <td><strong><?php echo htmlspecialchars($row[$name_column]); ?></strong></td>
+                                <td><?php echo htmlspecialchars($row['areaPaiNome'] ?? '<em>N/A</em>'); ?></td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-info text-white btn-edit" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#cadastroModal"
+                                            data-id="<?php echo $row[$id_column]; ?>"
+                                            data-nome="<?php echo htmlspecialchars($row[$name_column]); ?>"
+                                            data-descricao="<?php echo htmlspecialchars($row['areaDescricao'] ?? ''); ?>"
+                                            data-pai-id="<?php echo htmlspecialchars($row[$parent_id_column] ?? ''); ?>"
+                                            title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    
+                                    <a href="areas_atuacao.php?action=delete&id=<?php echo $row[$id_column]; ?>" 
+                                       class="btn btn-sm btn-danger" 
+                                       title="Excluir"
+                                       onclick="return confirm('Deseja realmente excluir este item? Esta ação não pode ser desfeita.');">
+                                       <i class="fas fa-trash-alt"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="4" class="text-center p-4">
+                                <i class="fas fa-info-circle fa-2x text-muted mb-2"></i><br>
+                                Nenhum registro encontrado.
+                            </td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
         </div>
     </div>
-</nav>
+    
+    <?php if ($totalRecords > 0): ?>
+    <div class="card-footer bg-white d-flex justify-content-between align-items-center">
+        <span class="text-muted">
+            Total: <strong><?php echo $totalRecords; ?></strong> registo(s)
+        </span>
+        
+        <?php if ($totalPages > 1): ?>
+        <nav aria-label="Navegação de página">
+            <ul class="pagination mb-0">
+                
+                <li class="page-item <?php echo ($currentPage <= 1) ? 'disabled' : ''; ?>">
+                    <?php $prev_query = http_build_query(array_merge($params, ['page' => $currentPage - 1])); ?>
+                    <a class="page-link" href="?<?php echo $prev_query; ?>">Anterior</a>
+                </li>
 
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <button class="btn btn-outline-secondary btn-sm" onclick="history.back()">
-            <i class="fas fa-arrow-left"></i> Voltar
-        </button>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="../index.php">Página Inicial</a></li>
-                <li class="breadcrumb-item active" aria-current="page"><?php echo $page_title; ?></li>
-            </ol>
+                <?php 
+                $startPage = max(1, $currentPage - 2);
+                $endPage = min($totalPages, $currentPage + 2);
+                if ($endPage - $startPage < 4) { $startPage = max(1, $endPage - 4); }
+                if ($endPage - $startPage < 4) { $endPage = min($totalPages, $startPage + 4); }
+
+                for ($i = $startPage; $i <= $endPage; $i++): 
+                    $page_query = http_build_query(array_merge($params, ['page' => $i]));
+                ?>
+                    <li class="page-item <?php echo ($i === $currentPage) ? 'active' : ''; ?>">
+                        <a class="page-link" href="?<?php echo $page_query; ?>"><?php echo $i; ?></a>
+                    </li>
+                <?php endfor; ?>
+
+                <li class="page-item <?php echo ($currentPage >= $totalPages) ? 'disabled' : ''; ?>">
+                    <?php $next_query = http_build_query(array_merge($params, ['page' => $currentPage + 1])); ?>
+                    <a class="page-link" href="?<?php echo $next_query; ?>">Próxima</a>
+                </li>
+            </ul>
         </nav>
+        <?php endif; ?>
     </div>
-
-    <h1 class="mb-4"><?php echo $page_title; ?></h1>
-
-    <?php if ($message): ?>
-        <div class="alert alert-<?php echo $message_type; ?> alert-dismissible fade show" role="alert">
-            <?php echo $message; ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
     <?php endif; ?>
 
-    <div class="row">
-        <div class="col-md-4">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header <?php echo ($id_para_editar > 0) ? 'bg-info text-white' : 'bg-primary text-white'; ?>">
-                    <h5 class="mb-0" id="formTitle">
-                        <?php if ($id_para_editar > 0): ?>
-                            <i class="fas fa-edit"></i> Editar Área (ID: <?php echo $id_para_editar; ?>)
-                        <?php else: ?>
-                            <i class="fas fa-plus"></i> Nova Área
-                        <?php endif; ?>
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <form method="POST" action="areas_atuacao.php" id="cadastroForm">
-                        <input type="hidden" name="<?php echo $id_column; ?>" id="formId" value="<?php echo htmlspecialchars($formData[$id_column] ?? ''); ?>">
-                        
-                        <div class="mb-3">
-                            <label for="formNome" class="form-label">Nome da Área *</label>
-                            <input type="text" class="form-control" id="formNome" name="<?php echo $name_column; ?>" 
-                                   value="<?php echo htmlspecialchars($formData[$name_column] ?? ''); ?>" required maxlength="150">
-                        </div>
+</div>
 
-                        <div class="mb-3">
-                            <label for="formPai" class="form-label">Hierarquia (Área Pai)</label>
-                            <select class="form-select" id="formPai" name="areaPaiId">
-                                <option value="">--- Nível Raiz (Nenhuma) ---</option>
-                                <?php 
-                                $selectedPaiId = $formData['areaPaiId'] ?? null;
-                                foreach ($areasLookup as $id => $nomeHierarquico): 
-                                    // Não exibe a própria área como opção de pai
-                                    if ($id == $id_para_editar) continue; 
-                                ?>
-                                    <option value="<?php echo $id; ?>" <?php echo ($id == $selectedPaiId) ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($nomeHierarquico); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="formCodigo" class="form-label">Código (Opcional)</label>
-                            <input type="text" class="form-control" id="formCodigo" name="areaCodigo" 
-                                   value="<?php echo htmlspecialchars($formData['areaCodigo'] ?? ''); ?>" maxlength="50">
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="formDescricao" class="form-label">Descrição (Opcional)</label>
-                            <textarea class="form-control" id="formDescricao" name="areaDescricao" rows="3"><?php echo htmlspecialchars($formData['areaDescricao'] ?? ''); ?></textarea>
-                        </div>
-                        
-                        <button type="submit" class="btn <?php echo ($id_para_editar > 0) ? 'btn-info' : 'btn-primary'; ?> w-100" id="btnSalvar">
-                            <i class="fas fa-check"></i> <?php echo ($id_para_editar > 0) ? 'Atualizar' : 'Salvar'; ?>
-                        </button>
-                        
-                        <?php if ($id_para_editar > 0 || !empty($error_data)): ?>
-                        <a href="areas_atuacao.php" class="btn btn-outline-secondary w-100 mt-2">
-                            Cancelar Edição
-                        </a>
-                        <?php endif; ?>
-                    </form>
-                </div>
+<div class="modal fade" id="cadastroModal" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalLabel">Cadastrar Nova Área</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-        </div>
+            <form method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="action" id="modalAction" value="insert">
+                    <input type="hidden" name="<?php echo $id_column; ?>" id="modalId" value="">
 
-        <div class="col-md-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-light">
-                    <span class="fw-bold">Estrutura de Áreas</span>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover table-sm mb-0 table-hierarquia">
-                            <thead class="bg-light">
-                                <tr>
-                                    <th>Nome da Área</th>
-                                    <th>Código</th>
-                                    <th>Descrição</th>
-                                    <th width="120px" class="text-center">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php
-                                // Função recursiva para renderizar as linhas da tabela
-                                function renderAreaRow($area, $level = 1) {
-                                    $levelClass = 'area-level-' . min($level, 4);
-                                    if ($level > 4) $levelClass = 'area-level-default';
-                                    
-                                    $icon = ($level == 1) ? '<i class="fas fa-building fa-fw me-2 text-primary"></i>' : '<i class="fas fa-level-up-alt fa-fw me-2 text-muted" style="transform: rotate(90deg);"></i>';
-                                    
-                                    echo '<tr>';
-                                    echo '<td class="align-middle ' . $levelClass . '">' . $icon . htmlspecialchars($area['areaNome']) . '</td>';
-                                    echo '<td class="align-middle">' . htmlspecialchars($area['areaCodigo'] ?? '') . '</td>';
-                                    echo '<td class="align-middle short-text" title="' . htmlspecialchars($area['areaDescricao'] ?? '') . '">' . htmlspecialchars($area['areaDescricao'] ?? '') . '</td>';
-                                    echo '<td class="text-center align-middle">';
-                                    
-                                    // Botão Editar
-                                    echo '<a href="areas_atuacao.php?edit_id=' . $area['areaId'] . '" class="btn btn-sm btn-info text-white" title="Editar"><i class="fas fa-edit"></i></a> ';
-                                    
-                                    // Botão Excluir
-                                    echo '<a href="areas_atuacao.php?action=delete&id=' . $area['areaId'] . '" 
-                                           class="btn btn-sm btn-danger" 
-                                           title="Excluir"
-                                           onclick="return confirm(\'ATENÇÃO: A exclusão desta área irá remover seus vínculos com os cargos e tornará áreas filhas em Nível Raiz. Deseja realmente excluir?\');">
-                                           <i class="fas fa-trash-alt"></i>
-                                         </a>';
-                                    echo '</td>';
-                                    echo '</tr>';
+                    <div class="mb-3">
+                        <label for="modalNome" class="form-label">Nome da Área *</label>
+                        <input type="text" class="form-control" id="modalNome" name="<?php echo $name_column; ?>" required maxlength="100">
+                    </div>
 
-                                    // Renderiza filhos
-                                    if (!empty($area['children'])) {
-                                        foreach ($area['children'] as $child) {
-                                            renderAreaRow($child, $level + 1);
-                                        }
-                                    }
-                                }
+                    <div class="mb-3">
+                        <label for="modalPaiId" class="form-label">Área Pai (Opcional)</label>
+                        <select class="form-select" id="modalPaiId" name="<?php echo $parent_id_column; ?>">
+                            <option value="">-- Nenhuma (Área Raiz) --</option>
+                            <?php foreach ($todasAreas as $area): ?>
+                                <option value="<?php echo $area['areaId']; ?>">
+                                    <?php echo htmlspecialchars($area['areaNome']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
 
-                                if (count($areaTree) > 0):
-                                    foreach ($areaTree as $areaRaiz) {
-                                        renderAreaRow($areaRaiz, 1);
-                                    }
-                                else:
-                                    echo '<tr><td colspan="4" class="text-center">Nenhuma Área de Atuação cadastrada.</td></tr>';
-                                endif;
-                                ?>
-                            </tbody>
-                        </table>
+                    <div class="mb-3">
+                        <label for="modalDescricao" class="form-label">Descrição (Opcional)</label>
+                        <textarea class="form-control" id="modalDescricao" name="areaDescricao" rows="3"></textarea>
                     </div>
                 </div>
-            </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    <button type="submit" class="btn btn-primary" id="btnSalvar">Salvar Cadastro</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-<script>
-    <?php if (!empty($error_data) && $message_type === 'danger'): ?>
-    // Se houve um erro no POST, o formulário já foi repopulado pelo PHP.
-    // Apenas garantimos que o select "Área Pai" também seja preenchido.
-    document.addEventListener('DOMContentLoaded', function() {
-        const selectedPaiId = <?php echo json_encode($error_data['areaPaiId'] ?? null); ?>;
-        if (selectedPaiId) {
-            document.getElementById('formPai').value = selectedPaiId;
-        }
-    });
-    <?php endif; ?>
-</script>
-
-</body>
-</html>
+<?php
+// 8. Inclui o Footer
+include '../includes/footer.php';
+?>

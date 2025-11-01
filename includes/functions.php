@@ -1,149 +1,226 @@
 <?php
-// Arquivo: includes/functions.php
-// Este arquivo DEVE ser incluído APÓS o config.php e o vendor/autoload.php
+// Arquivo: includes/functions.php (Completo)
 
-// Importa as classes necessárias
+/**
+ * Este arquivo é responsável por funções globais e pela inicialização de serviços.
+ */
+
+// 1. INICIAR SESSÃO (SEMPRE PRIMEIRO)
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// 2. IMPORTAR CLASSES GLOBAIS
 use App\Core\Database;
 use App\Service\AuthService;
 use App\Service\AuditService;
 
-// --- 1. INICIALIZAÇÃO DA SESSÃO E SERVIÇOS GLOBAIS ---
+// 3. INICIALIZAR SERVIÇOS GLOBAIS
+global $authService, $auditService;
 
-// Inicia a sessão no início de todos os arquivos protegidos
-startSession();
-
-/** @var AuthService|null $authService */
-$authService = null;
-if (isUserLoggedIn()) { // Verifica se o usuário já está logado
-    // Se estiver logado, cria a instância do serviço de autorização
-    // para ser usada em toda a aplicação (ex: cargos_form.php)
-    $authService = new AuthService();
-}
-
-
-// --- 2. CONSTANTES E VALIDAÇÕES (Mantidas) ---
-
-// Lista de tabelas mestras permitidas.
-const ALLOWED_TABLES = [
-    'cargos', 'escolaridades', 'cbos', 'caracteristicas', 'cursos', 'riscos', 
-    'habilidades', 'usuarios', 'familia_cbo', 'recursos', 'recursos_grupos',
-    'faixas_salariais',             
-    'areas_atuacao',                
-    'cargos_area',                  
-    'tipo_hierarquia',              
-    'nivel_hierarquico',            
-    'habilidades_cargo', 'caracteristicas_cargo', 'riscos_cargo', 'cursos_cargo', 
-    'cargo_sinonimos', 'recursos_grupos_cargo', 'recurso_grupo_recurso'
-];
-
-/**
- * Valida se um nome de tabela é seguro.
- */
-function isValidTableName(string $tableName): bool {
-    return in_array(strtolower($tableName), ALLOWED_TABLES);
-}
-
-// ----------------------------------------------------
-// FUNÇÕES DE BANCO DE DADOS REMOVIDAS (Como no original)
-// ----------------------------------------------------
-// ... (comentários de funções removidas) ...
-// ----------------------------------------------------
-
-
-// ----------------------------------------------------
-// 7. FUNÇÕES DE AUTENTICAÇÃO E SESSÃO (AJUSTADAS)
-// ----------------------------------------------------
-/**
- * Inicia a sessão se ainda não estiver ativa.
- */
-function startSession() {
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
-}
-
-/**
- * Autentica o usuário e REGISTRA LOG de sucesso ou falha.
- *
- * @param string $email O email/username fornecido.
- * @param string $password A senha bruta fornecida.
- * @return bool True se o login for bem-sucedido.
- */
-function authenticateUser($email, $password) {
-    // A sessão já foi iniciada no topo do arquivo.
-    $pdo = null;
-    try {
-        $pdo = Database::getConnection(); 
-        $stmt = $pdo->prepare("SELECT usuarioId, nome, email, senha, ativo FROM usuarios WHERE email = ? AND ativo = TRUE");
-        $stmt->execute([$email]);
-        $user = $stmt->fetch();
-    } catch (PDOException $e) {
-        // Erro de banco de dados
-        return false;
-    }
-
-    // Instancia o serviço de auditoria para registrar a tentativa
+try {
+    $authService = new AuthService(); 
     $auditService = new AuditService();
-
-    // Verifica se o usuário existe e se a senha corresponde
-    if ($user && password_verify($password, $user['senha'])) {
-        $_SESSION['logged_in'] = true;
-        $_SESSION['user_id'] = $user['usuarioId'];
-        $_SESSION['username'] = $user['nome']; 
-        $_SESSION['user_email'] = $user['email'];
-        
-        // --- LOG DE AUDITORIA (SUCESSO) ---
-        $auditService->log('LOGIN_SUCCESS', 'usuarios', $user['usuarioId'], ['email' => $email]);
-        
-        return true;
-    }
-    
-    // --- LOG DE AUDITORIA (FALHA) ---
-    // Registra a tentativa falha (usuário não encontrado ou senha errada)
-    $auditService->log('LOGIN_FAIL', 'usuarios', null, ['email' => $email]);
-
-    return false;
+} catch (Exception $e) {
+    error_log('Erro ao inicializar serviços globais: ' . $e->getMessage());
+    die("Erro crítico na inicialização da aplicação. Verifique o log.");
 }
 
+
+// 4. FUNÇÃO DE VERIFICAÇÃO DE LOGIN
 /**
  * Verifica se o usuário está logado.
  * @return bool
  */
-function isUserLoggedIn() {
-    // startSession(); // REMOVIDO - Já é chamado no topo do arquivo.
-    return isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true;
+function isUserLoggedIn(): bool
+{
+    return isset($_SESSION['user_id']) && $_SESSION['user_id'] > 0;
 }
 
-// ----------------------------------------------------
-// 8. FUNÇÃO AUXILIAR DE ORDENAÇÃO (MANTIDA)
-// ----------------------------------------------------
+
+// 5. FUNÇÃO DE AUTENTICAÇÃO
 /**
- * Alterna a direção da ordenação para um link de coluna na Datagrid.
+ * Tenta autenticar um usuário com base no e-mail e senha.
  */
-function getSortDirection($current_order, $column, $default_dir = 'ASC') {
-    if ($current_order === $column) {
-        // Pega o sort_dir atual da URL (ou o padrão) e inverte
-        return ($_GET['sort_dir'] ?? $default_dir) === 'ASC' ? 'DESC' : 'ASC';
+function authenticateUser(string $email, string $password): bool
+{
+    global $auditService; 
+
+    try {
+        $db = Database::getConnection();
+
+        $stmt = $db->prepare("SELECT usuarioId, nome, email, senha, ativo FROM usuarios WHERE email = :email LIMIT 1");
+        $stmt->execute([':email' => $email]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($user && password_verify($password, $user['senha'])) {
+            
+            if ($user['ativo'] != 1) {
+                // (Correção de argumentos aplicada)
+                $auditService->log(
+                    'LOGIN_FAIL',
+                    'usuarios',
+                    $user['usuarioId'],
+                    ['motivo' => 'Usuário inativo'], // Arg 4
+                    $user['nome']                    // Arg 5
+                );
+                return false;
+            }
+
+            session_regenerate_id(true); 
+            $_SESSION['logged_in'] = true;
+            $_SESSION['user_id'] = (int)$user['usuarioId'];
+            $_SESSION['username'] = $user['nome'];
+            $_SESSION['email'] = $user['email'];
+
+            // (Correção de argumentos aplicada)
+            $auditService->log(
+                'LOGIN_SUCCESS',
+                'usuarios',
+                $user['usuarioId'],
+                null,           // Arg 4
+                $user['nome']   // Arg 5
+            );
+            
+            return true;
+        }
+
+        // (Correção de argumentos aplicada)
+        $auditService->log(
+            'LOGIN_FAIL',
+            'usuarios',
+            null,
+            ['motivo' => 'Credenciais inválidas'], // Arg 4
+            $email                                 // Arg 5
+        );
+        
+        return false;
+
+    } catch (PDOException $e) {
+        error_log('Erro em authenticateUser: ' . $e->getMessage());
+        
+        // (Correção de argumentos aplicada)
+        $auditService->log(
+            'LOGIN_FAIL',
+            'usuarios',
+            null,
+            ['motivo' => 'Erro interno (DB)', 'error' => $e->getMessage()], // Arg 4
+            $email                                                        // Arg 5
+        );
+        
+        return false;
     }
-    return $default_dir;
 }
 
-// ----------------------------------------------------
-// 9. FUNÇÃO AUXILIAR DE VISUALIZAÇÃO (MANTIDA)
-// ----------------------------------------------------
+// 6. FUNÇÃO DE LOGOUT
 /**
- * Mapeia o nome do risco para um ícone Font Awesome com estilo.
- * @param string $riscoNome
- * @return string HTML do ícone.
+ * Destrói a sessão do usuário (Logout).
  */
-function getRiscoIcon(string $riscoNome): string {
-    $map = [
-        'Físico' => '<i class="fas fa-sun" style="color:#f90;"></i>',
-        'Químico' => '<i class="fas fa-flask" style="color:#09f;"></i>',
-        'Ergonômico' => '<i class="fas fa-chair" style="color:#888;"></i>',
-        'Psicossocial' => '<i class="fas fa-brain" style="color:#e66;"></i>',
-        'Acidental' => '<i class="fas fa-exclamation-triangle" style="color:#f00;"></i>',
-        'Biológico' => '<i class="fas fa-biohazard" style="color:#228B22;"></i>'
+function logoutUser(): void
+{
+    $_SESSION = [];
+
+    if (ini_get("session.use_cookies")) {
+        $params = session_get_cookie_params();
+        setcookie(session_name(), '', time() - 42000,
+            $params["path"], $params["domain"],
+            $params["secure"], $params["httponly"]
+        );
+    }
+
+    session_destroy();
+}
+
+
+// 7. FUNÇÃO DE VALIDAÇÃO
+/**
+ * Valida se um nome de tabela está em uma "lista segura".
+ */
+function isValidTableName(string $tableName): bool
+{
+    $allowedTables = [
+        'cargos', 'habilidades', 'caracteristicas', 'riscos', 'usuarios',
+        'cursos', 'areas_atuacao', 'nivel_hierarquico', 'faixas_salariais',
     ];
-    return $map[$riscoNome] ?? '<i class="fas fa-dot-circle" style="color:#999;"></i>';
+    return in_array($tableName, $allowedTables);
+}
+
+
+// 8. FUNÇÕES HELPER PARA ORDENAÇÃO DE TABELAS
+
+/**
+ * Determina a próxima direção de ordenação (ASC/DESC).
+ */
+function getSortDirection(string $currentSortCol, string $currentSortDir, string $columnName): string
+{
+    if ($currentSortCol === $columnName && $currentSortDir === 'ASC') {
+        return 'DESC';
+    }
+    return 'ASC';
+}
+
+/**
+ * Cria um link de cabeçalho de tabela <a> com ícone de ordenação.
+ */
+function createSortLink(string $columnName, string $displayName, array $params): string
+{
+    $currentSortCol = $params['sort_col'] ?? '';
+    $currentSortDir = $params['sort_dir'] ?? 'ASC';
+
+    // 1. Determina a próxima direção de ordenação
+    $nextSortDir = getSortDirection($currentSortCol, $currentSortDir, $columnName);
+    
+    // 2. Define o ícone a ser exibido
+    $icon = 'fa-sort'; // Ícone padrão
+    if ($currentSortCol === $columnName) {
+        $icon = ($currentSortDir === 'ASC') ? 'fa-sort-up' : 'fa-sort-down';
+    }
+
+    // 3. Monta os parâmetros da URL, mesclando os existentes com os novos
+    $queryParams = array_merge($params, [
+        'sort_col' => $columnName,
+        'sort_dir' => $nextSortDir
+    ]);
+
+    // Remove 'page' para voltar à primeira página ao reordenar
+    unset($queryParams['page']);
+
+    // 4. Constrói a URL
+    $url = htmlspecialchars(basename($_SERVER['PHP_SELF'])) . '?' . http_build_query($queryParams);
+
+    // 5. Retorna o link HTML
+    return '<a href="' . $url . '" class="text-decoration-none text-dark">' .
+           htmlspecialchars($displayName) . 
+           ' <i class="fas ' . $icon . ' ms-1 text-muted"></i>' .
+           '</a>';
+}
+
+
+// 9. FUNÇÃO HELPER PARA RELATÓRIOS (NOVA)
+
+/**
+ * Retorna a classe do ícone Font Awesome para um tipo de risco.
+ * Usado em relatorios/cargo_individual.php
+ *
+ * @param string $riscoNome O nome do risco (ex: 'Físico', 'Químico')
+ * @return string A classe do ícone (ex: 'fas fa-flask')
+ */
+function getRiscoIcon(string $riscoNome): string
+{
+    switch ($riscoNome) {
+        case 'Físico':
+            return 'fas fa-thermometer-half'; // Ícone para ruído, calor, vibração
+        case 'Químico':
+            return 'fas fa-flask'; // Ícone para gases, poeira
+        case 'Ergonômico':
+            return 'fas fa-chair'; // Ícone para postura, LER/DORT
+        case 'Psicossocial':
+            return 'fas fa-brain'; // Ícone para stress, ansiedade
+        case 'Acidental':
+            return 'fas fa-exclamation-triangle'; // Ícone para perigo, queda
+        case 'Biológico':
+            return 'fas fa-bacterium'; // Ícone para vírus, bactérias
+        default:
+            return 'fas fa-question-circle'; // Ícone padrão
+    }
 }

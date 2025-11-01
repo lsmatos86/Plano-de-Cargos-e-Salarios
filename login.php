@@ -1,9 +1,7 @@
 <?php
-// Arquivo: login.php (Página de Login)
+// Arquivo: login.php (Página de Login - Corrigido)
 
 // 1. Inclui os arquivos necessários
-// vendor/autoload.php e config.php SÃO necessários para a classe Database
-// functions.php é necessário para a função authenticateUser()
 require_once 'vendor/autoload.php';
 require_once 'config.php';
 require_once 'includes/functions.php'; // Inclui authenticateUser() e isUserLoggedIn()
@@ -11,9 +9,9 @@ require_once 'includes/functions.php'; // Inclui authenticateUser() e isUserLogg
 // 2. Lógica de Login
 $error_message = '';
 
-// Se o usuário já estiver logado, redireciona para o painel
+// Se o usuário já estiver logado, redireciona para o painel principal
 if (isUserLoggedIn()) {
-    header('Location: painel.php');
+    header('Location: index.php'); // <-- CORRIGIDO
     exit;
 }
 
@@ -23,14 +21,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
 
     // 3. Tenta autenticar
-    // A função authenticateUser() agora usa App\Core\Database e registra os logs de auditoria
     if (authenticateUser($email, $password)) {
-        // Sucesso: Redireciona para o painel
-        header('Location: painel.php');
+        // Sucesso: Redireciona para o painel principal
+        header('Location: index.php'); // <-- CORRIGIDO
         exit;
     } else {
         // Falha: Define mensagem de erro
-        // O log de falha já foi registrado dentro de authenticateUser()
         $error_message = 'E-mail ou senha inválidos, ou usuário inativo.';
     }
 }
