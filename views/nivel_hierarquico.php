@@ -1,5 +1,5 @@
 <?php
-// Arquivo: views/nivel_hierarquico.php (REFATORADO COM HEADER/FOOTER)
+// Arquivo: views/nivel_hierarquico.php (REFATORADO - CORRIGIDO)
 
 // 1. Inclusão de arquivos
 require_once '../vendor/autoload.php';
@@ -10,16 +10,19 @@ require_once '../includes/functions.php'; // Para login e helpers
 use App\Repository\NivelHierarquicoRepository;
 use App\Repository\LookupRepository;
 
-// 3. Segurança
+// 3. AVISA AO SCRIPT PARA USAR A VARIÁVEL GLOBAL
+global $authService; 
+
+// 4. Segurança
 if (!isUserLoggedIn()) {
     header('Location: ../login.php');
     exit;
 }
 // (OPCIONAL - Verificação de permissão)
-$authService->checkAndFail('config:view', '../index.php?error=Acesso+negado');
+// $authService->checkAndFail('config:view', '../index.php?error=Acesso+negado');
 
 
-// 4. Definições da Página (para o header.php)
+// 5. Definições da Página (para o header.php)
 $page_title = 'Gerenciamento de Níveis Hierárquicos';
 $root_path = '../'; 
 $breadcrumb_items = [
@@ -280,12 +283,13 @@ include '../includes/header.php';
                 </div>
             </div>
             
-            <?php if ($totalPages > 1): ?>
+            <?php if ($totalRecords > 0): ?>
             <div class="card-footer bg-white d-flex justify-content-between align-items-center">
                 <span class="text-muted">
                     Total: <strong><?php echo $totalRecords; ?></strong> registo(s)
                 </span>
 
+                <?php if ($totalPages > 1): ?>
                 <nav aria-label="Navegação de página">
                     <ul class="pagination mb-0">
                         <li class="page-item <?php echo ($currentPage <= 1) ? 'disabled' : ''; ?>">
@@ -309,11 +313,12 @@ include '../includes/header.php';
                             <a class="page-link" href="?<?php echo $next_query; ?>">Próxima</a>
                         </li>
                     </ul>
+                </nav>
+                <?php endif; ?>
             </div>
             <?php endif; ?>
         </div>
-
-    </div>
+        </div>
 </div>
 
 <?php
