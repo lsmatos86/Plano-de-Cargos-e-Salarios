@@ -37,6 +37,7 @@ if (empty($cargos)) {
 }
 
 $totalCargos = count($cargos);
+$data_emissao_consolidada = date('d/m/Y H:i:s');
 
 // ----------------------------------------------------
 // 7. GERAÇÃO DO HTML (Bufferizado)
@@ -73,17 +74,27 @@ ob_start();
     <script type="text/php">
         if ( isset($pdf) ) {
             $font = $fontMetrics->get_font("Helvetica", "normal");
-            $size = 9;
-            $y = $pdf->get_height() - 30; // Posição Y (inferior)
-            $x = $pdf->get_width() - 100 - $pdf->get_margin_right(); // Posição X (canto direito)
-            $pdf->page_text($x, $y, "Página {PAGE_NUM} de {PAGE_COUNT}", $font, $size);
+            $font_size = 7; // Menor que 8pt
+            $y = $pdf->get_height() - 35; // Posição Y (Dentro da margem inferior de 2cm)
+
+            // Texto da Esquerda (Data de Emissão)
+            $text_left = "Emitido em: <?php echo $data_emissao_consolidada; ?>";
+            $width_left = $fontMetrics->get_text_width($text_left, $font, $font_size);
+            $x_left = 85.0395; // Margem esquerda 3cm
+            $pdf->text($x_left, $y, $text_left, $font, $font_size);
+
+            // Texto da Direita (Paginação)
+            $text_right = "Página {PAGE_NUM} de {PAGE_COUNT}";
+            $width_right = $fontMetrics->get_text_width($text_right, $font, $font_size);
+            $x_right = $pdf->get_width() - 56.693 - $width_right; // Largura - Margem Direita (2cm) - Largura do texto
+            $pdf->text($x_right, $y, $text_right, $font, $font_size);
         }
     </script>
 </head>
 <body class="pdf-render"> <div class="report-header-final" style="margin-top: 200px;">
         <span class="cargo-nome-principal">Relatório Consolidado de Cargos</span>
         <p class="cbo-detail" style="font-size: 14pt;">Total de Cargos: <?php echo $totalCargos; ?></p>
-        <p class="cbo-detail" style="font-size: 11pt;">Emitido em: <?php echo date('d/m/Y H:i:s'); ?></p>
+        <p class="cbo-detail" style="font-size: 11pt;">Emitido em: <?php echo $data_emissao_consolidada; ?></p>
     </div>
     
     <div class="page-break"></div>
@@ -109,8 +120,10 @@ ob_start();
         // 8.3. Define a variável de controlo (NÃO MOSTRAR HIERARQUIA)
         $show_hierarquia = false; 
         
+        // Inicializa o contador de secção DENTRO do loop
+        $section_counter = 1;
+
         // 8.4. Inclui o template
-        // (Usando o caminho correto que definimos: includes/templates/)
         include '../includes/templates/_template_cargo.php'; 
     ?>
         

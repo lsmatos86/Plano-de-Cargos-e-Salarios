@@ -40,9 +40,15 @@ $cargo = $data['cargo'];
 $soft_skills = array_filter($data['habilidades'], fn($h) => $h['habilidadeTipo'] == 'Softskill');
 $hard_skills = array_filter($data['habilidades'], fn($h) => $h['habilidadeTipo'] == 'Hardskill');
 
+// Prepara as variáveis para o rodapé
+$data_emissao = date('d/m/Y H:i:s');
+$data_atualizacao = !empty($cargo['cargoDataAtualizacao']) ? (new DateTime($cargo['cargoDataAtualizacao']))->format('d/m/Y') : 'N/A';
+
+
 // ----------------------------------------------------
 // 9. GERAÇÃO DO HTML (Bufferizado)
 // ----------------------------------------------------
+$section_counter = 1;
 ob_start();
 ?>
 <!DOCTYPE html>
@@ -65,22 +71,40 @@ ob_start();
     <script type="text/php">
         if ( isset($pdf) ) {
             $font = $fontMetrics->get_font("Helvetica", "normal");
-            $size = 9;
-            $y = $pdf->get_height() - 30; // Posição Y (inferior)
-            $x = $pdf->get_width() - 100 - $pdf->get_margin_right(); // Posição X (canto direito)
-            $pdf->page_text($x, $y, "Página {PAGE_NUM} de {PAGE_COUNT}", $font, $size);
+            $font_size = 7; // Menor que 8pt
+            
+            // Margem inferior (definida no @page) = 2cm. 
+            // (2cm * 28.3465) = 56.693 pts. Posição Y será (altura - margem) + (margem/2)
+            $y = $pdf->get_height() - 35; // Posição Y (Dentro da margem inferior de 2cm)
+
+            // Texto da Esquerda (Data de Atualização)
+            $text_left = "Última Atualização do Registo: <?php echo $data_atualizacao; ?>";
+            $width_left = $fontMetrics->get_text_width($text_left, $font, $font_size);
+            // Posição X (Margem esquerda = 3cm = 85.0395 pts)
+            $x_left = 85.0395; 
+            $pdf->text($x_left, $y, $text_left, $font, $font_size);
+
+            // Texto do Meio (Data de Emissão)
+            $text_center = "Emitido em: <?php echo $data_emissao; ?>";
+            $width_center = $fontMetrics->get_text_width($text_center, $font, $font_size);
+            $x_center = ($pdf->get_width() - $width_center) / 2; // Centralizado
+            $pdf->text($x_center, $y, $text_center, $font, $font_size);
+            
+            // Texto da Direita (Paginação)
+            $text_right = "Página {PAGE_NUM} de {PAGE_COUNT}";
+            $width_right = $fontMetrics->get_text_width($text_right, $font, $font_size);
+            // Posição X (Largura - Margem Direita (56.693 pts) - Largura do texto)
+            $x_right = $pdf->get_width() - 56.693 - $width_right; 
+            $pdf->text($x_right, $y, $text_right, $font, $font_size);
         }
     </script>
 </head>
-<body class="pdf-render"> <div class="container">
+<body class="pdf-render"> 
+<div class="container">
 
     <?php
     // Define a variável de controlo e inclui o template
-    $show_hierarquia = false; // <-- AQUI ESTÁ A MUDANÇA
-    
-    // ======================================================
-    // ATUALIZAÇÃO DO CAMINHO DO INCLUDE
-    // ======================================================
+    $show_hierarquia = false; 
     include '../includes/templates/_template_cargo.php';
     ?>
 

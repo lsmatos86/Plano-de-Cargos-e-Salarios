@@ -87,6 +87,12 @@ $pdf_params = http_build_query([
 // ----------------------------------------------------
 // 9. GERAÇÃO DO HTML (Bufferizado)
 // ----------------------------------------------------
+
+// ======================================================
+// ATUALIZAÇÃO: Inicializa o contador de secção
+// ======================================================
+$section_counter = 1;
+
 ob_start();
 ?>
 <!DOCTYPE html>
@@ -174,10 +180,6 @@ ob_start();
     <?php
     // Define a variável de controlo e inclui o template
     $show_hierarquia = true;
-    
-    // ======================================================
-    // ATUALIZAÇÃO DO CAMINHO DO INCLUDE
-    // ======================================================
     include '../includes/templates/_template_cargo.php';
     ?>
 

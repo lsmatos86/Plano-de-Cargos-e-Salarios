@@ -24,12 +24,16 @@ body.html-render .container {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
-
+/*
+ * ======================================================
+ * AJUSTE 1: Remoção da linha (borda) e redução de espaçamento
+ * ======================================================
+ */
 .report-header-final {
     text-align: center;
     margin-bottom: 25px;
-    border-bottom: 2px solid #eee;
-    padding-bottom: 20px;
+    /* border-bottom: 2px solid #eee; <-- REMOVIDO */
+    padding-bottom: 0; /* <-- REMOVIDO */
 }
 
 .cargo-nome-principal {
@@ -37,13 +41,13 @@ body.html-render .container {
     color: #000;
     font-weight: bold;
     display: block;
-    margin-bottom: 5px;
+    margin-bottom: 2px; /* <-- REDUZIDO */
 }
 
 .cbo-detail {
     font-size: 11pt;
     color: #555;
-    margin-bottom: 10px;
+    margin-bottom: 15px; /* <-- REDUZIDO */
     text-align: center;
 }
 
@@ -98,60 +102,43 @@ table.data-list th i {
     color: #198754;
 }
 
-/* Tabela de Riscos */
-table.riscos-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
-    border: 1px solid #ddd;
-}
-table.riscos-table tr {
-    page-break-inside: avoid;
-}
-
-table.riscos-table th,
-table.riscos-table td {
-    padding: 8px;
-    text-align: left;
-    vertical-align: top;
-    border: 1px solid #ddd;
-}
-
-table.riscos-table th {
-    background-color: #f8f9fa;
-    font-weight: bold;
-}
-
-table.riscos-table td i {
-    margin-right: 5px;
-}
-
-/* Conteúdo WYSIWYG (Descrições Longas) */
 .wysiwyg-content {
     margin-top: 5px;
-    padding: 15px;
-    background-color: #fdfdfd;
-    border: 1px solid #eee;
-    border-radius: 5px;
+    padding: 10px 0; /* Apenas espaçamento vertical */
 }
 
 /* Listas (Habilidades, Cursos, Características) */
 .habilidade-list,
 .curso-list,
-.caracteristica-list {
+.caracteristica-list,
+.risco-list { 
     list-style: none;
     padding-left: 0;
     margin-top: 10px;
 }
 
+/* Estilo padrão (compacto) para o PDF */
 .habilidade-list li,
 .curso-list li,
-.caracteristica-list li {
-    padding: 8px 0;
-    border-bottom: 1px dotted #eee;
+.caracteristica-list li,
+.risco-list li { 
+    padding: 2px 0; /* <-- Padding compacto para PDF */
+    line-height: 1.2; /* <-- Entrelinha compacta para PDF */
+    border-bottom: 1px dotted #ccc;
     page-break-inside: avoid;
     overflow: hidden; /* Clearfix para o float do ícone */
 }
+
+/* Override (espaçamento maior) para o Navegador */
+body.html-render .habilidade-list li,
+body.html-render .curso-list li,
+body.html-render .caracteristica-list li,
+body.html-render .risco-list li {
+    padding: 8px 0; /* <-- Padding maior para HTML */
+    line-height: 1.4; /* <-- Entrelinha normal para HTML */
+    border-bottom: 1px dotted #eee;
+}
+
 
 .habilidade-nome {
     font-size: 10.5pt;
@@ -175,48 +162,59 @@ table.riscos-table td i {
     margin-right: 5px;
 }
 
+/* Ícones de lista (Alinhamento) */
 .curso-list li i,
 .caracteristica-list li i,
-.habilidade-list li i {
+.habilidade-list li i,
+.risco-list li i { 
     color: #198754;
     margin-right: 8px;
-    margin-top: 4px; 
-    width: 12px;
+    margin-top: 3px; 
+    width: 1.2em; 
+    text-align: center; 
     float: left; 
 }
 
+/* Ícones de Risco pretos */
+.risco-list li i {
+    color: #000 !important; 
+}
+
+
 .item-content {
     display: block;
-    overflow: hidden; /* Força o div a ocupar o espaço ao lado do ícone flutuante */
+    overflow: hidden; 
 }
 
 .caracteristica-list li {
     /* font-weight: normal; */
 }
 
-/* Layout de 2 colunas para Habilidades */
-.skill-container {
-    width: 100%;
-    overflow: hidden; /* Clearfix para floats */
-}
-.skill-column {
-    width: 49%;
-    float: left;
-}
-.skill-column:first-child {
-    margin-right: 2%;
-}
-
-/* NOVO: Layout de 2 colunas para Seções (Qualificação/Riscos) */
+/* Padrão (para PDF): 1 Coluna */
+.skill-container,
 .section-container {
     width: 100%;
+    overflow: hidden;
+}
+.skill-column,
+.section-column {
+    width: 100%;
+    float: none;
+    margin-right: 0;
+}
+
+/* Apenas no Navegador (HTML): Ativa 2 Colunas */
+body.html-render .skill-container,
+body.html-render .section-container {
     overflow: hidden; /* Clearfix para floats */
 }
-.section-column {
+body.html-render .skill-column,
+body.html-render .section-column {
     width: 49%;
     float: left;
 }
-.section-column:first-child {
+body.html-render .skill-column:first-child,
+body.html-render .section-column:first-child {
     margin-right: 2%;
 }
 
@@ -246,10 +244,10 @@ table.riscos-table td i {
 
     /* Força a impressão de cores/ícones do FontAwesome */
     table.data-list th i,
-    table.riscos-table td i,
     .curso-list li i,
     .caracteristica-list li i,
     .habilidade-list li i,
+    .risco-list li i, 
     .h2-custom i,
     .h5-custom i {
         color: #000 !important;
@@ -273,20 +271,15 @@ table.riscos-table td i {
     }
 
     /* Remove fundos e bordas desnecessários */
-    table.data-list th,
-    table.riscos-table th {
+    table.data-list th {
         background-color: #fff !important;
-        border-color: #888;
-    }
-    
-    table.riscos-table,
-    table.riscos-table td {
         border-color: #888;
     }
 
     .wysiwyg-content {
         background-color: #fff !important;
-        border: 1px solid #bbb;
+        border: none; 
+        padding: 10px 0;
     }
     
     a {
@@ -296,19 +289,24 @@ table.riscos-table td i {
 
     /* Na impressão, força 1 coluna (melhor para A4) */
     .skill-container,
-    .section-container { /* Adicionado container da seção */
+    .section-container { 
         width: 100%;
         overflow: visible;
     }
     .skill-column,
-    .section-column { /* Adicionada coluna da seção */
+    .section-column { 
         width: 100%;
         float: none;
         margin-right: 0;
     }
 }
 
+/*
+ * ======================================================
+ * AJUSTE 3: Margens ABNT para o PDF
+ * ======================================================
+ */
 @page {
-    /* Define as margens da página do PDF */
-    margin: 1.5cm;
+    /* 3cm topo, 2cm direita, 2cm inferior, 3cm esquerda */
+    margin: 3cm 2cm 2cm 3cm;
 }

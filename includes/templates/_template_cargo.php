@@ -1,30 +1,23 @@
 <?php
 /**
  * ARQUIVO DE TEMPLATE DE CARGO (PARCIAL)
- *
- * Este ficheiro não deve ser acedido diretamente.
- * Ele espera que as seguintes variáveis já estejam definidas:
- * - $cargo (array)
- * - $data (array)
- * - $hard_skills (array)
- * - $soft_skills (array)
- * - $show_hierarquia (bool)
  */
  
-if (!isset($cargo)) {
-    die("Erro: Template carregado sem dados do cargo.");
+if (!isset($cargo) || !isset($section_counter)) {
+    die("Erro: Template carregado sem dados do cargo ou contador de secção.");
 }
 ?>
 
 <div class="report-header-final">
     <span class="cargo-nome-principal"><?php echo htmlspecialchars($cargo['cargoNome']); ?></span>
+    
     <p class="cbo-detail">
-        <strong>CBO:</strong> <?php echo htmlspecialchars($cargo['cboCod'] ?? 'N/A'); ?> - 
+        CBO: <?php echo htmlspecialchars($cargo['cboCod'] ?? 'N/A'); ?> - 
         <?php echo htmlspecialchars($cargo['cboTituloOficial'] ?? 'Título Oficial Não Disponível'); ?>
     </p>
 </div>
 
-<h2 class="h2-custom"><i class="fas fa-id-card"></i> 1. Informações Essenciais</h2>
+<h2 class="h2-custom"><i class="fas fa-id-card"></i> <?php echo $section_counter++; ?>. Informações Essenciais</h2>
 <table class="data-list">
     <tr>
         <th><i class="fas fa-file-alt"></i> Descrição Sumária</th>
@@ -45,7 +38,7 @@ if (!isset($cargo)) {
 </table>
 
 <?php if ($show_hierarquia): ?>
-<h2 class="h2-custom"><i class="fas fa-sitemap"></i> 2. Hierarquia e Estrutura</h2>
+<h2 class="h2-custom"><i class="fas fa-sitemap"></i> <?php echo $section_counter++; ?>. Hierarquia e Estrutura</h2>
  <table class="data-list">
     <tr>
         <th><i class="fas fa-level-up-alt"></i> Nível Hierárquico</th>
@@ -80,7 +73,7 @@ if (!isset($cargo)) {
 </table>
 <?php endif; ?>
 
-<h2 class="h2-custom"><i class="fas fa-cogs"></i> 3. Habilidades e Competências</h2>
+<h2 class="h2-custom"><i class="fas fa-cogs"></i> <?php echo $section_counter++; ?>. Habilidades e Competências</h2>
 <div class="skill-container">
     <div class="skill-column">
         <h5 class="h5-custom skill-type-header"><i class="fas fa-toolbox"></i> Habilidades Técnicas (HARD SKILLS)</h5>
@@ -143,7 +136,7 @@ if (!isset($cargo)) {
 
 <div class="section-container">
     <div class="section-column">
-        <h2 class="h2-custom"><i class="fas fa-handshake"></i> 4. Qualificação e Recursos</h2>
+        <h2 class="h2-custom"><i class="fas fa-handshake"></i> <?php echo $section_counter++; ?>. Qualificação e Recursos</h2>
         
         <h5 class="h5-custom"><i class="fas fa-certificate"></i> Cursos e Treinamentos</h5>
         <ul class="curso-list">
@@ -181,31 +174,25 @@ if (!isset($cargo)) {
             <?php endif; ?>
         </ul>
     </div><div class="section-column">
-        <h2 class="h2-custom"><i class="fas fa-radiation-alt"></i> 5. Riscos de Exposição</h2>
-        <table class="riscos-table">
-            <thead class="bg-light">
-                <tr>
-                    <th style="width: 30%;">Tipo de Risco</th>
-                    <th>Detalhe Específico da Exposição</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($data['riscos'])): ?>
-                    <tr><td colspan="2" style="text-align: center;">Nenhum risco de exposição registrado.</td></tr>
-                <?php else: ?>
-                    <?php foreach ($data['riscos'] as $r): ?>
-                        <tr>
-                            <td>
-                                <i class="<?php echo getRiscoIcon($r['riscoNome']); // ?>"></i> 
-                                <?php echo htmlspecialchars($r['riscoNome']); ?>
-                            </td>
-                            <td><?php echo nl2br(htmlspecialchars($r['riscoDescricao'])); ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
-    </div></div><h2 class="h2-custom"><i class="fas fa-book-open"></i> 6. Descrições Detalhadas</h2>
+        <h2 class="h2-custom"><i class="fas fa-radiation-alt"></i> <?php echo $section_counter++; ?>. Riscos de Exposição</h2>
+        
+        <ul class="risco-list">
+            <?php if (empty($data['riscos'])): ?>
+                <li>Nenhum risco de exposição registrado.</li>
+            <?php else: ?>
+                <?php foreach ($data['riscos'] as $r): ?>
+                    <li>
+                        <i class="<?php echo getRiscoIcon($r['riscoNome']); // ?>"></i>
+                        <div class="item-content">
+                            <strong><?php echo htmlspecialchars($r['riscoNome']); ?>:</strong>
+                            <?php echo htmlspecialchars($r['riscoDescricao']); ?>
+                        </div>
+                    </li>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </ul>
+        
+    </div></div><h2 class="h2-custom"><i class="fas fa-book-open"></i> <?php echo $section_counter++; ?>. Descrições Detalhadas</h2>
 
 <h5 class="h5-custom"><i class="fas fa-clipboard-list"></i> Responsabilidades Detalhadas:</h5>
 <div class="wysiwyg-content"><?php echo nl2br(htmlspecialchars($cargo['cargoResponsabilidades'] ?? 'N/A')); ?></div>
