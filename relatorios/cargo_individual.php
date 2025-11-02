@@ -1,302 +1,432 @@
 <?php
-// Arquivo: relatorios/cargo_individual.php (REFATORADO E CORRIGIDO)
+// Arquivo: relatorios/cargo_individual.php (Ajustes de Ícones e Negrito)
 
-// 1. Inclusão de arquivos
+// 1. Inclua o autoload do Composer
 require_once '../vendor/autoload.php';
-require_once '../config.php';
-require_once '../includes/functions.php'; // Para login e helpers (incluindo getRiscoIcon)
+require_once '../config.php'; 
 
-// 2. Importa os Repositórios
+// 2. Importe a classe
 use App\Repository\CargoRepository;
-use App\Core\Database; // Para a navegação Próximo/Anterior
 
-// 3. Segurança
+// 3. Inclua functions.php (para login e helpers de ícones)
+require_once '../includes/functions.php'; 
+
+// 4. Inclua o gerador de PDF
+require_once 'pdf_generator.php';
+
+// 5. Segurança
 if (!isUserLoggedIn()) {
-    header('Location: ../login.php');
-    exit;
-}
-// (OPCIONAL - Verificação de permissão)
-// $authService->checkAndFail('cargos:view', '../index.php?error=Acesso+negado');
-
-
-// 4. Obter Dados
-$cargoId = (int)($_GET['id'] ?? 0);
-if ($cargoId === 0) {
-    // Redireciona de volta para a lista se nenhum ID for fornecido
-    header('Location: ../views/cargos.php?message=ID do cargo não fornecido.&type=danger');
-    exit;
+    die("Acesso Negado.");
 }
 
-$repo = new CargoRepository();
+// 6. Obter Parâmetros
+$cargo_id = (int)($_GET['id'] ?? 0);
+$format = strtolower($_GET['format'] ?? 'html');
 
-// ---- INÍCIO DA CORREÇÃO ----
-// O método 'getFullCargoDetails' não existe.
-// Vamos usar os métodos reais do CargoRepository.
+// Parâmetros de navegação
+$sort_col = $_GET['sort_col'] ?? 'c.cargoId';
+$sort_dir = $_GET['sort_dir'] ?? 'ASC';
+$term = $_GET['term'] ?? '';
 
+if ($cargo_id <= 0) {
+    die("Erro: ID de cargo inválido.");
+}
+
+// 7. Buscar os dados
 try {
-    // 1. Busca os detalhes principais (JOINs com CBO, Nível, Faixa, etc.)
-    $details = $repo->find($cargoId);
+    $cargoRepository = new CargoRepository(); 
+    $data = $cargoRepository->findReportData($cargo_id); 
+    
+    $adjacentIds = ['prev_id' => null, 'next_id' => null];
+    $extremityIds = ['first_id' => null, 'last_id' => null];
 
-    if (!$details) {
-        throw new Exception("Cargo com ID $cargoId não encontrado.");
+    // Só buscamos navegação se for HTML
+    if ($format === 'html') {
+        //
+        $adjacentIds = $cargoRepository->findAdjacentCargoIds($cargo_id, $sort_col, $sort_dir, $term);
+        //
+        $extremityIds = $cargoRepository->findFirstAndLastCargoIds($sort_col, $sort_dir, $term);
     }
 
-    // 2. Busca os dados das tabelas de ligação (Muitos-para-Muitos)
-    $habilidades = $repo->findHabilidadesByCargoId($cargoId);
-    $cursos = $repo->findCursosByCargoId($cargoId);
-    $riscos = $repo->findRiscosByCargoId($cargoId);
-    // (Adicione aqui outras buscas se necessário, ex: caracteristicas)
-
-} catch (Exception $e) {
-    // Redireciona de volta para a lista com a mensagem de erro
-    header('Location: ../views/cargos.php?message=' . urlencode($e->getMessage()) . '&type=danger');
-    exit;
-}
-// ---- FIM DA CORREÇÃO ----
-
-
-// 5. Definições da Página (para o header.php)
-$page_title = "Cargo: " . htmlspecialchars($details['cargoNome']);
-$root_path = '../'; 
-$breadcrumb_items = [
-    'Dashboard' => '../index.php',
-    'Gerenciamento de Cargos' => '../views/cargos.php',
-    'Relatório Individual' => null // Página ativa
-];
-// NOTA: $is_dashboard não é definida (mostra o menu cascata)
-
-
-// 6. LÓGICA DE NAVEGAÇÃO (Próximo/Anterior)
-try {
-    $db = Database::getConnection();
-    $stmtPrev = $db->prepare("SELECT MAX(cargoId) as prevId FROM cargos WHERE cargoId < :id");
-    $stmtPrev->execute([':id' => $cargoId]);
-    $prevCargoId = $stmtPrev->fetchColumn();
-
-    $stmtNext = $db->prepare("SELECT MIN(cargoId) as nextId FROM cargos WHERE cargoId > :id");
-    $stmtNext->execute([':id' => $cargoId]);
-    $nextCargoId = $stmtNext->fetchColumn();
-} catch (Exception $e) {
-    $prevCargoId = null;
-    $nextCargoId = null;
-    // Não é um erro fatal, apenas desativa os botões
+} catch (\Exception $e) {
+    die("Erro ao carregar dados do repositório: " . $e->getMessage());
 }
 
+if (!$data) {
+    die("Erro: Cargo ID {$cargo_id} não encontrado ou dados insuficientes.");
+}
 
-// 7. Inclui o Header
-include '../includes/header.php';
+// 8. Preparar variáveis
+$cargo = $data['cargo'];
+$soft_skills = array_filter($data['habilidades'], fn($h) => $h['habilidadeTipo'] == 'Softskill');
+$hard_skills = array_filter($data['habilidades'], fn($h) => $h['habilidadeTipo'] == 'Hardskill');
 
-/*
- * NOTA: A lógica de GERAÇÃO DE PDF (format=pdf) foi movida 
- * para um ficheiro separado (ex: /relatorios/gerador_pdf.php)
- * para não conflitar com o layout HTML do header.php.
- *
- * Este ficheiro (cargo_individual.php) agora é APENAS para a
- * visualização HTML.
- */
+// IDs de Navegação
+$prev_id = $adjacentIds['prev_id'];
+$next_id = $adjacentIds['next_id'];
+$first_id = $extremityIds['first_id'];
+$last_id = $extremityIds['last_id'];
 
+// Monta os parâmetros de navegação para os links
+$nav_params_base = http_build_query([
+    'format' => 'html',
+    'sort_col' => $sort_col,
+    'sort_dir' => $sort_dir,
+    'term' => $term
+]);
+
+// Links de navegação
+$first_link = $first_id ? "cargo_individual.php?id={$first_id}&{$nav_params_base}" : null;
+$prev_link  = $prev_id  ? "cargo_individual.php?id={$prev_id}&{$nav_params_base}" : null;
+$next_link  = $next_id  ? "cargo_individual.php?id={$next_id}&{$nav_params_base}" : null;
+$last_link  = $last_id  ? "cargo_individual.php?id={$last_id}&{$nav_params_base}" : null;
+
+
+// ----------------------------------------------------
+// 9. GERAÇÃO DO HTML (Bufferizado)
+// ----------------------------------------------------
+ob_start();
 ?>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Relatório - Cargo: <?php echo htmlspecialchars($cargo['cargoNome']); ?></title>
+    
+    <link rel="stylesheet" href="../css/relatorio_style.css">
 
-<style>
-    .report-header {
-        text-align: center;
-        border-bottom: 2px solid #000;
-        margin-bottom: 20px;
-        padding-bottom: 10px;
-    }
-    .report-header h1 {
-        margin: 0;
-        font-size: 2rem;
-    }
-    .report-header h2 {
-        margin: 0;
-        font-size: 1.2rem;
-        font-weight: normal;
-        color: #555;
-    }
-    .section-title {
-        background-color: #f0f0f0;
-        padding: 10px;
-        font-size: 1.2rem;
-        font-weight: bold;
-        border-top: 2px solid #ddd;
-        margin-top: 20px;
-        margin-bottom: 15px;
-    }
-    .list-group-item {
-        border-bottom: 1px solid #eee !important;
-    }
-    .list-group-item strong {
-        display: inline-block;
-        width: 150px;
-        color: #333;
-    }
-    .badge-hardskill { background-color: #0d6efd; }
-    .badge-softskill { background-color: #198754; }
-
-    /* Oculta elementos na impressão */
-    @media print {
-        body {
-            padding-top: 0 !important; /* Remove o padding do header */
-        }
-        header.fixed-top, footer.footer, .breadcrumb, .action-bar {
-            display: none !important; /* Esconde header, footer e barras de ação */
-        }
-        main.main-content {
-            margin-bottom: 0 !important;
-        }
-        .card-report {
-            box-shadow: none !important;
-            border: none !important;
-        }
-    }
-</style>
-
-<div class="card shadow-sm mb-4 action-bar">
-    <div class="card-body d-flex flex-wrap justify-content-between align-items-center">
+    <?php if ($format === 'html'): ?>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
         
-        <div>
-            <a href="../views/cargos.php" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left"></i> Voltar à Lista
+        <style>
+            .btn-nav-container {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+                padding: 15px;
+                background-color: #f8f9fa;
+                border: 1px solid #dee2e6;
+                border-radius: 8px;
+                flex-wrap: wrap; /* Permite quebrar linha em telas menores */
+            }
+            .nav-group {
+                margin: 5px;
+            }
+            .nav-go-form {
+                display: flex;
+            }
+            .nav-go-form input[type="number"] {
+                width: 90px;
+                margin-right: 5px;
+                text-align: center;
+            }
+        </style>
+    <?php endif; ?>
+    
+    <?php if ($format === 'pdf'): ?>
+    <script type="text/php">
+        if ( isset($pdf) ) {
+            $font = $fontMetrics->get_font("Helvetica", "normal");
+            $size = 9;
+            $y = $pdf->get_height() - 30; // Posição Y (inferior)
+            $x = $pdf->get_width() - 100 - $pdf->get_margin_right(); // Posição X (canto direito)
+            $pdf->page_text($x, $y, "Página {PAGE_NUM} de {PAGE_COUNT}", $font, $size);
+        }
+    </script>
+    <?php endif; ?>
+</head>
+<body>
+<div class="container">
+
+    <?php if ($format === 'html'): ?>
+    <div class="btn-nav-container no-print">
+        
+        <div class="btn-group nav-group" role="group">
+            <a href="../views/cargos.php" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left"></i> Voltar
             </a>
         </div>
         
-        <div class="my-2 my-md-0">
-            <a href="cargo_individual.php?id=<?php echo $prevCargoId; ?>" 
-               class="btn btn-outline-primary <?php echo $prevCargoId ? '' : 'disabled'; ?>" 
-               title="Cargo Anterior">
-                <i class="fas fa-chevron-left"></i> Anterior
+        <div class="btn-group nav-group" role="group">
+            <a href="<?php echo $first_link; ?>" class="btn btn-outline-primary btn-sm <?php echo $first_id && $first_id != $cargo_id ? '' : 'disabled'; ?>" title="Primeiro Registro">
+                <i class="fas fa-angle-double-left"></i>
             </a>
-            <a href="cargo_individual.php?id=<?php echo $nextCargoId; ?>" 
-               class="btn btn-outline-primary <?php echo $nextCargoId ? '' : 'disabled'; ?>" 
-               title="Próximo Cargo">
-                Próximo <i class="fas fa-chevron-right"></i>
+            <a href="<?php echo $prev_link; ?>" class="btn btn-outline-primary btn-sm <?php echo $prev_id ? '' : 'disabled'; ?>" title="Anterior">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+            <a href="<?php echo $next_link; ?>" class="btn btn-outline-primary btn-sm <?php echo $next_id ? '' : 'disabled'; ?>" title="Próximo">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            <a href="<?php echo $last_link; ?>" class="btn btn-outline-primary btn-sm <?php echo $last_id && $last_id != $cargo_id ? '' : 'disabled'; ?>" title="Último Registro">
+                <i class="fas fa-angle-double-right"></i>
             </a>
         </div>
         
-        <div>
-            <a href="javascript:window.print()" class="btn btn-secondary">
+        <form class="nav-go-form nav-group" method="GET" action="cargo_individual.php" id="navGoForm">
+            <input type="hidden" name="format" value="html">
+            <input type="hidden" name="sort_col" value="<?php echo htmlspecialchars($sort_col); ?>">
+            <input type="hidden" name="sort_dir" value="<?php echo htmlspecialchars($sort_dir); ?>">
+            <input type="hidden" name="term" value="<?php echo htmlspecialchars($term); ?>">
+            
+            <input type="number" class="form-control form-control-sm" name="id" placeholder="Ir para ID..." value="<?php echo $cargo_id; ?>" required>
+            <button type="submit" class="btn btn-outline-primary btn-sm">Ir</button>
+        </form>
+        
+        <div class="btn-group nav-group" role="group">
+            <a href="cargo_individual.php?id=<?php echo $cargo_id; ?>&<?php echo $nav_params_base; ?>&format=pdf" class="btn btn-danger btn-sm" target="_blank">
+                <i class="fas fa-file-pdf"></i> PDF
+            </a>
+            <button onclick="window.print()" class="btn btn-success btn-sm">
                 <i class="fas fa-print"></i> Imprimir
-            </a>
-            <a href="gerador_pdf.php?id=<?php echo $cargoId; ?>" class="btn btn-danger" target="_blank">
-                <i class="fas fa-file-pdf"></i> Gerar PDF
-            </a>
+            </button>
         </div>
     </div>
-</div>
+    <?php endif; ?>
 
-<div class="card shadow-sm card-report" id="reportContent">
-    <div class="card-body p-4 p-md-5">
+    <div class="report-header-final">
+        <span class="cargo-nome-principal"><?php echo htmlspecialchars($cargo['cargoNome']); ?></span>
+        <p class="cbo-detail">
+            <strong>CBO:</strong> <?php echo htmlspecialchars($cargo['cboCod'] ?? 'N/A'); ?> - 
+            <?php echo htmlspecialchars($cargo['cboTituloOficial'] ?? 'Título Oficial Não Disponível'); ?>
+        </p>
+    </div>
 
-        <div class="report-header mb-4">
-            <h1><?php echo htmlspecialchars($details['cargoNome']); ?></h1>
-            <h2><?php echo htmlspecialchars($details['areaNome'] ?? 'Área não definida'); ?></h2>
-        </div>
+    <h2 class="h2-custom"><i class="fas fa-id-card"></i> 1. Informações Essenciais</h2>
+    <table class="data-list">
+        <tr>
+            <th><i class="fas fa-file-alt"></i> Descrição Sumária</th>
+            <td><?php echo nl2br(htmlspecialchars($cargo['cargoResumo'] ?? 'N/A')); ?></td>
+        </tr>
+        <tr>
+            <th><i class="fas fa-graduation-cap"></i> Escolaridade</th>
+            <td><?php echo htmlspecialchars($cargo['escolaridadeTitulo'] ?? 'N/A'); ?></td>
+        </tr>
+        <tr>
+            <th><i class="fas fa-clock"></i> Experiência</th>
+            <td><?php echo htmlspecialchars($cargo['cargoExperiencia'] ?? 'N/A'); ?></td>
+        </tr>
+         <tr>
+            <th><i class="fas fa-tags"></i> Sinônimos</th>
+            <td><?php echo empty($data['sinonimos']) ? 'Nenhum' : implode(', ', array_map('htmlspecialchars', $data['sinonimos'])); ?></td>
+        </tr>
+    </table>
 
-        <div class="section-title">Informações Básicas</div>
-        <ul class="list-group list-group-flush">
-            <li class="list-group-item">
-                <strong>CBO Oficial:</strong> <?php echo htmlspecialchars($details['cboTituloOficial'] ?? 'N/A'); ?> (<?php echo htmlspecialchars($details['cboCod'] ?? 'N/A'); ?>)
-            </li>
-            <li class="list-group-item">
-                <strong>Família CBO:</strong> <?php echo htmlspecialchars($details['familiaCboNome'] ?? 'N/A'); ?>
-            </li>
-            <li class="list-group-item">
-                <strong>Nível Hierárquico:</strong> <?php echo htmlspecialchars($details['nivelDescricao'] ?? 'N/A'); ?> (Ordem: <?php echo htmlspecialchars($details['nivelOrdem'] ?? 'N/A'); ?>)
-            </li>
-            <li class="list-group-item">
-                <strong>Tipo de Nível:</strong> <?php echo htmlspecialchars($details['tipoNome'] ?? 'N/A'); ?>
-            </li>
-            <li class="list-group-item">
-                <strong>Faixa Salarial:</strong> <?php echo htmlspecialchars($details['faixaNivel'] ?? 'N/A'); ?> (R$ <?php echo number_format($details['faixaSalarioMinimo'] ?? 0, 2, ',', '.'); ?> - R$ <?php echo number_format($details['faixaSalarioMaximo'] ?? 0, 2, ',', '.'); ?>)
-            </li>
-            <li class="list-group-item">
-                <strong>Supervisor Direto:</strong> <?php echo htmlspecialchars($details['supervisorNome'] ?? 'N/A'); ?>
-            </li>
-        </ul>
+    <h2 class="h2-custom"><i class="fas fa-sitemap"></i> 2. Hierarquia e Estrutura</h2>
+     <table class="data-list">
+        <tr>
+            <th><i class="fas fa-level-up-alt"></i> Nível Hierárquico</th>
+            <td>
+                <?php 
+                echo htmlspecialchars($cargo['tipoHierarquiaNome'] ?? 'N/A'); 
+                if (!empty($cargo['nivelOrdem'])) {
+                    echo ' (Ordem: ' . htmlspecialchars($cargo['nivelOrdem']) . ')';
+                }
+                ?>
+            </td>
+        </tr>
+         <tr>
+            <th><i class="fas fa-user-tie"></i> Reporta-se a</th>
+            <td><?php echo htmlspecialchars($cargo['cargoSupervisorNome'] ?? 'N/A'); ?></td>
+        </tr>
+         <tr>
+            <th><i class="fas fa-building"></i> Áreas de Atuação</th>
+            <td><?php echo empty($data['areas_atuacao']) ? 'Nenhuma' : implode(', ', array_map('htmlspecialchars', $data['areas_atuacao'])); ?></td>
+        </tr>
+         <tr>
+            <th><i class="fas fa-wallet"></i> Faixa Salarial</th>
+            <td>
+                <?php 
+                echo htmlspecialchars($cargo['faixaNivel'] ?? 'Não definida'); 
+                if (!empty($cargo['faixaSalarioMinimo'])) {
+                    echo ' (R$ ' . htmlspecialchars(number_format($cargo['faixaSalarioMinimo'], 2, ',', '.')) . ' - R$ ' . htmlspecialchars(number_format($cargo['faixaSalarioMaximo'], 2, ',', '.')) . ')';
+                }
+                ?>
+            </td>
+        </tr>
+    </table>
 
-        <div class="section-title">Descrição do Cargo</div>
-        <div class="p-2">
-            <strong>Resumo:</strong>
-            <p><?php echo nl2br(htmlspecialchars($details['cargoResumo'] ?? 'N/A')); ?></p>
-            <strong>Descrição Detalhada:</strong>
-            <p><?php echo nl2br(htmlspecialchars($details['cargoDescricao'] ?? 'N/A')); ?></p>
-        </div>
-
-        <div class="section-title">Requisitos Obrigatórios</div>
-        <div class="row">
-            <div class="col-md-6">
-                <h6><i class="fas fa-graduation-cap text-primary me-2"></i> Escolaridade Mínima</h6>
-                <p class="ms-4"><?php echo htmlspecialchars($details['escolaridadeTitulo'] ?? 'N/A'); ?></p>
-                
-                <h6><i class="fas fa-certificate text-primary me-2"></i> Cursos e Treinamentos</h6>
-                <ul class="list-unstyled ms-4">
-                    <?php if (empty($cursos)): ?>
-                        <li>Nenhum curso específico.</li>
-                    <?php else: ?>
-                        <?php foreach ($cursos as $item): ?>
-                            <li>
-                                <i class="fas fa-check-circle text-success me-1"></i>
-                                <?php echo htmlspecialchars($item['cursoNome']); ?>
-                                <?php if ($item['cursoCargoObrigatorio']): ?>
-                                    <span class="badge bg-danger ms-1">Obrigatório</span>
-                                <?php endif; ?>
-                            </li>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </ul>
-            </div>
-            <div class="col-md-6">
-                <h6><i class="fas fa-lightbulb text-primary me-2"></i> Habilidades</h6>
-                <ul class="list-unstyled ms-4">
-                    <?php if (empty($habilidades)): ?>
-                        <li>Nenhuma habilidade específica.</li>
-                    <?php else: ?>
-                        <?php foreach ($habilidades as $item): ?>
-                            <li>
-                                <?php
-                                $badge_class = $item['habilidadeTipo'] === 'Hardskill' ? 'badge-hardskill' : 'badge-softskill';
-                                ?>
-                                <span class="badge <?php echo $badge_class; ?> me-1"><?php echo $item['habilidadeTipo']; ?></span>
-                                <?php echo htmlspecialchars($item['habilidadeNome']); ?>
-                            </li>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </ul>
-            </div>
-        </div>
-
-        <div class="section-title">Riscos de Exposição</div>
-        <div class="row p-2">
-            <?php if (empty($riscos)): ?>
-                <div class="col">Nenhum risco de exposição associado.</div>
+    <h2 class="h2-custom"><i class="fas fa-cogs"></i> 3. Habilidades e Competências</h2>
+    
+    <div class="skill-container">
+        
+        <div class="skill-column">
+            <h5 class="h5-custom skill-type-header"><i class="fas fa-toolbox"></i> Habilidades Técnicas (HARD SKILLS)</h5>
+            <ul class="habilidade-list">
+            <?php if (empty($hard_skills)): ?>
+                <li>Nenhuma Hard Skill associada.</li>
             <?php else: ?>
-                <?php foreach ($riscos as $item): ?>
-                    <div class="col-md-4 mb-2">
-                        <i class="<?php echo getRiscoIcon($item['riscoNome']); ?> text-danger me-2"></i>
-                        <strong><?php echo htmlspecialchars($item['riscoNome']); ?></strong>
-                    </div>
+                <?php foreach ($hard_skills as $h): ?>
+                    <li>
+                        <i class="fas fa-chevron-right"></i> <div class="item-content"> <span class="habilidade-nome"><?php echo htmlspecialchars($h['habilidadeNome']); ?></span>
+                            <?php if (!empty($h['habilidadeDescricao'])): ?>
+                                <div class="habilidade-descricao"> - <?php echo htmlspecialchars($h['habilidadeDescricao']); ?></div>
+                            <?php endif; ?>
+                        </div>
+                    </li>
                 <?php endforeach; ?>
             <?php endif; ?>
+            </ul>
         </div>
-
-        <div class="section-title">Outros Detalhes</div>
-        <div class="p-2">
-            <strong>Experiência Requerida:</strong>
-            <p><?php echo nl2br(htmlspecialchars($details['cargoExperiencia'] ?? 'N/A')); ?></p>
-            <strong>Condições de Trabalho:</strong>
-            <p><?php echo nl2br(htmlspecialchars($details['cargoCondicoes'] ?? 'N/A')); ?></p>
-            <strong>Complexidade:</strong>
-            <p><?php echo nl2br(htmlspecialchars($details['cargoComplexidade'] ?? 'N/A')); ?></p>
-            <strong>Responsabilidades:</strong>
-            <p><?php echo nl2br(htmlspecialchars($details['cargoResponsabilidades'] ?? 'N/A')); ?></p>
+        
+        <div class="skill-column">
+            <h5 class="h5-custom skill-type-header"><i class="fas fa-users"></i> Competências Comportamentais (SOFT SKILLS)</h5>
+            <ul class="habilidade-list">
+            <?php if (empty($soft_skills)): ?>
+                <li>Nenhuma Soft Skill associada.</li>
+            <?php else: ?>
+                <?php foreach ($soft_skills as $h): ?>
+                     <li>
+                        <i class="fas fa-chevron-right"></i> <div class="item-content"> <span class="habilidade-nome"><?php echo htmlspecialchars($h['habilidadeNome']); ?></span>
+                            <?php if (!empty($h['habilidadeDescricao'])): ?>
+                                <div class="habilidade-descricao"> - <?php echo htmlspecialchars($h['habilidadeDescricao']); ?></div>
+                            <?php endif; ?>
+                        </div>
+                    </li>
+                <?php endforeach; ?>
+            <?php endif; ?>
+            </ul>
         </div>
         
     </div>
-</div>
+    <h2 class="h2-custom"><i class="fas fa-handshake"></i> 4. Qualificação e Recursos</h2>
+    <h5 class="h5-custom"><i class="fas fa-certificate"></i> Cursos e Treinamentos</h5>
+    <ul class="curso-list">
+        <?php if (empty($data['cursos'])): ?>
+            <li>Nenhum curso associado.</li>
+        <?php else: ?>
+            <?php foreach ($data['cursos'] as $cur): ?>
+                <li>
+                    <i class="fas fa-check-circle" style="color: <?php echo $cur['cursoCargoObrigatorio'] ? '#dc3545' : '#198754'; ?>;"></i>
+                    <div class="item-content">
+                        <?php echo htmlspecialchars($cur['cursoNome']); // NEGRITO REMOVIDO ?>
+                        <span style="color: <?php echo $cur['cursoCargoObrigatorio'] ? '#dc3545' : '#555'; ?>; font-size: 0.9em;">
+                            (<?php echo $cur['cursoCargoObrigatorio'] ? 'OBRIGATÓRIO' : 'Recomendado'; ?>)
+                        </span>
+                        <?php echo !empty($cur['cursoCargoObs']) ? '<br><small style="color: #555;">Observação: '. htmlspecialchars($cur['cursoCargoObs']) . '</small>' : '' ?>
+                    </div>
+                </li>
+            <?php endforeach; ?>
+        <?php endif; ?>
+    </ul>
+
+    <h5 class="h5-custom"><i class="fas fa-user-tag"></i> Características Pessoais Desejáveis</h5>
+    <ul class="caracteristica-list">
+    <?php if (empty($data['caracteristicas'])): ?>
+        <li>Nenhuma característica associada.</li>
+    <?php else: ?>
+        <?php foreach ($data['caracteristicas'] as $c): ?>
+            <li>
+                <i class="fas fa-chevron-right"></i>
+                <div class="item-content">
+                    <?php echo htmlspecialchars($c['caracteristicaNome']); // Negrito já havia sido removido ?>
+                </div>
+            </li>
+        <?php endforeach; ?>
+    <?php endif; ?>
+    </ul>
+    
+    <h5 class="h5-custom"><i class="fas fa-wrench"></i> Grupos de Recursos Utilizados</h5>
+     <ul class="caracteristica-list">
+        <?php if (empty($data['recursos_grupos'])): ?>
+            <li>Nenhum grupo de recurso associado.</li>
+        <?php else: ?>
+            <?php foreach ($data['recursos_grupos'] as $rg): ?>
+                <li>
+                    <i class="fas fa-chevron-right"></i>
+                    <div class="item-content">
+                        <?php echo htmlspecialchars($rg); ?>
+                    </div>
+                </li>
+            <?php endforeach; ?>
+        <?php endif; ?>
+    </ul>
 
 
+    <h2 class="h2-custom"><i class="fas fa-radiation-alt"></i> 5. Riscos de Exposição</h2>
+    <table class="riscos-table">
+        <thead class="bg-light">
+            <tr>
+                <th style="width: 30%;">Tipo de Risco</th>
+                <th>Detalhe Específico da Exposição</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php if (empty($data['riscos'])): ?>
+                <tr><td colspan="2" style="text-align: center;">Nenhum risco de exposição registrado.</td></tr>
+            <?php else: ?>
+                <?php foreach ($data['riscos'] as $r): ?>
+                    <tr>
+                        <td>
+                            <i class="<?php echo getRiscoIcon($r['riscoNome']); // ?>"></i> 
+                            <?php echo htmlspecialchars($r['riscoNome']); ?>
+                        </td>
+                        <td><?php echo nl2br(htmlspecialchars($r['riscoDescricao'])); ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </tbody>
+    </table>
+    
+    <h2 class="h2-custom"><i class="fas fa-book-open"></i> 6. Descrições Detalhadas</h2>
+    
+    <h5 class="h5-custom"><i class="fas fa-clipboard-list"></i> Responsabilidades Detalhadas:</h5>
+    <div class="wysiwyg-content"><?php echo nl2br(htmlspecialchars($cargo['cargoResponsabilidades'] ?? 'N/A')); ?></div>
+    
+    <h5 class="h5-custom"><i class="fas fa-cloud-sun"></i> Condições Gerais de Trabalho:</h5>
+    <div class="wysiwyg-content"><?php echo nl2br(htmlspecialchars($cargo['cargoCondicoes'] ?? 'N/A')); ?></div>
+    
+    <h5 class="h5-custom"><i class="fas fa-layer-group"></i> Complexidade do Cargo:</h5>
+    <div class="wysiwyg-content"><?php echo nl2br(htmlspecialchars($cargo['cargoComplexidade'] ?? 'N/A')); ?></div>
+
+</div> 
+</body>
+</html>
 <?php
-// 8. Inclui o Footer
-include '../includes/footer.php';
+// Fim do buffer HTML
+$html = ob_get_clean();
+
+// ----------------------------------------------------
+// 10. ROTEAMENTO DE SAÍDA (HTML ou PDF)
+// ----------------------------------------------------
+
+if ($format === 'pdf') {
+    // LÓGICA DE NOME DO ARQUIVO
+    $cargo_name_cleaned = preg_replace('/[^A-Za-z0-9_]/', '_', strtoupper($cargo['cargoNome']));
+    $cargo_name_cleaned = substr($cargo_name_cleaned, 0, 30);
+    $cbo_code = $cargo['cboCod'] ?? '000000';
+    $timestamp = date('Ymd'); 
+    $filename_final = "{$cargo_name_cleaned}_{$cbo_code}_{$timestamp}";
+
+    // Opções do Dompdf
+    $options = new \Dompdf\Options();
+    $options->set('isRemoteEnabled', true); // Necessário para carregar o CSS
+    $options->set('defaultFont', 'Helvetica');
+    
+    // Define o chroot para a raiz do projeto (um nível acima de /relatorios)
+    $options->set('chroot', realpath(__DIR__ . '/..')); 
+
+    try {
+        $dompdf = new \Dompdf\Dompdf($options);
+        
+        // Carrega o HTML. Dompdf usará o chroot para encontrar ../css/relatorio_style.css
+        $dompdf->loadHtml($html);
+        
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+        
+        $dompdf->stream($filename_final . ".pdf", ["Attachment" => true]); // Força download
+        
+    } catch (Exception $e) {
+        die("Erro ao gerar PDF: " . $e->getMessage());
+    }
+    
+    exit;
+    
+} else {
+    // Se for 'html', apenas exibe o HTML
+    echo $html;
+    exit;
+}
 ?>

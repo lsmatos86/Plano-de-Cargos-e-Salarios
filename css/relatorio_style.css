@@ -1,0 +1,294 @@
+/* --- ESTILOS GERAIS (TELA E IMPRESSÃO) --- */
+body {
+    font-family: 'Helvetica', sans-serif;
+    font-size: 10pt;
+    line-height: 1.4;
+    background-color: #f4f4f4;
+    color: #333;
+}
+
+.container {
+    width: 90%;
+    margin: 20px auto;
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.report-header-final {
+    text-align: center;
+    margin-bottom: 25px;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 20px;
+}
+
+.cargo-nome-principal {
+    font-size: 22pt;
+    color: #000;
+    font-weight: bold;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.cbo-detail {
+    font-size: 11pt;
+    color: #555;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.h2-custom {
+    font-size: 16pt;
+    color: #198754;
+    border-bottom: 2px solid #198754;
+    padding-bottom: 5px;
+    margin-top: 30px;
+    margin-bottom: 15px;
+    font-weight: bold;
+    page-break-after: avoid;
+}
+
+.h5-custom {
+    font-size: 12pt;
+    font-weight: bold;
+    color: #333;
+    margin-top: 15px;
+    margin-bottom: 5px;
+    page-break-after: avoid;
+}
+
+/* Tabelas de Dados (Informações Essenciais, Hierarquia) */
+table.data-list {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    page-break-inside: avoid;
+}
+
+table.data-list th,
+table.data-list td {
+    padding: 10px;
+    text-align: left;
+    vertical-align: top;
+    border-bottom: 1px solid #ddd;
+}
+
+table.data-list th {
+    background-color: #f8f9fa;
+    font-weight: bold;
+    width: 25%;
+}
+
+table.data-list th i {
+    margin-right: 8px;
+    width: 16px;
+    text-align: center;
+    color: #198754;
+}
+
+/* Tabela de Riscos */
+table.riscos-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    border: 1px solid #ddd;
+    page-break-inside: avoid;
+}
+
+table.riscos-table th,
+table.riscos-table td {
+    padding: 8px;
+    text-align: left;
+    vertical-align: top;
+    border: 1px solid #ddd;
+}
+
+table.riscos-table th {
+    background-color: #f8f9fa;
+    font-weight: bold;
+}
+
+table.riscos-table td i {
+    margin-right: 5px;
+}
+
+/* Conteúdo WYSIWYG (Descrições Longas) */
+.wysiwyg-content {
+    margin-top: 5px;
+    padding: 15px;
+    background-color: #fdfdfd;
+    border: 1px solid #eee;
+    border-radius: 5px;
+    page-break-inside: avoid;
+}
+
+/* Listas (Habilidades, Cursos, Características) */
+.habilidade-list,
+.curso-list,
+.caracteristica-list {
+    list-style: none;
+    padding-left: 0;
+    margin-top: 10px;
+}
+
+.habilidade-list li,
+.curso-list li,
+.caracteristica-list li {
+    padding: 8px 0;
+    border-bottom: 1px dotted #eee;
+    page-break-inside: avoid;
+    display: flex; /* Alinha o ícone com o texto */
+    align-items: flex-start;
+}
+
+.habilidade-nome {
+    font-size: 10.5pt;
+    color: #222;
+    /* font-weight: bold; <-- REMOVIDO */
+}
+
+.habilidade-descricao {
+    font-size: 9pt;
+    color: #555;
+    padding-left: 20px; /* Alinha com o texto principal, não com o ícone */
+}
+
+.skill-type-header {
+    font-size: 11pt;
+    font-weight: bold;
+    color: #444;
+    margin-top: 10px;
+}
+
+.skill-type-header i {
+    margin-right: 5px;
+}
+
+/*
+ * AJUSTE: Ícones de todas as listas unificados.
+ * O ícone de Cursos (fa-check-circle) terá sua cor definida inline no PHP.
+ */
+.curso-list li i,
+.caracteristica-list li i,
+.habilidade-list li i { /* <-- HABILIDADE ADICIONADA AQUI */
+    color: #198754;
+    margin-right: 8px;
+    margin-top: 4px; /* Ajuste vertical leve */
+    width: 12px;     /* Garante alinhamento */
+}
+
+.caracteristica-list li {
+    /* font-weight: normal; (já é o padrão) */
+}
+
+
+/* Layout de 2 colunas para Habilidades */
+.skill-container {
+    width: 100%;
+    overflow: hidden; /* Clearfix para floats */
+    page-break-inside: avoid;
+}
+.skill-column {
+    width: 49%;
+    float: left;
+}
+.skill-column:first-child {
+    margin-right: 2%;
+}
+/* Divisor para o conteúdo do item (para o ícone e o texto) */
+.item-content {
+    flex: 1;
+}
+
+
+/* --- ESTILOS DE IMPRESSÃO --- */
+@media print {
+    body {
+        font-size: 9pt;
+        background-color: #fff;
+        color: #000;
+    }
+
+    .no-print {
+        display: none !important;
+    }
+
+    .container {
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+        border: none;
+    }
+
+    /* Força a impressão de cores/ícones do FontAwesome */
+    table.data-list th i,
+    table.riscos-table td i,
+    .curso-list li i,
+    .caracteristica-list li i,
+    .habilidade-list li i,
+    .h2-custom i,
+    .h5-custom i {
+        color: #000 !important;
+        -webkit-print-color-adjust: exact;
+        color-adjust: exact;
+    }
+
+    .h2-custom {
+        font-size: 14pt;
+        color: #000 !important;
+        border-bottom: 2px solid #000 !important;
+    }
+
+    .cargo-nome-principal {
+        font-size: 18pt;
+        color: #000 !important;
+    }
+    
+    .cbo-detail, .h5-custom {
+        color: #000 !important;
+    }
+
+    /* Remove fundos e bordas desnecessários */
+    table.data-list th,
+    table.riscos-table th {
+        background-color: #fff !important;
+        border-color: #888;
+    }
+    
+    table.riscos-table,
+    table.riscos-table td {
+        border-color: #888;
+    }
+
+    .wysiwyg-content {
+        background-color: #fff !important;
+        border: 1px solid #bbb;
+    }
+
+    /* Gerenciamento de Quebra de Página */
+    table, .wysiwyg-content, .habilidade-list li, .curso-list li, .caracteristica-list li {
+        page-break-inside: avoid;
+    }
+    
+    a {
+        text-decoration: none;
+        color: #000;
+    }
+
+    /* Garante que as colunas de skills voltem ao layout de 1 coluna */
+    .skill-container {
+        width: 100%;
+        overflow: visible;
+    }
+    .skill-column {
+        width: 100%;
+        float: none;
+        margin-right: 0;
+    }
+}
+
+@page {
+    margin: 1.5cm;
+}
