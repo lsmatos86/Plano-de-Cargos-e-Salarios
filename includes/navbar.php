@@ -1,52 +1,52 @@
 <?php
 // Arquivo: includes/navbar.php
-// (Este arquivo assume que 'functions.php' já foi incluído pela página pai)
+// (Incluído por header.php)
 
-// Busca o nome do usuário da sessão
+// ======================================================
+// CORREÇÃO: Importa a variável $root_path para este escopo
+// ======================================================
+global $root_path; 
+
+// Obter o nome de usuário e ID da sessão
 $username = $_SESSION['username'] ?? 'Usuário';
-
-// Define o caminho raiz com base em uma variável (se definida), ou assume caminhos relativos
-// Ex: index.php define $root_path = './';
-// Ex: views/cargos.php define $root_path = '../';
-if (!isset($root_path)) {
-    $root_path = './'; // Padrão seguro
-}
+$user_id = $_SESSION['user_id'] ?? 0;
 ?>
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container-fluid container">
-        <a class="navbar-brand" href="<?php echo htmlspecialchars($root_path); ?>index.php">
-            <i class="fas fa-briefcase me-2"></i> ITACITRUS | Gestão de Cargos
+<nav class="navbar navbar-expand-lg navbar-dark bg-success shadow-sm">
+    <div class="container">
+        <a class="navbar-brand" href="<?php echo $root_path; ?>index.php">
+            <i class="fas fa-database me-2"></i>Sistema de Cargos
         </a>
-        <div class="d-flex">
-            <span class="navbar-text me-3 text-white">
-                <i class="fas fa-user-circle me-1"></i> Olá, <?php echo htmlspecialchars($username); ?>
-            </span>
-            <a href="<?php echo htmlspecialchars($root_path); ?>logout.php" class="btn btn-outline-light btn-sm">
-                <i class="fas fa-sign-out-alt me-1"></i> Sair
-            </a>
+        
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <div class="collapse navbar-collapse" id="navbarNavDropdown">
+            <ul class="navbar-nav me-auto">
+                </ul>
+            
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarUserDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-user-circle me-1"></i>
+                        <?php echo htmlspecialchars($username); ?>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarUserDropdown">
+                        <li>
+                            <a class="dropdown-item" href="<?php echo $root_path; ?>views/usuarios_form.php?id=<?php echo $user_id; ?>">
+                                <i class="fas fa-user-cog me-2"></i>Meu Perfil
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item text-danger" href="<?php echo $root_path; ?>logout.php">
+                                <i class="fas fa-sign-out-alt me-2"></i>Sair
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
         </div>
     </div>
 </nav>
-
-<div class="container mt-3">
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-            <?php if (isset($breadcrumb_items) && is_array($breadcrumb_items)): ?>
-                <?php foreach ($breadcrumb_items as $name => $link): ?>
-                    <?php if ($link === null): // A página ativa não tem link ?>
-                        <li class="breadcrumb-item active" aria-current="page">
-                            <?php echo htmlspecialchars($name); ?>
-                        </li>
-                    <?php else: // Páginas anteriores no caminho ?>
-                        <li class="breadcrumb-item">
-                            <a href="<?php echo htmlspecialchars($link); ?>"><?php echo htmlspecialchars($name); ?></a>
-                        </li>
-                    <?php endif; ?>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <li class="breadcrumb-item active" aria-current="page">Dashboard</li>
-            <?php endif; ?>
-        </ol>
-    </nav>
-</div>

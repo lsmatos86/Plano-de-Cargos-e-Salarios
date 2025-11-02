@@ -1,5 +1,5 @@
 <?php
-// Arquivo: views/cargos_form.php (Formulário de Cadastro e Edição de Cargos)
+// Arquivo: views/cargos_form.php (Refatorado com Header/Footer)
 
 // 1. Incluir Autoload e Config
 require_once '../vendor/autoload.php';
@@ -11,8 +11,7 @@ use App\Repository\HabilidadeRepository;
 use App\Repository\AreaRepository;
 use App\Repository\CargoRepository;
 
-// 3. Incluir functions.php (APENAS para login e validação de tabela)
-// A conexão $pdo não é mais necessária aqui.
+// 3. Incluir functions.php
 require_once '../includes/functions.php';
 
 if (!isUserLoggedIn()) {
@@ -31,15 +30,25 @@ $isDuplicating = $action === 'duplicate' && $originalId > 0;
 $isEditing = !$isDuplicating && $originalId > 0;
 $currentFormId = $isEditing ? $originalId : 0;
 $cargoId = $originalId;
+
+// ======================================================
+// Definições de Página para o header.php
+// ======================================================
 $page_title = $isDuplicating ? 'Duplicar Cargo (Novo Registro)' : ($isEditing ? 'Editar Cargo' : 'Novo Cargo');
+$root_path = '../'; 
+$breadcrumb_items = [
+    'Dashboard' => '../index.php',
+    'Gerenciamento de Cargos' => 'cargos.php',
+    $page_title => null // Página ativa
+];
 
 // ----------------------------------------------------
-// 1. CARREGAMENTO DOS LOOKUPS MESTRES (REFATORADO no Passo 9)
+// 1. CARREGAMENTO DOS LOOKUPS MESTRES
 // ----------------------------------------------------
 $lookupRepo = new LookupRepository();
 $habilidadeRepo = new HabilidadeRepository();
 $areaRepo = new AreaRepository();
-$cargoRepo = new CargoRepository(); // Instancia o Repositório de Cargo
+$cargoRepo = new CargoRepository(); 
 
 $cbos = $lookupRepo->getLookup('cbos', 'cboId', 'cboCod', 'cboTituloOficial');
 $escolaridades = $lookupRepo->getLookup('escolaridades', 'escolaridadeId', 'escolaridadeTitulo');
@@ -64,9 +73,8 @@ $cargoCursos = [];
 $cargoRecursosGrupos = [];
 $cargoSinonimos = [];
 
-
 // ----------------------------------------------------
-// 2. BUSCA DADOS PARA EDIÇÃO OU DUPLICAÇÃO (REFATORADO no Passo 10)
+// 2. BUSCA DADOS PARA EDIÇÃO OU DUPLICAÇÃO
 // ----------------------------------------------------
 if ($isEditing || $isDuplicating) {
     try {
@@ -92,7 +100,7 @@ if ($isEditing || $isDuplicating) {
             $isEditing = false;
         }
 
-    } catch (Exception $e) { // Captura Exceção genérica
+    } catch (Exception $e) { 
         $message = "Erro ao carregar dados: " . $e->getMessage();
         $message_type = 'danger';
     }
@@ -100,25 +108,18 @@ if ($isEditing || $isDuplicating) {
 
 
 // ----------------------------------------------------
-// 3. LÓGICA DE SALVAMENTO (POST) (REFATORADO - PASSO 11)
+// 3. LÓGICA DE SALVAMENTO (POST)
 // ----------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cargoNome'])) {
     
     try {
-        // Toda a lógica de validação, transação, INSERT/UPDATE
-        // está agora encapsulada no método save()!
-        
         $novoCargoId = $cargoRepo->save($_POST);
-
         $message = "Cargo salvo com sucesso! ID: {$novoCargoId}";
         $message_type = 'success';
-
-        // Redireciona para a página de edição do cargo salvo
         header("Location: cargos_form.php?id={$novoCargoId}&message=" . urlencode($message) . "&type={$message_type}");
         exit;
 
     } catch (Exception $e) {
-        // Se o repo lançar uma exceção (validação ou DB), nós a pegamos
         $message = "Erro fatal ao salvar. Erro: " . $e->getMessage();
         $message_type = 'danger';
         
@@ -126,15 +127,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cargoNome'])) {
         $cargo = array_merge($cargo, $_POST);
         $cargoId = (int)($_POST['cargoId'] ?? 0);
         
-        // (A lógica de recarregar os arrays de JS abaixo lidará
-        // com a repopulação dos grids N:M em caso de falha)
         $cargoAreas = array_map(fn($id) => ['id' => $id, 'nome' => $areasAtuacao[$id] ?? 'N/A'], $_POST['areaId'] ?? []);
         $cargoHabilidades = array_map(fn($id) => ['id' => $id, 'nome' => $habilidades[$id] ?? 'N/A'], $_POST['habilidadeId'] ?? []);
         $cargoCaracteristicas = array_map(fn($id) => ['id' => $id, 'nome' => $caracteristicas[$id] ?? 'N/A'], $_POST['caracteristicaId'] ?? []);
         $cargoRecursosGrupos = array_map(fn($id) => ['id' => $id, 'nome' => $recursosGrupos[$id] ?? 'N/A'], $_POST['recursoGrupoId'] ?? []);
         $cargoSinonimos = array_map(fn($nome) => ['id' => $nome, 'nome' => $nome], $_POST['sinonimoNome'] ?? []);
         
-        // Repopula Cursos e Riscos (complexos)
         if(isset($_POST['riscoId'])) {
             foreach($_POST['riscoId'] as $index => $id) {
                 $cargoRiscos[] = ['id' => $id, 'nome' => $riscos[$id] ?? 'N/A', 'descricao' => $_POST['riscoDescricao'][$index] ?? ''];
@@ -158,7 +156,6 @@ if (isset($_GET['message'])) {
 // 4. PREPARAÇÃO DOS DADOS JS (Global Scope)
 // ----------------------------------------------------
 ?>
-
 <script>
     const mapToSimpleState = (data) => data.map(item => ({
         id: item.id ? (isNaN(item.id) ? item.id : parseInt(item.id)) : null,
@@ -169,8 +166,6 @@ if (isset($_GET['message'])) {
         obs: item.obs
     }));
 
-    // Inicializa as variáveis globais antes de carregar o script externo
-    // Estas variáveis são preenchidas pela lógica GET (Passo 10) ou pela lógica POST-Falha (Passo 11)
     window.habilidadesAssociadas = mapToSimpleState(<?php echo json_encode($cargoHabilidades); ?>);
     window.caracteristicasAssociadas = mapToSimpleState(<?php echo json_encode($cargoCaracteristicas); ?>);
     window.riscosAssociados = mapToSimpleState(<?php echo json_encode($cargoRiscos); ?>);
@@ -180,18 +175,15 @@ if (isset($_GET['message'])) {
     window.sinonimosAssociados = mapToSimpleState(<?php echo json_encode($cargoSinonimos); ?>);
 </script>
 
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $page_title; ?></title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<?php
+// ======================================================
+// AJUSTE: Inclui o header.php padronizado
+// ======================================================
+
+// Adiciona os links CSS e JS específicos desta página ANTES de fechar o </head>
+$extra_head_content = '
     <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
     <style>
         textarea { resize: vertical; }
         .grid-header { background-color: #f8f9fa; border-top: 1px solid #dee2e6; padding-top: 10px; }
@@ -200,387 +192,338 @@ if (isset($_GET['message'])) {
         .grid-risco-desc textarea { width: 100%; resize: vertical; min-height: 40px; border: 1px solid #ced4da; padding: 5px; }
         .table-group-separator { background-color: #e9ecef; }
         .grid-container { max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; }
-        /* Estilos para Select2 no modal */
         .select2-container--bootstrap-5 .select2-dropdown { z-index: 1060; }
         .form-control-sm { min-height: calc(1.5em + 0.5rem + 2px); }
     </style>
-</head>
-<body>
+';
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-success">
-    <div class="container-fluid container">
-        <a class="navbar-brand" href="../index.php">ITACITRUS | Início</a>
-        <div class="d-flex">
-            <span class="navbar-text me-3 text-white">Olá, <?php echo htmlspecialchars($_SESSION['username'] ?? 'Usuário'); ?></span>
-            <a href="../logout.php" class="btn btn-outline-light btn-sm">Sair</a>
-        </div>
-    </div>
-</nav>
+//
+include '../includes/header.php';
 
-<div class="container mt-4 mb-5">
-    
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <a href="cargos.php" class="btn btn-outline-secondary btn-sm">
-            <i class="fas fa-arrow-left"></i> Voltar para Cargos
+// ======================================================
+// AJUSTE: O <nav> manual foi REMOVIDO
+// ======================================================
+?>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">
+        <?php if ($isEditing && isset($cargo['cargoNome'])): ?>
+            <?php echo htmlspecialchars($originalId); ?> - <?php echo htmlspecialchars($cargo['cargoNome']); ?>
+            <small class="text-primary fw-normal ms-2">
+                (editando)
+                <i class="fas fa-pencil-alt ms-1"></i>
+            </small>
+        <?php else: ?>
+            <?php echo $page_title; ?>
+        <?php endif; ?>
+    </h1>
+    <?php if ($isEditing && $originalId > 0): ?>
+         <a href="cargos_form.php?id=<?php echo $originalId; ?>&action=duplicate" 
+            class="btn btn-warning btn-sm" 
+            title="Criar um novo registro com base neste.">
+            <i class="fas fa-copy"></i> Duplicar Cadastro
         </a>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="../index.php">Página Inicial</a></li>
-                <li class="breadcrumb-item"><a href="cargos.php">Gerenciamento de Cargos</a></li>
-                <li class="breadcrumb-item active" aria-current="page"><?php echo $page_title; ?></li>
-            </ol>
-        </nav>
+    <?php endif; ?>
+</div>
+
+
+<?php if ($message): ?>
+    <div class="alert alert-<?php echo $message_type; ?> alert-dismissible fade show" role="alert">
+        <?php echo $message; ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+<?php endif; ?> 
+
+<form method="POST" action="cargos_form.php" id="cargoForm">
+    <input type="hidden" name="cargoId" value="<?php echo htmlspecialchars($currentFormId); ?>">
+
+    <ul class="nav nav-tabs" id="cargoTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="basicas-tab" data-bs-toggle="tab" data-bs-target="#basicas" type="button" role="tab" aria-controls="basicas" aria-selected="true">
+                <i class="fas fa-info-circle"></i> Dados Básicos
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="hierarquia-tab" data-bs-toggle="tab" data-bs-target="#hierarquia" type="button" role="tab" aria-controls="hierarquia" aria-selected="false">
+                <i class="fas fa-sitemap"></i> Hierarquia e Áreas
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="requisitos-tab" data-bs-toggle="tab" data-bs-target="#requisitos" type="button" role="tab" aria-controls="requisitos" aria-selected="false">
+                <i class="fas fa-list-alt"></i> Requisitos e Riscos
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="sinonimos-tab" data-bs-toggle="tab" data-bs-target="#sinonimos" type="button" role="tab" aria-controls="sinonimos" aria-selected="false">
+                <i class="fas fa-tags"></i> Sinônimos
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="descricoes-tab" data-bs-toggle="tab" data-bs-target="#descricoes" type="button" role="tab" aria-controls="descricoes" aria-selected="false">
+                <i class="fas fa-book"></i> Descrições Longas
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content border border-top-0 p-3 mb-4" id="cargoTabsContent">
+        
+        <div class="tab-pane fade show active" id="basicas" role="tabpanel" aria-labelledby="basicas-tab">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="cargoNome" class="form-label">Nome do Cargo *</label>
+                    <input type="text" class="form-control" id="cargoNome" name="cargoNome" value="<?php echo htmlspecialchars($cargo['cargoNome'] ?? ''); ?>" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="cboId" class="form-label">CBO *</label>
+                    <select class="form-select searchable-select" id="cboId" name="cboId" required>
+                        <option value="">--- Selecione o CBO ---</option>
+                        <?php foreach ($cbos as $id => $nome): ?>
+                            <option value="<?php echo $id; ?>" <?php echo (isset($cargo['cboId']) && $cargo['cboId'] == $id) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($nome); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label for="cargoResumo" class="form-label">Resumo do Cargo</label>
+                <textarea class="form-control" id="cargoResumo" name="cargoResumo" rows="3"><?php echo htmlspecialchars($cargo['cargoResumo'] ?? ''); ?></textarea>
+                <div class="form-text">Descrição sumária das responsabilidades (máximo 250 caracteres, idealmente).</div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="escolaridadeId" class="form-label">Escolaridade Mínima *</label>
+                    <select class="form-select searchable-select" id="escolaridadeId" name="escolaridadeId" required>
+                        <option value="">--- Selecione a Escolaridade ---</option>
+                        <?php foreach ($escolaridades as $id => $nome): ?>
+                            <option value="<?php echo $id; ?>" <?php echo (int)($cargo['escolaridadeId'] ?? 0) === (int)$id ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($nome); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="cargoExperiencia" class="form-label">Experiência Necessária</label>
+                    <input type="text" class="form-control" id="cargoExperiencia" name="cargoExperiencia" value="<?php echo htmlspecialchars($cargo['cargoExperiencia'] ?? ''); ?>">
+                </div>
+            </div>
+        </div>
+        <div class="tab-pane fade" id="hierarquia" role="tabpanel" aria-labelledby="hierarquia-tab">
+            <h4 class="mb-3"><i class="fas fa-level-up-alt"></i> Hierarquia de Comando</h4>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="nivelHierarquicoId" class="form-label">Nível Hierárquico</label>
+                    <select class="form-select searchable-select" id="nivelHierarquicoId" name="nivelHierarquicoId">
+                        <option value="">--- Selecione o Nível ---</option>
+                        <?php foreach ($niveisOrdenados as $id => $nome): ?>
+                            <option value="<?php echo $id; ?>" <?php echo (int)($cargo['nivelHierarquicoId'] ?? 0) === (int)$id ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($nome); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <div class="form-text"><a href="nivel_hierarquico.php" target="_blank">Gerenciar Níveis</a></div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="cargoSupervisorId" class="form-label">Reporta-se a (Supervisor)</label>
+                    <select class="form-select searchable-select" id="cargoSupervisorId" name="cargoSupervisorId">
+                        <option value="">--- Nível Superior / Nenhum ---</option>
+                        <?php foreach ($cargosSupervisor as $id => $nome): 
+                            if ($isEditing && (int)($originalId) === (int)$id): continue; endif; 
+                        ?>
+                            <option value="<?php echo $id; ?>" <?php echo (int)($cargo['cargoSupervisorId'] ?? 0) === (int)$id ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($nome); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <div class="form-text">Define a linha de comando para o Organograma.</div>
+                </div>
+            </div>
+            <hr>
+            <h4 class="mb-3"><i class="fas fa-wallet"></i> Faixa Salarial</h4>
+             <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="faixaId" class="form-label">Faixa/Nível Salarial</label>
+                    <select class="form-select searchable-select" id="faixaId" name="faixaId">
+                        <option value="">--- Não Definido ---</option>
+                        <?php foreach ($faixasSalariais as $id => $nome): ?>
+                            <option value="<?php echo $id; ?>" <?php echo (int)($cargo['faixaId'] ?? 0) === (int)$id ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($nome); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <div class="form-text">Lembre-se de cadastrar as faixas salariais.</div>
+                </div>
+            </div>
+            <hr>
+            <h4 class="mb-3"><i class="fas fa-building"></i> Áreas de Atuação</h4>
+            <button type="button" class="btn btn-sm btn-outline-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAssociacaoAreasAtuacao">
+                <i class="fas fa-plus"></i> Adicionar Área
+            </button>
+            <div class="card p-0 mt-2">
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Área de Atuação (Hierárquica)</th>
+                                <th class="grid-action-cell text-center">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="areasAtuacaoGridBody">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="form-text mt-3"><a href="areas_atuacao.php" target="_blank">Gerenciar Estrutura de Áreas</a></div>
+        </div>
+        <div class="tab-pane fade" id="requisitos" role="tabpanel" aria-labelledby="requisitos-tab">
+            <h4 class="mb-3"><i class="fas fa-lightbulb"></i> Habilidades</h4>
+            <button type="button" class="btn btn-sm btn-outline-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAssociacaoHabilidades">
+                <i class="fas fa-plus"></i> Adicionar Habilidade
+            </button>
+            <div class="card p-0 mt-2 mb-4">
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Habilidade</th>
+                                <th class="grid-action-cell text-center">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="habilidadesGridBody">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+            <h4 class="mb-3"><i class="fas fa-user-tag"></i> Características</h4>
+            <button type="button" class="btn btn-sm btn-outline-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAssociacaoCaracteristicas">
+                <i class="fas fa-plus"></i> Adicionar Característica
+            </button>
+            <div class="card p-0 mt-2 mb-4">
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Característica</th>
+                                <th class="grid-action-cell text-center">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="caracteristicasGridBody">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+            <h4 class="mb-3"><i class="fas fa-certificate"></i> Cursos</h4>
+            <button type="button" class="btn btn-sm btn-outline-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAssociacaoCursos">
+                <i class="fas fa-plus"></i> Adicionar Curso
+            </button>
+            <div class="card p-0 mt-2 mb-4">
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th width="35%">Curso</th>
+                                <th width="50%">Obrigatoriedade e Observação</th>
+                                <th class="grid-action-cell text-center">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cursosGridBody">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+            <h4 class="mb-3"><i class="fas fa-wrench"></i> Grupos de Recursos</h4>
+            <button type="button" class="btn btn-sm btn-outline-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAssociacaoRecursosGrupos">
+                <i class="fas fa-plus"></i> Adicionar Grupo de Recurso
+            </button>
+            <div class="card p-0 mt-2 mb-4">
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Grupo de Recurso</th>
+                                <th class="grid-action-cell text-center">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recursosGruposGridBody">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+            <h4 class="mb-3"><i class="fas fa-radiation-alt"></i> Riscos de Exposição</h4>
+            <button type="button" class="btn btn-sm btn-outline-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAssociacaoRiscos">
+                <i class="fas fa-plus"></i> Adicionar Risco
+            </button>
+            <div class="card p-0 mt-2">
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th width="30%">Tipo</th>
+                                <th>Descrição Específica</th>
+                                <th class="grid-action-cell text-center">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="riscosGridBody">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="tab-pane fade" id="sinonimos" role="tabpanel" aria-labelledby="sinonimos-tab">
+            <h4 class="mb-3"><i class="fas fa-tags"></i> Sinônimos e Nomes Alternativos</h4>
+            <p class="text-muted">Inclua nomes alternativos usados para este cargo.</p>
+            <div class="row mb-3">
+                <div class="col-md-9">
+                    <input type="text" class="form-control" id="sinonimoInput" placeholder="Digite um nome alternativo...">
+                </div>
+                <div class="col-md-3">
+                    <button type="button" class="btn btn-primary w-100" id="btnAddSinonimo">
+                        <i class="fas fa-plus"></i> Adicionar
+                    </button>
+                </div>
+            </div>
+            <div class="card p-0 mt-2">
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Nome Alternativo</th>
+                                <th class="grid-action-cell text-center">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sinonimosGridBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="tab-pane fade" id="descricoes" role="tabpanel" aria-labelledby="descricoes-tab">
+            <h4 class="mb-3"><i class="fas fa-clipboard-list"></i> Responsabilidades Detalhadas</h4>
+            <div class="mb-3">
+                <textarea class="form-control" id="cargoResponsabilidades" name="cargoResponsabilidades" rows="5"><?php echo htmlspecialchars($cargo['cargoResponsabilidades'] ?? ''); ?></textarea>
+            </div>
+            <h4 class="mb-3"><i class="fas fa-layer-group"></i> Complexidade do Cargo</h4>
+            <div class="mb-3">
+                <textarea class="form-control" id="cargoComplexidade" name="cargoComplexidade" rows="5"><?php echo htmlspecialchars($cargo['cargoComplexidade'] ?? ''); ?></textarea>
+            </div>
+            <h4 class="mb-3"><i class="fas fa-cloud-sun"></i> Condições Gerais</h4>
+            <div class="mb-3">
+                <textarea class="form-control" id="cargoCondicoes" name="cargoCondicoes" rows="5"><?php echo htmlspecialchars($cargo['cargoCondicoes'] ?? ''); ?></textarea>
+            </div>
+        </div>
+        
     </div>
     
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        
-        <h1 class="mb-0">
-            <?php if ($isEditing && isset($cargo['cargoNome'])): ?>
-                
-                <?php echo htmlspecialchars($originalId); ?> - <?php echo htmlspecialchars($cargo['cargoNome']); ?>
-                
-                <small class="text-primary fw-normal ms-2">
-                    (editando)
-                    <i class="fas fa-pencil-alt ms-1"></i>
-                </small>
+    <button type="submit" class="btn btn-lg btn-success w-100 mt-3">
+        <i class="fas fa-check-circle"></i> SALVAR CARGO
+    </button>
+    <?php if ($isEditing || $isDuplicating): ?>
+        <a href="cargos.php" class="btn btn-link text-secondary w-100 mt-2">
+            <i class="fas fa-arrow-left"></i> Voltar sem salvar
+        </a>
+    <?php endif; ?>
 
-            <?php else: ?>
-                
-                <?php echo $page_title; ?>
-                
-            <?php endif; ?>
-        </h1>
-        <?php if ($isEditing && $originalId > 0): ?>
-             <a href="cargos_form.php?id=<?php echo $originalId; ?>&action=duplicate" 
-                class="btn btn-warning btn-sm" 
-                title="Criar um novo registro com base neste.">
-                <i class="fas fa-copy"></i> Duplicar Cadastro
-            </a>
-        <?php endif; ?>
-    </div>
-
-
-    <?php if ($message): ?>
-        <div class="alert alert-<?php echo $message_type; ?> alert-dismissible fade show" role="alert">
-            <?php echo $message; ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    <?php endif; ?> <form method="POST" action="cargos_form.php" id="cargoForm">
-        <input type="hidden" name="cargoId" value="<?php echo htmlspecialchars($currentFormId); ?>">
-
-        <ul class="nav nav-tabs" id="cargoTabs" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="basicas-tab" data-bs-toggle="tab" data-bs-target="#basicas" type="button" role="tab" aria-controls="basicas" aria-selected="true">
-                    <i class="fas fa-info-circle"></i> Dados Básicos
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="hierarquia-tab" data-bs-toggle="tab" data-bs-target="#hierarquia" type="button" role="tab" aria-controls="hierarquia" aria-selected="false">
-                    <i class="fas fa-sitemap"></i> Hierarquia e Áreas
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="requisitos-tab" data-bs-toggle="tab" data-bs-target="#requisitos" type="button" role="tab" aria-controls="requisitos" aria-selected="false">
-                    <i class="fas fa-list-alt"></i> Requisitos e Riscos
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="sinonimos-tab" data-bs-toggle="tab" data-bs-target="#sinonimos" type="button" role="tab" aria-controls="sinonimos" aria-selected="false">
-                    <i class="fas fa-tags"></i> Sinônimos
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="descricoes-tab" data-bs-toggle="tab" data-bs-target="#descricoes" type="button" role="tab" aria-controls="descricoes" aria-selected="false">
-                    <i class="fas fa-book"></i> Descrições Longas
-                </button>
-            </li>
-        </ul>
-
-        <div class="tab-content border border-top-0 p-3 mb-4" id="cargoTabsContent">
-            
-            <div class="tab-pane fade show active" id="basicas" role="tabpanel" aria-labelledby="basicas-tab">
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label for="cargoNome" class="form-label">Nome do Cargo *</label>
-                        <input type="text" class="form-control" id="cargoNome" name="cargoNome" value="<?php echo htmlspecialchars($cargo['cargoNome'] ?? ''); ?>" required>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="cboId" class="form-label">CBO *</label>
-                        <select class="form-select searchable-select" id="cboId" name="cboId" required>
-                            <option value="">--- Selecione o CBO ---</option>
-                            <?php foreach ($cbos as $id => $nome): ?>
-                                <option value="<?php echo $id; ?>" <?php echo (isset($cargo['cboId']) && $cargo['cboId'] == $id) ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($nome); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label for="cargoResumo" class="form-label">Resumo do Cargo</label>
-                    <textarea class="form-control" id="cargoResumo" name="cargoResumo" rows="3"><?php echo htmlspecialchars($cargo['cargoResumo'] ?? ''); ?></textarea>
-                    <div class="form-text">Descrição sumária das responsabilidades (máximo 250 caracteres, idealmente).</div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label for="escolaridadeId" class="form-label">Escolaridade Mínima *</label>
-                        <select class="form-select searchable-select" id="escolaridadeId" name="escolaridadeId" required>
-                            <option value="">--- Selecione a Escolaridade ---</option>
-                            <?php foreach ($escolaridades as $id => $nome): ?>
-                                <option value="<?php echo $id; ?>" <?php echo (int)($cargo['escolaridadeId'] ?? 0) === (int)$id ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($nome); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="cargoExperiencia" class="form-label">Experiência Necessária</label>
-                        <input type="text" class="form-control" id="cargoExperiencia" name="cargoExperiencia" value="<?php echo htmlspecialchars($cargo['cargoExperiencia'] ?? ''); ?>">
-                    </div>
-                </div>
-            </div>
-
-            <div class="tab-pane fade" id="hierarquia" role="tabpanel" aria-labelledby="hierarquia-tab">
-                
-                <h4 class="mb-3"><i class="fas fa-level-up-alt"></i> Hierarquia de Comando</h4>
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label for="nivelHierarquicoId" class="form-label">Nível Hierárquico</label>
-                        <select class="form-select searchable-select" id="nivelHierarquicoId" name="nivelHierarquicoId">
-                            <option value="">--- Selecione o Nível ---</option>
-                            <?php foreach ($niveisOrdenados as $id => $nome): ?>
-                                <option value="<?php echo $id; ?>" <?php echo (int)($cargo['nivelHierarquicoId'] ?? 0) === (int)$id ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($nome); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <div class="form-text"><a href="nivel_hierarquico.php" target="_blank">Gerenciar Níveis</a></div>
-                    </div>
-
-                    <div class="col-md-6 mb-3">
-                        <label for="cargoSupervisorId" class="form-label">Reporta-se a (Supervisor)</label>
-                        <select class="form-select searchable-select" id="cargoSupervisorId" name="cargoSupervisorId">
-                            <option value="">--- Nível Superior / Nenhum ---</option>
-                            <?php foreach ($cargosSupervisor as $id => $nome): 
-                                if ($isEditing && (int)($originalId) === (int)$id): continue; endif; 
-                            ?>
-                                <option value="<?php echo $id; ?>" <?php echo (int)($cargo['cargoSupervisorId'] ?? 0) === (int)$id ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($nome); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <div class="form-text">Define a linha de comando para o Organograma.</div>
-                    </div>
-                </div>
-
-                <hr>
-
-                <h4 class="mb-3"><i class="fas fa-wallet"></i> Faixa Salarial</h4>
-                 <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label for="faixaId" class="form-label">Faixa/Nível Salarial</label>
-                        <select class="form-select searchable-select" id="faixaId" name="faixaId">
-                            <option value="">--- Não Definido ---</option>
-                            <?php foreach ($faixasSalariais as $id => $nome): ?>
-                                <option value="<?php echo $id; ?>" <?php echo (int)($cargo['faixaId'] ?? 0) === (int)$id ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($nome); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <div class="form-text">Lembre-se de cadastrar as faixas salariais.</div>
-                    </div>
-                </div>
-                
-                <hr>
-
-                <h4 class="mb-3"><i class="fas fa-building"></i> Áreas de Atuação</h4>
-                <button type="button" class="btn btn-sm btn-outline-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAssociacaoAreasAtuacao">
-                    <i class="fas fa-plus"></i> Adicionar Área
-                </button>
-                <div class="card p-0 mt-2">
-                    <div class="card-body p-0">
-                        <table class="table table-sm mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Área de Atuação (Hierárquica)</th>
-                                    <th class="grid-action-cell text-center">Ação</th>
-                                </tr>
-                            </thead>
-                            <tbody id="areasAtuacaoGridBody">
-                                </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="form-text mt-3"><a href="areas_atuacao.php" target="_blank">Gerenciar Estrutura de Áreas</a></div>
-
-            </div>
-
-            <div class="tab-pane fade" id="requisitos" role="tabpanel" aria-labelledby="requisitos-tab">
-                
-                <h4 class="mb-3"><i class="fas fa-lightbulb"></i> Habilidades</h4>
-                <button type="button" class="btn btn-sm btn-outline-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAssociacaoHabilidades">
-                    <i class="fas fa-plus"></i> Adicionar Habilidade
-                </button>
-                <div class="card p-0 mt-2 mb-4">
-                    <div class="card-body p-0">
-                        <table class="table table-sm mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Habilidade</th>
-                                    <th class="grid-action-cell text-center">Ação</th>
-                                </tr>
-                            </thead>
-                            <tbody id="habilidadesGridBody">
-                                </tbody>
-                        </table>
-                    </div>
-                </div>
-                
-                <h4 class="mb-3"><i class="fas fa-user-tag"></i> Características</h4>
-                <button type="button" class="btn btn-sm btn-outline-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAssociacaoCaracteristicas">
-                    <i class="fas fa-plus"></i> Adicionar Característica
-                </button>
-                <div class="card p-0 mt-2 mb-4">
-                    <div class="card-body p-0">
-                        <table class="table table-sm mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Característica</th>
-                                    <th class="grid-action-cell text-center">Ação</th>
-                                </tr>
-                            </thead>
-                            <tbody id="caracteristicasGridBody">
-                                </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <h4 class="mb-3"><i class="fas fa-certificate"></i> Cursos</h4>
-                <button type="button" class="btn btn-sm btn-outline-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAssociacaoCursos">
-                    <i class="fas fa-plus"></i> Adicionar Curso
-                </button>
-                <div class="card p-0 mt-2 mb-4">
-                    <div class="card-body p-0">
-                        <table class="table table-sm mb-0">
-                            <thead>
-                                <tr>
-                                    <th width="35%">Curso</th>
-                                    <th width="50%">Obrigatoriedade e Observação</th>
-                                    <th class="grid-action-cell text-center">Ação</th>
-                                </tr>
-                            </thead>
-                            <tbody id="cursosGridBody">
-                                </tbody>
-                        </table>
-                    </div>
-                </div>
-                
-                <h4 class="mb-3"><i class="fas fa-wrench"></i> Grupos de Recursos</h4>
-                <button type="button" class="btn btn-sm btn-outline-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAssociacaoRecursosGrupos">
-                    <i class="fas fa-plus"></i> Adicionar Grupo de Recurso
-                </button>
-                <div class="card p-0 mt-2 mb-4">
-                    <div class="card-body p-0">
-                        <table class="table table-sm mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Grupo de Recurso</th>
-                                    <th class="grid-action-cell text-center">Ação</th>
-                                </tr>
-                            </thead>
-                            <tbody id="recursosGruposGridBody">
-                                </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <h4 class="mb-3"><i class="fas fa-radiation-alt"></i> Riscos de Exposição</h4>
-                <button type="button" class="btn btn-sm btn-outline-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAssociacaoRiscos">
-                    <i class="fas fa-plus"></i> Adicionar Risco
-                </button>
-                <div class="card p-0 mt-2">
-                    <div class="card-body p-0">
-                        <table class="table table-sm mb-0">
-                            <thead>
-                                <tr>
-                                    <th width="30%">Tipo</th>
-                                    <th>Descrição Específica</th>
-                                    <th class="grid-action-cell text-center">Ação</th>
-                                </tr>
-                            </thead>
-                            <tbody id="riscosGridBody">
-                                </tbody>
-                        </table>
-                    </div>
-                </div>
-
-            </div>
-
-            <div class="tab-pane fade" id="sinonimos" role="tabpanel" aria-labelledby="sinonimos-tab">
-                <h4 class="mb-3"><i class="fas fa-tags"></i> Sinônimos e Nomes Alternativos</h4>
-                <p class="text-muted">Inclua nomes alternativos usados para este cargo.</p>
-
-                <div class="row mb-3">
-                    <div class="col-md-9">
-                        <input type="text" class="form-control" id="sinonimoInput" placeholder="Digite um nome alternativo...">
-                    </div>
-                    <div class="col-md-3">
-                        <button type="button" class="btn btn-primary w-100" id="btnAddSinonimo">
-                            <i class="fas fa-plus"></i> Adicionar
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="card p-0 mt-2">
-                    <div class="card-body p-0">
-                        <table class="table table-sm mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Nome Alternativo</th>
-                                    <th class="grid-action-cell text-center">Ação</th>
-                                </tr>
-                            </thead>
-                            <tbody id="sinonimosGridBody">
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="tab-pane fade" id="descricoes" role="tabpanel" aria-labelledby="descricoes-tab">
-                
-                <h4 class="mb-3"><i class="fas fa-clipboard-list"></i> Responsabilidades Detalhadas</h4>
-                <div class="mb-3">
-                    <textarea class="form-control" id="cargoResponsabilidades" name="cargoResponsabilidades" rows="5"><?php echo htmlspecialchars($cargo['cargoResponsabilidades'] ?? ''); ?></textarea>
-                </div>
-                
-                <h4 class="mb-3"><i class="fas fa-layer-group"></i> Complexidade do Cargo</h4>
-                <div class="mb-3">
-                    <textarea class="form-control" id="cargoComplexidade" name="cargoComplexidade" rows="5"><?php echo htmlspecialchars($cargo['cargoComplexidade'] ?? ''); ?></textarea>
-                </div>
-                
-                <h4 class="mb-3"><i class="fas fa-cloud-sun"></i> Condições Gerais</h4>
-                <div class="mb-3">
-                    <textarea class="form-control" id="cargoCondicoes" name="cargoCondicoes" rows="5"><?php echo htmlspecialchars($cargo['cargoCondicoes'] ?? ''); ?></textarea>
-                </div>
-                
-            </div>
-            
-        </div>
-        
-        <button type="submit" class="btn btn-lg btn-success w-100 mt-3">
-            <i class="fas fa-check-circle"></i> SALVAR CARGO
-        </button>
-        <?php if ($isEditing || $isDuplicating): ?>
-            <a href="cargos.php" class="btn btn-link text-secondary w-100 mt-2">
-                <i class="fas fa-arrow-left"></i> Voltar sem salvar
-            </a>
-        <?php endif; ?>
-
-    </form>
-</div>
+</form>
 
 <div class="modal fade" id="modalAssociacaoHabilidades" tabindex="-1" aria-labelledby="modalHabilidadesLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -900,6 +843,15 @@ if (isset($_GET['message'])) {
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="../scripts/cargos_form.js?v=4"></script> </body>
-</html>
+<?php
+// ======================================================
+// AJUSTE: Inclui os scripts JS específicos desta página ANTES de incluir o footer
+// ======================================================
+$extra_scripts = '
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+    <script src="../scripts/cargos_form.js?v=4"></script>
+';
+
+//
+include '../includes/footer.php';
+?>
