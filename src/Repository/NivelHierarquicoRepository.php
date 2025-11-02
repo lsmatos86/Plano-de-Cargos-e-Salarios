@@ -1,192 +1,248 @@
 <?php
-// Arquivo: src/Repository/NivelHierarquicoRepository.php
+// Arquivo: src/Repository/NivelHierarquicoRepository.php (Atualizado com Auditoria)
 
 namespace App\Repository;
 
 use App\Core\Database;
+use App\Service\AuditService;  // <-- PASSO 1: Incluir
+use App\Service\AuthService;   // <-- PASSO 1: Incluir
 use PDO;
 use Exception;
 
-/**
- * Lida com todas as operações de banco de dados para a entidade NivelHierarquico.
- */
 class NivelHierarquicoRepository
 {
     private PDO $pdo;
-    private string $tableName = 'nivel_hierarquico';
-    private string $idColumn = 'nivelId';
+    private AuditService $auditService; // <-- PASSO 2: Adicionar propriedade
+    private AuthService $authService;   // <-- PASSO 2: Adicionar propriedade
 
     public function __construct()
     {
         $this->pdo = Database::getConnection();
+        // ======================================================
+        // PASSO 2: Inicializar os serviços
+        // ======================================================
+        $this->auditService = new AuditService();
+        $this->authService = new AuthService();
+    }
+    
+    /**
+     * Busca um Nível pelo ID.
+     */
+    public function find(int $id)
+    {
+        // ======================================================
+        // PASSO 3: Adicionar verificação de permissão
+        // ======================================================
+        $this->authService->checkAndFail('estruturas:manage');
+
+        $stmt = $this->pdo->prepare("SELECT * FROM nivel_hierarquico WHERE nivelId = ?");
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+    
+    /**
+     * Busca todos os Tipos de Hierarquia (para o <select>).
+     */
+    public function findAllTipos(): array
+    {
+        $stmt = $this->pdo->query("SELECT tipoId, tipoNome FROM tipo_hierarquia ORDER BY tipoNome ASC");
+        return $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
     }
 
     /**
-     * Salva (cria ou atualiza) um registro de nível hierárquico.
-     * (Migrado de views/nivel_hierarquico.php)
-     *
-     * @param array $data Dados vindos do formulário ($_POST)
-     * @return int O número de linhas afetadas.
-     * @throws Exception Se os campos obrigatórios estiverem vazios.
+     * Salva (cria ou atualiza) um Nível Hierárquico.
      */
     public function save(array $data): int
     {
-        // Campos do formulário
-        $id = (int)($data[$this->idColumn] ?? 0);
-        $ordem = (int)($data['nivelOrdem'] ?? 0);
-        $descricao = trim($data['nivelDescricao'] ?? '');
-        $tipoId = (int)($data['tipoId'] ?? 0);
-        $atribuicoes = trim($data['nivelAtribuicoes'] ?? null);
-        $autonomia = trim($data['nivelAutonomia'] ?? null);
-        $quandoUtilizar = trim($data['nivelQuandoUtilizar'] ?? null);
-        
-        // No formulário original, a ação não era enviada, então determinamos aqui
-        $action = ($id > 0 ? 'update' : 'insert');
+        $tableName = 'nivel_hierarquico';
 
-        // Validação
-        if (empty($ordem) || empty($descricao) || empty($tipoId)) {
-            throw new Exception("Os campos Ordem, Descrição e Tipo de Hierarquia são obrigatórios.");
+        // 1. Coleta de Dados
+        $id = (int)($data['nivelId'] ?? 0);
+        $isUpdating = $id > 0;
+        
+        $params = [
+            ':tipoId' => (int)($data['tipoId'] ?? 0),
+            ':nivelOrdem' => (int)($data['nivelOrdem'] ?? 0),
+            ':nivelDescricao' => trim($data['nivelDescricao'] ?? ''),
+            ':nivelAtribuicoes' => trim($data['nivelAtribuicoes'] ?? null),
+            ':nivelAutonomia' => trim($data['nivelAutonomia'] ?? null),
+            ':nivelQuandoUtilizar' => trim($data['nivelQuandoUtilizar'] ?? null),
+        ];
+
+        // 2. Validação de Permissão e Dados
+        $permissionNeeded = $isUpdating ? 'estruturas:manage' : 'estruturas:manage';
+        // ======================================================
+        // PASSO 3: Adicionar verificação de permissão
+        // ======================================================
+        $this->authService->checkAndFail($permissionNeeded);
+        
+        if (empty($params[':tipoId']) || empty($params[':nivelDescricao'])) {
+            throw new Exception("Tipo de Hierarquia e Descrição são obrigatórios.");
         }
 
+        // 3. SQL
         try {
-            if ($action === 'insert') {
-                $sql = "INSERT INTO {$this->tableName} 
-                            (nivelOrdem, nivelDescricao, tipoId, nivelAtribuicoes, nivelAutonomia, nivelQuandoUtilizar, nivelDataCadastro) 
-                        VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP())";
-                $stmt = $this->pdo->prepare($sql);
-                $stmt->execute([$ordem, $descricao, $tipoId, $atribuicoes, $autonomia, $quandoUtilizar]);
-                return $stmt->rowCount();
-
-            } elseif ($action === 'update' && $id > 0) {
-                $sql = "UPDATE {$this->tableName} SET 
-                            nivelOrdem = ?, 
-                            nivelDescricao = ?, 
-                            tipoId = ?, 
-                            nivelAtribuicoes = ?, 
-                            nivelAutonomia = ?, 
-                            nivelQuandoUtilizar = ?,
-                            nivelDataAtualizacao = CURRENT_TIMESTAMP() 
-                        WHERE {$this->idColumn} = ?";
-                $stmt = $this->pdo->prepare($sql);
-                $stmt->execute([$ordem, $descricao, $tipoId, $atribuicoes, $autonomia, $quandoUtilizar, $id]);
-                return $stmt->rowCount();
+            if ($isUpdating) {
+                $sql = "UPDATE {$tableName} SET 
+                            tipoId = :tipoId, 
+                            nivelOrdem = :nivelOrdem, 
+                            nivelDescricao = :nivelDescricao, 
+                            nivelAtribuicoes = :nivelAtribuicoes, 
+                            nivelAutonomia = :nivelAutonomia, 
+                            nivelQuandoUtilizar = :nivelQuandoUtilizar 
+                        WHERE nivelId = :id";
+                $params[':id'] = $id;
+                $this->pdo->prepare($sql)->execute($params);
+                $savedId = $id;
+                
+                // ======================================================
+                // PASSO 3: REGISTRAR O LOG DE UPDATE
+                // ======================================================
+                $this->auditService->log('UPDATE', $tableName, $savedId, $data);
+                
+            } else {
+                $sql = "INSERT INTO {$tableName} (tipoId, nivelOrdem, nivelDescricao, nivelAtribuicoes, nivelAutonomia, nivelQuandoUtilizar) 
+                        VALUES (:tipoId, :nivelOrdem, :nivelDescricao, :nivelAtribuicoes, :nivelAutonomia, :nivelQuandoUtilizar)";
+                $this->pdo->prepare($sql)->execute($params);
+                $savedId = (int)$this->pdo->lastInsertId();
+                
+                // ======================================================
+                // PASSO 3: REGISTRAR O LOG DE CREATE
+                // ======================================================
+                $this->auditService->log('CREATE', $tableName, $savedId, $data);
             }
             
-            return 0; // Nenhuma ação válida
+            return $savedId;
 
-        } catch (\PDOException $e) {
-            error_log("Erro ao salvar Nível Hierárquico: " . $e->getMessage());
-            if ($e->getCode() == 23000) { // Erro de duplicidade (provavelmente na Ordem)
-                 throw new Exception("Erro: A ordem '{$ordem}' já está em uso.");
-            }
-            throw new Exception("Erro de banco de dados ao salvar. " . $e->getMessage());
+        } catch (Exception $e) {
+            throw $e; // Propaga outros erros
         }
     }
 
     /**
-     * Exclui um registro de nível hierárquico.
-     * (Migrado de views/nivel_hierarquico.php)
-     *
-     * @param int $id O ID a ser excluído.
-     * @return int O número de linhas afetadas.
-     * @throws Exception Em caso de falha.
+     * Exclui um Nível Hierárquico.
      */
-    public function delete(int $id): int
+    public function delete(int $id): bool
     {
+        $tableName = 'nivel_hierarquico';
+        
+        // ======================================================
+        // PASSO 3: Adicionar verificação de permissão
+        // ======================================================
+        $this->authService->checkAndFail('estruturas:manage');
+
         try {
-            $stmt = $this->pdo->prepare("DELETE FROM {$this->tableName} WHERE {$this->idColumn} = ?");
-            $stmt->execute([$id]);
-            return $stmt->rowCount();
-        } catch (\PDOException $e) {
-            error_log("Erro ao excluir Nível Hierárquico: " . $e->getMessage());
-            if ($e->getCode() == 23000) {
-                // Erro de chave estrangeira (FK)
-                throw new Exception("Erro: Este Nível Hierárquico não pode ser excluído pois está sendo utilizado por um ou mais Cargos.");
+            // 1. Verifica se o nível está sendo usado por um cargo
+            //
+            $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM cargos WHERE nivelHierarquicoId = ?");
+            $stmtCheck->execute([$id]);
+            if ($stmtCheck->fetchColumn() > 0) {
+                throw new Exception("Este nível não pode ser excluído pois está associado a um ou mais cargos.");
             }
-            throw new Exception("Erro de banco de dados ao excluir. " . $e->getMessage());
+
+            // 2. Exclui
+            $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE nivelId = ?");
+            $stmt->execute([$id]);
+            
+            $success = $stmt->rowCount() > 0;
+            
+            if ($success) {
+                // ======================================================
+                // PASSO 3: REGISTRAR O LOG DE DELETE
+                // ======================================================
+                $this->auditService->log('DELETE', $tableName, $id, ['deletedId' => $id]);
+            }
+            
+            return $success;
+
+        } catch (Exception $e) {
+            // Se for erro de FK (mesmo que tenhamos verificado, por segurança)
+            if (str_contains($e->getMessage(), 'foreign key constraint')) {
+                 throw new Exception("Este nível não pode ser excluído pois está em uso.");
+            }
+            throw $e; // Propaga outros erros
         }
     }
-
+    
     /**
-     * Busca registros de forma paginada, com filtro e ordenação.
-     * (Migrado de views/nivel_hierarquico.php)
-     *
-     * @param array $params Parâmetros de busca (term, page, limit, order_by, sort_dir)
-     * @return array Contendo ['data', 'total', 'totalPages', 'currentPage']
+     * Busca Níveis de forma paginada, com filtro.
      */
     public function findAllPaginated(array $params = []): array
     {
         // 1. Configuração da Paginação e Filtros
-        $itemsPerPage = (int)($params['limit'] ?? 10);
+        $itemsPerPage = (int)($params['limit'] ?? 15);
         $currentPage = (int)($params['page'] ?? 1);
-        $currentPage = max(1, $currentPage);
+        $currentPage = max(1, $currentPage); 
         $term = $params['term'] ?? '';
         $sqlTerm = "%{$term}%";
-        $count_bindings = [];
-        $all_bindings = [];
+        
+        $where = [];
+        $bindings = [];
 
-        // Alias
-        $mainAlias = 'n';
-        $joinAlias = 't';
-
-        // 2. Query para Contagem Total (com JOIN)
-        $count_sql = "SELECT COUNT({$mainAlias}.{$this->idColumn}) 
-                      FROM {$this->tableName} {$mainAlias}
-                      LEFT JOIN tipo_hierarquia {$joinAlias} ON {$mainAlias}.tipoId = {$joinAlias}.tipoId";
+        // 2. Montagem dos Filtros
         if (!empty($term)) {
-            $count_sql .= " WHERE {$mainAlias}.nivelDescricao LIKE ? OR {$joinAlias}.tipoNome LIKE ?";
-            $count_bindings[] = $sqlTerm;
-            $count_bindings[] = $sqlTerm;
+            $where[] = "(n.nivelDescricao LIKE :term OR t.tipoNome LIKE :term)";
+            $bindings[':term'] = $sqlTerm;
+        }
+        
+        $sqlJoin = " FROM nivel_hierarquico n LEFT JOIN tipo_hierarquia t ON n.tipoId = t.tipoId";
+        $sqlWhere = "";
+        if (!empty($where)) {
+            $sqlWhere = " WHERE " . implode(" AND ", $where);
         }
 
+        // 3. Query para Contagem Total
+        $count_sql = "SELECT COUNT(n.nivelId)" . $sqlJoin . $sqlWhere;
+        
         try {
             $count_stmt = $this->pdo->prepare($count_sql);
-            $count_stmt->execute($count_bindings);
+            $count_stmt->execute($bindings);
             $totalRecords = (int)$count_stmt->fetchColumn();
         } catch (\PDOException $e) {
-            error_log("Erro ao contar Níveis Hierárquicos: " . $e->getMessage());
+            error_log("Erro ao contar níveis hierárquicos: " . $e->getMessage());
             $totalRecords = 0;
         }
 
-        // 3. Ajuste de Página
+        // 4. Ajuste de Página
         $totalPages = $totalRecords > 0 ? ceil($totalRecords / $itemsPerPage) : 1;
         if ($currentPage > $totalPages) {
             $currentPage = $totalPages;
         }
         $offset = ($currentPage - 1) * $itemsPerPage;
 
-        // 4. Query Principal (com JOIN)
-        $sql = "SELECT {$mainAlias}.*, {$joinAlias}.tipoNome 
-                FROM {$this->tableName} {$mainAlias}
-                LEFT JOIN tipo_hierarquia {$joinAlias} ON {$mainAlias}.tipoId = {$joinAlias}.tipoId";
+        // 5. Query Principal
+        $sql = "SELECT n.*, t.tipoNome" . $sqlJoin . $sqlWhere;
         
-        if (!empty($term)) {
-            $sql .= " WHERE {$mainAlias}.nivelDescricao LIKE ? OR {$joinAlias}.tipoNome LIKE ?";
-            $all_bindings[] = $sqlTerm;
-            $all_bindings[] = $sqlTerm;
-        }
-
-        // 5. Ordenação
-        $orderBy = $params['order_by'] ?? "{$mainAlias}.nivelOrdem";
-        $sortDir = $params['sort_dir'] ?? 'DESC';
-        
-        $validColumns = [
-            "{$mainAlias}.nivelId", "{$mainAlias}.nivelOrdem", "{$mainAlias}.nivelDescricao", 
-            "{$joinAlias}.tipoNome", "{$mainAlias}.nivelDataCadastro", "{$mainAlias}.nivelDataAtualizacao"
-        ];
-        $orderBy = in_array($orderBy, $validColumns) ? $orderBy : "{$mainAlias}.nivelOrdem";
-        $sortDir = in_array(strtoupper($sortDir), ['ASC', 'DESC']) ? strtoupper($sortDir) : 'DESC';
+        // Validação de Colunas de Ordenação
+        $sort_col = $params['sort_col'] ?? 'n.nivelOrdem';
+        $sort_dir = $params['sort_dir'] ?? 'ASC';
+        //
+        $validColumns = ['n.nivelId', 'n.nivelOrdem', 'n.nivelDescricao', 't.tipoNome', 'n.nivelDataAtualizacao'];
+        $orderBy = in_array($sort_col, $validColumns) ? $sort_col : 'n.nivelOrdem';
+        $sortDir = in_array(strtoupper($sort_dir), ['ASC', 'DESC']) ? strtoupper($sort_dir) : 'ASC';
 
         $sql .= " ORDER BY {$orderBy} {$sortDir}";
-        $sql .= " LIMIT {$itemsPerPage} OFFSET {$offset}";
+        $sql .= " LIMIT :limit OFFSET :offset";
+
+        $bindings[':limit'] = $itemsPerPage;
+        $bindings[':offset'] = $offset;
 
         // 6. Executa a query principal
         try {
             $stmt = $this->pdo->prepare($sql);
-            $stmt->execute($all_bindings);
-            $registros = $stmt->fetchAll();
+            
+            foreach ($bindings as $key => &$val) {
+                if ($key == ':limit' || $key == ':offset') {
+                    $stmt->bindParam($key, $val, PDO::PARAM_INT);
+                } else {
+                    $stmt->bindParam($key, $val);
+                }
+            }
+            
+            $stmt->execute();
+            $registros = $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
-            error_log("Erro ao buscar Níveis Hierárquicos: " . $e->getMessage());
+            error_log("Erro ao buscar níveis hierárquicos: " . $e->getMessage() . " SQL: " . $sql);
             $registros = [];
         }
 

@@ -4,8 +4,8 @@
 namespace App\Repository;
 
 use App\Core\Database;
-use App\Service\AuditService;
-use App\Service\AuthService;
+use App\Service\AuditService;  // 1. IMPORTAR
+use App\Service\AuthService;   // 2. IMPORTAR
 use PDO;
 use Exception; // Importa a classe Exception global
 
@@ -15,20 +15,21 @@ use Exception; // Importa a classe Exception global
 class CargoRepository
 {
     private PDO $pdo;
-    private AuditService $auditService;
-    private AuthService $authService;
+    private AuditService $auditService; // 3. ADICIONAR PROPRIEDADE
+    private AuthService $authService;   // 4. ADICIONAR PROPRIEDADE
 
     public function __construct()
     {
         // Pega a conexão PDO da nossa classe de Database
         $this->pdo = Database::getConnection();
         
-        // INICIALIZAR OS SERVIÇOS
+        // 5. INICIALIZAR OS SERVIÇOS
         $this->auditService = new AuditService();
         $this->authService = new AuthService();
     }
 
     /**
+     * NOVO MÉTODO (Adicionado no Passo 26)
      * Busca os IDs e Nomes de todos os cargos para o relatório consolidado.
      * (Usado por relatorios/cargo_total.php)
      *
@@ -48,7 +49,7 @@ class CargoRepository
 
     /**
      * Salva (cria ou atualiza) um cargo e todas as suas relações N:M.
-     * (Usado por cargos_form.php)
+     * (Criado no Passo 11 - Usado por cargos_form.php)
      *
      * @param array $postData Os dados vindo diretamente do $_POST.
      * @return int O ID do cargo salvo.
@@ -59,7 +60,7 @@ class CargoRepository
         $cargoIdSubmissao = (int)($postData['cargoId'] ?? 0);
         $isUpdating = $cargoIdSubmissao > 0;
 
-        // --- VERIFICAÇÃO DE PERMISSÃO (AuthService) ---
+        // --- 6. VERIFICAÇÃO DE PERMISSÃO (AuthService) ---
         $permissionNeeded = $isUpdating ? 'cargos:edit' : 'cargos:create';
         // Lança uma exceção se o usuário não tiver permissão
         $this->authService->checkAndFail($permissionNeeded); 
@@ -121,7 +122,7 @@ class CargoRepository
                 $stmt->execute($bindings);
                 $novoCargoId = $cargoIdSubmissao;
 
-                // --- LOG DE AUDITORIA (UPDATE) ---
+                // --- 7. LOG DE AUDITORIA (UPDATE) ---
                 $this->auditService->log('UPDATE', 'cargos', $novoCargoId, $postData);
 
             } else {
@@ -132,7 +133,7 @@ class CargoRepository
                 $stmt->execute($bindings);
                 $novoCargoId = $this->pdo->lastInsertId();
                 
-                // --- LOG DE AUDITORIA (CREATE) ---
+                // --- 8. LOG DE AUDITORIA (CREATE) ---
                 $this->auditService->log('CREATE', 'cargos', $novoCargoId, $postData);
             }
 
@@ -195,7 +196,7 @@ class CargoRepository
 
     /**
      * Busca todos os dados de um cargo e suas relações para popular o formulário.
-     * (Usado por cargos_form.php)
+     * (Criado no Passo 10 - Usado por cargos_form.php)
      *
      * @param int $cargoId O ID do cargo a ser buscado.
      * @return array|null Um array com ['cargo' => [], 'sinonimos' => [], ...] ou null se não encontrado.
@@ -217,7 +218,7 @@ class CargoRepository
             // 1. Busca Cargo Principal
             $stmt = $this->pdo->prepare("SELECT * FROM cargos WHERE cargoId = ?");
             $stmt->execute([$cargoId]);
-            $cargo = $stmt->fetch(PDO::FETCH_ASSOC); 
+            $cargo = $stmt->fetch(PDO::FETCH_ASSOC); // Modificado para FETCH_ASSOC
 
             if (!$cargo) {
                 return null; // Cargo não existe
@@ -225,6 +226,7 @@ class CargoRepository
             $data['cargo'] = $cargo;
 
             // 2. SINÔNIMOS
+            // Corrigido: cargoSinonimoNome AS nome (para consistência com o JS)
             $stmt = $this->pdo->prepare("SELECT cargoSinonimoId AS id, cargoSinonimoNome AS nome FROM cargo_sinonimos WHERE cargoId = ?");
             $stmt->execute([$cargoId]);
             $data['sinonimos'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -274,7 +276,7 @@ class CargoRepository
 
     /**
      * Busca cargos de forma paginada, com filtro e ordenação.
-     * (Usado por cargos.php)
+     * (Criado no Passo 7 - Usado por cargos.php)
      *
      * @param array $params Parâmetros de busca (term, page, limit, order_by, sort_dir)
      * @return array Contendo ['data', 'total', 'totalPages', 'currentPage']
@@ -365,7 +367,7 @@ class CargoRepository
             }
             
             $stmt->execute();
-            $registros = $stmt->fetchAll(PDO::FETCH_ASSOC); 
+            $registros = $stmt->fetchAll(PDO::FETCH_ASSOC); // Modificado para FETCH_ASSOC
         } catch (\PDOException $e) {
             error_log("Erro ao buscar cargos: " . $e->getMessage() . " SQL: " . $sql);
             $registros = [];
@@ -383,7 +385,7 @@ class CargoRepository
 
     /**
      * Remove todas as referências de um Cargo em suas tabelas de junção N:M.
-     * (Usado por delete() e save())
+     * (Criado no Passo 5 - Usado por delete() e save())
      *
      * @param int $cargoId O ID do cargo.
      * @return bool True se a limpeza for bem-sucedida.
@@ -411,7 +413,7 @@ class CargoRepository
 
     /**
      * Exclui um cargo e todas as suas relações.
-     * (Usado por cargos.php)
+     * (Criado no Passo 5 - Usado por cargos.php)
      *
      * @param int $id O ID do cargo a ser excluído.
      * @return int O número de linhas afetadas (0 ou 1).
@@ -419,7 +421,7 @@ class CargoRepository
      */
     public function delete(int $id): int
     {
-        // --- VERIFICAÇÃO DE PERMISSÃO (AuthService) ---
+        // --- 9. VERIFICAÇÃO DE PERMISSÃO (AuthService) ---
         $this->authService->checkAndFail('cargos:delete');
         
         $this->pdo->beginTransaction();
@@ -436,7 +438,7 @@ class CargoRepository
             $stmt->execute([$id]);
             $rowCount = $stmt->rowCount();
             
-            // --- LOG DE AUDITORIA (DELETE) ---
+            // --- 10. LOG DE AUDITORIA (DELETE) ---
             if ($rowCount > 0) {
                 $this->auditService->log('DELETE', 'cargos', $id, ['deletedCargoId' => $id]);
             }
@@ -453,7 +455,7 @@ class CargoRepository
 
     /**
      * Carrega todos os dados de um cargo para relatórios.
-     * (Usado por gerador_pdf.php e cargo_individual.php)
+     * (Criado no Passo 4 - Usado por gerador_pdf.php e cargo_individual.php)
      *
      * @param int $cargoId O ID do cargo.
      * @return array|null Os dados completos do cargo ou null se não encontrado.
@@ -482,7 +484,7 @@ class CargoRepository
                 WHERE c.cargoId = ?
             ");
             $stmt->execute([$cargoId]);
-            $cargo = $stmt->fetch(PDO::FETCH_ASSOC); 
+            $cargo = $stmt->fetch(PDO::FETCH_ASSOC); // Modificado para FETCH_ASSOC
 
             if (!$cargo) return null;
             $data['cargo'] = $cargo;
@@ -492,22 +494,22 @@ class CargoRepository
             // 2.1. HABILIDADES
             $stmt_hab = $this->pdo->prepare("SELECT h.habilidadeNome, h.habilidadeTipo, h.habilidadeDescricao FROM habilidades_cargo hc JOIN habilidades h ON h.habilidadeId = hc.habilidadeId WHERE hc.cargoId = ? ORDER BY h.habilidadeTipo DESC, h.habilidadeNome ASC");
             $stmt_hab->execute([$cargoId]);
-            $data['habilidades'] = $stmt_hab->fetchAll(PDO::FETCH_ASSOC); 
+            $data['habilidades'] = $stmt_hab->fetchAll(PDO::FETCH_ASSOC); // Modificado
 
             // 2.2. CARACTERÍSTICAS
             $stmt_car = $this->pdo->prepare("SELECT c.caracteristicaNome, c.caracteristicaDescricao FROM caracteristicas_cargo cc JOIN caracteristicas c ON c.caracteristicaId = cc.caracteristicaId WHERE cc.cargoId = ? ORDER BY c.caracteristicaNome ASC");
             $stmt_car->execute([$cargoId]);
-            $data['caracteristicas'] = $stmt_car->fetchAll(PDO::FETCH_ASSOC); 
+            $data['caracteristicas'] = $stmt_car->fetchAll(PDO::FETCH_ASSOC); // Modificado
             
             // 2.3. RISCOS
             $stmt_ris = $this->pdo->prepare("SELECT r.riscoNome, rc.riscoDescricao FROM riscos_cargo rc JOIN riscos r ON r.riscoId = rc.riscoId WHERE rc.cargoId = ? ORDER BY r.riscoNome ASC");
             $stmt_ris->execute([$cargoId]);
-            $data['riscos'] = $stmt_ris->fetchAll(PDO::FETCH_ASSOC); 
+            $data['riscos'] = $stmt_ris->fetchAll(PDO::FETCH_ASSOC); // Modificado
             
             // 2.4. CURSOS
             $stmt_cur = $this->pdo->prepare("SELECT cur.cursoNome, c_c.cursoCargoObrigatorio, c_c.cursoCargoObs FROM cursos_cargo c_c JOIN cursos cur ON cur.cursoId = c_c.cursoId WHERE c_c.cargoId = ? ORDER BY c_c.cursoCargoObrigatorio DESC, cur.cursoNome ASC");
             $stmt_cur->execute([$cargoId]);
-            $data['cursos'] = $stmt_cur->fetchAll(PDO::FETCH_ASSOC); 
+            $data['cursos'] = $stmt_cur->fetchAll(PDO::FETCH_ASSOC); // Modificado
 
             // 2.5. SINÔNIMOS
             $stmt_sin = $this->pdo->prepare("SELECT cargoSinonimoNome FROM cargo_sinonimos WHERE cargoId = ?"); 
@@ -593,8 +595,8 @@ class CargoRepository
     }
 
     /**
-     * NOVO MÉTODO (Adicionado para navegação "Primeiro/Último")
      * Busca os IDs do primeiro e último cargo, com base no filtro e ordenação.
+     * (Usado por cargo_individual.php para navegação "Primeiro/Último")
      *
      * @param string $orderBy A coluna de ordenação
      * @param string $sortDir A direção (ASC/DESC)
@@ -621,7 +623,6 @@ class CargoRepository
         }
 
         // 3. Query com Funções de Janela (FIRST_VALUE/LAST_VALUE)
-        // Usamos ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING para obter o valor real da janela inteira
         $sql = "
             WITH OrderedCargos AS (
                 SELECT 

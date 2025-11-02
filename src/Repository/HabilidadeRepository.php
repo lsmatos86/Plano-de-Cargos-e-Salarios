@@ -1,197 +1,131 @@
 <?php
-// Arquivo: src/Repository/HabilidadeRepository.php
+// Arquivo: src/Repository/HabilidadeRepository.php (Atualizado com Auditoria)
 
 namespace App\Repository;
 
 use App\Core\Database;
+use App\Service\AuditService;  // <-- PASSO 1: Incluir
+use App\Service\AuthService;   // <-- PASSO 1: Incluir
 use PDO;
 use Exception;
 
 class HabilidadeRepository
 {
     private PDO $pdo;
-    private string $tableName = 'habilidades';
-    private string $idColumn = 'habilidadeId';
-    private string $nameColumn = 'habilidadeNome';
-    private string $typeColumn = 'habilidadeTipo';
-    private string $descColumn = 'habilidadeDescricao';
+    private AuditService $auditService; // <-- PASSO 2: Adicionar propriedade
+    private AuthService $authService;   // <-- PASSO 2: Adicionar propriedade
 
     public function __construct()
     {
         $this->pdo = Database::getConnection();
+        // ======================================================
+        // PASSO 2: Inicializar os serviços
+        // ======================================================
+        $this->auditService = new AuditService();
+        $this->authService = new AuthService();
     }
 
     /**
-     * Retorna as opções válidas para o campo ENUM 'habilidadeTipo'.
-     * (Migrado de functions.php/getEnumOptions)
-     *
-     * @return array Uma lista de strings com os valores ENUM.
+     * Busca uma habilidade pelo ID.
      */
-    public function getEnumOptions(): array
+    public function find(int $id)
     {
-        try {
-            $stmt = $this->pdo->query("SHOW COLUMNS FROM {$this->tableName} LIKE '{$this->typeColumn}'");
-            $row = $stmt->fetch();
+        // ======================================================
+        // PASSO 3: Adicionar verificação de permissão
+        // ======================================================
+        $this->authService->checkAndFail('cadastros:manage');
 
-            if (isset($row['Type']) && strpos($row['Type'], 'enum') !== false) {
-                $enum_string = $row['Type'];
-                $matches = [];
-                preg_match_all('/\'([^\']+)\'/', $enum_string, $matches);
-                return $matches[1];
-            }
-        } catch (\PDOException $e) {
-            error_log("Erro ao buscar ENUM para {$this->tableName}: " . $e->getMessage());
-        }
-        return [];
+        $stmt = $this->pdo->prepare("SELECT * FROM habilidades WHERE habilidadeId = ?");
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     /**
-     * Salva (cria ou atualiza) um registro de habilidade.
-     * (Migrado de views/habilidades.php)
-     *
-     * @param array $data Dados vindos do formulário ($_POST)
-     * @return int O número de linhas afetadas.
-     * @throws Exception Se os campos obrigatórios estiverem vazios ou inválidos.
-     */
-    public function save(array $data): int
-    {
-        $id = (int)($data[$this->idColumn] ?? 0);
-        $nome = trim($data[$this->nameColumn] ?? '');
-        $tipo = trim($data[$this->typeColumn] ?? '');
-        $descricao = trim($data[$this->descColumn] ?? null);
-        $action = $data['action'] ?? ($id > 0 ? 'update' : 'insert');
-
-        // Validação
-        if (empty($nome)) {
-            throw new Exception("O nome da habilidade é obrigatório.");
-        }
-        $enum_options = $this->getEnumOptions();
-        if (empty($tipo) || !in_array($tipo, $enum_options)) {
-            throw new Exception("O tipo de habilidade selecionado não é válido.");
-        }
-
-        try {
-            if ($action === 'insert') {
-                $sql = "INSERT INTO {$this->tableName} ({$this->nameColumn}, {$this->typeColumn}, {$this->descColumn}, habilidadeDataCadastro) 
-                        VALUES (?, ?, ?, CURRENT_TIMESTAMP())";
-                $stmt = $this->pdo->prepare($sql);
-                $stmt->execute([$nome, $tipo, $descricao]);
-                return $stmt->rowCount();
-
-            } elseif ($action === 'update' && $id > 0) {
-                $sql = "UPDATE {$this->tableName} SET 
-                            {$this->nameColumn} = ?, 
-                            {$this->typeColumn} = ?, 
-                            {$this->descColumn} = ?,
-                            habilidadeDataAtualizacao = CURRENT_TIMESTAMP() 
-                        WHERE {$this->idColumn} = ?";
-                $stmt = $this->pdo->prepare($sql);
-                $stmt->execute([$nome, $tipo, $descricao, $id]);
-                return $stmt->rowCount();
-            }
-            
-            return 0; // Nenhuma ação válida
-
-        } catch (\PDOException $e) {
-            error_log("Erro ao salvar Habilidade: " . $e->getMessage());
-            throw new Exception("Erro de banco de dados ao salvar. " . $e->getMessage());
-        }
-    }
-
-    /**
-     * Exclui um registro de habilidade.
-     * (Migrado de views/habilidades.php)
-     *
-     * @param int $id O ID a ser excluído.
-     * @return int O número de linhas afetadas.
-     * @throws Exception Em caso de falha.
-     */
-    public function delete(int $id): int
-    {
-        try {
-            $stmt = $this->pdo->prepare("DELETE FROM {$this->tableName} WHERE {$this->idColumn} = ?");
-            $stmt->execute([$id]);
-            return $stmt->rowCount();
-        } catch (\PDOException $e) {
-            error_log("Erro ao excluir Habilidade: " . $e->getMessage());
-            if ($e->getCode() == 23000) {
-                // Erro de chave estrangeira (FK)
-                throw new Exception("Erro: Esta habilidade não pode ser excluída pois está sendo utilizada por um ou mais cargos.");
-            }
-            throw new Exception("Erro de banco de dados ao excluir. " . $e->getMessage());
-        }
-    }
-
-    /**
-     * Busca registros de forma paginada, com filtro e ordenação.
-     * (Migrado de views/habilidades.php)
-     *
-     * @param array $params Parâmetros de busca (term, page, limit, order_by, sort_dir)
-     * @return array Contendo ['data', 'total', 'totalPages', 'currentPage']
+     * Busca habilidades de forma paginada, com filtro.
      */
     public function findAllPaginated(array $params = []): array
     {
-        // 1. Configuração
-        $itemsPerPage = (int)($params['limit'] ?? 10);
+        // 1. Configuração da Paginação e Filtros
+        $itemsPerPage = (int)($params['limit'] ?? 15);
         $currentPage = (int)($params['page'] ?? 1);
-        $currentPage = max(1, $currentPage);
+        $currentPage = max(1, $currentPage); 
         $term = $params['term'] ?? '';
         $sqlTerm = "%{$term}%";
-        $count_bindings = [];
-        $all_bindings = [];
+        $tipo = $params['tipo'] ?? ''; // Filtro de tipo
+        
+        $where = [];
+        $bindings = [];
 
-        // 2. Query para Contagem Total
-        $count_sql = "SELECT COUNT(*) FROM {$this->tableName}";
+        // 2. Montagem dos Filtros
         if (!empty($term)) {
-            $count_sql .= " WHERE {$this->nameColumn} LIKE ? OR {$this->descColumn} LIKE ? OR {$this->typeColumn} LIKE ?";
-            $count_bindings = [$sqlTerm, $sqlTerm, $sqlTerm];
+            $where[] = "(habilidadeNome LIKE :term OR habilidadeDescricao LIKE :term)";
+            $bindings[':term'] = $sqlTerm;
+        }
+        if (!empty($tipo)) {
+            $where[] = "habilidadeTipo = :tipo";
+            $bindings[':tipo'] = $tipo;
+        }
+        
+        $sqlWhere = "";
+        if (!empty($where)) {
+            $sqlWhere = " WHERE " . implode(" AND ", $where);
         }
 
+        // 3. Query para Contagem Total
+        $count_sql = "SELECT COUNT(*) FROM habilidades" . $sqlWhere;
+        
         try {
             $count_stmt = $this->pdo->prepare($count_sql);
-            $count_stmt->execute($count_bindings);
+            $count_stmt->execute($bindings);
             $totalRecords = (int)$count_stmt->fetchColumn();
         } catch (\PDOException $e) {
-            error_log("Erro ao contar Habilidades: " . $e->getMessage());
+            error_log("Erro ao contar habilidades: " . $e->getMessage());
             $totalRecords = 0;
         }
 
-        // 3. Ajuste de Página
+        // 4. Ajuste de Página
         $totalPages = $totalRecords > 0 ? ceil($totalRecords / $itemsPerPage) : 1;
         if ($currentPage > $totalPages) {
             $currentPage = $totalPages;
         }
         $offset = ($currentPage - 1) * $itemsPerPage;
 
-        // 4. Query Principal
-        $sql = "SELECT * FROM {$this->tableName}";
-        if (!empty($term)) {
-            $sql .= " WHERE {$this->nameColumn} LIKE ? OR {$this->descColumn} LIKE ? OR {$this->typeColumn} LIKE ?";
-            $all_bindings = [$sqlTerm, $sqlTerm, $sqlTerm];
-        }
-
-        // 5. Ordenação
-        $orderBy = $params['order_by'] ?? $this->idColumn;
-        $sortDir = $params['sort_dir'] ?? 'ASC';
+        // 5. Query Principal
+        $sql = "SELECT * FROM habilidades" . $sqlWhere;
         
-        $validColumns = [$this->idColumn, $this->nameColumn, $this->typeColumn, $this->descColumn, 'habilidadeDataCadastro', 'habilidadeDataAtualizacao'];
-        $orderBy = in_array($orderBy, $validColumns) ? $orderBy : $this->idColumn;
-        $sortDir = in_array(strtoupper($sortDir), ['ASC', 'DESC']) ? strtoupper($sortDir) : 'ASC';
+        // Validação de Colunas de Ordenação
+        $sort_col = $params['sort_col'] ?? 'habilidadeNome';
+        $sort_dir = $params['sort_dir'] ?? 'ASC';
+        $validColumns = ['habilidadeId', 'habilidadeNome', 'habilidadeTipo', 'habilidadeDataAtualizacao'];
+        $orderBy = in_array($sort_col, $validColumns) ? $sort_col : 'habilidadeNome';
+        $sortDir = in_array(strtoupper($sort_dir), ['ASC', 'DESC']) ? strtoupper($sort_dir) : 'ASC';
 
         $sql .= " ORDER BY {$orderBy} {$sortDir}";
-        $sql .= " LIMIT {$itemsPerPage} OFFSET {$offset}";
+        $sql .= " LIMIT :limit OFFSET :offset";
 
-        // 6. Executa
+        $bindings[':limit'] = $itemsPerPage;
+        $bindings[':offset'] = $offset;
+
+        // 6. Executa a query principal
         try {
             $stmt = $this->pdo->prepare($sql);
-            $stmt->execute($all_bindings);
-            $registros = $stmt->fetchAll();
+            
+            foreach ($bindings as $key => &$val) {
+                if ($key == ':limit' || $key == ':offset') {
+                    $stmt->bindParam($key, $val, PDO::PARAM_INT);
+                } else {
+                    $stmt->bindParam($key, $val);
+                }
+            }
+            
+            $stmt->execute();
+            $registros = $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
-            error_log("Erro ao buscar Habilidades: " . $e->getMessage());
+            error_log("Erro ao buscar habilidades: " . $e->getMessage() . " SQL: " . $sql);
             $registros = [];
         }
 
-        // 7. Retorna
+        // 7. Retorna o pacote completo
         return [
             'data' => $registros,
             'total' => $totalRecords,
@@ -199,42 +133,154 @@ class HabilidadeRepository
             'currentPage' => $currentPage
         ];
     }
-
+    
     /**
-     * Retorna as habilidades agrupadas por Hardskill e Softskill.
-     * (Criado no Passo 9)
-     * @return array Um array aninhado [tipo => [id => nome]]
+     * Busca Habilidades agrupadas por Tipo (para o formulário de cargos).
      */
     public function getGroupedLookup(): array
     {
         try {
-            // Busca todas as habilidades, ordenando pelo tipo (DESC para garantir Hardskill primeiro)
-            $stmt = $this->pdo->query("SELECT habilidadeId, habilidadeNome, habilidadeTipo FROM habilidades ORDER BY habilidadeTipo DESC, habilidadeNome ASC");
-            $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            $grouped = [];
-            foreach ($results as $row) {
-                $tipo = $row['habilidadeTipo'];
-                // Se o campo for nulo/vazio, padroniza para "Outros"
-                $tipo = empty($tipo) ? 'Outros' : $tipo; 
-                
-                if (!isset($grouped[$tipo])) {
-                    $grouped[$tipo] = [];
+            $stmt = $this->pdo->query("SELECT habilidadeId, habilidadeNome, habilidadeTipo FROM habilidades ORDER BY habilidadeTipo, habilidadeNome ASC");
+            $habilidades = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $grouped = [
+                'Hardskill' => [],
+                'Softskill' => []
+            ];
+
+            foreach ($habilidades as $h) {
+                if (isset($grouped[$h['habilidadeTipo']])) {
+                    $grouped[$h['habilidadeTipo']][$h['habilidadeId']] = $h['habilidadeNome'];
                 }
-                $grouped[$tipo][$row['habilidadeId']] = $row['habilidadeNome'];
             }
             
-            // Garante a ordem Hard Skills, Soft Skills, Outros
-            $final_grouped = [];
-            if (isset($grouped['Hardskill'])) { $final_grouped['Hard Skills'] = $grouped['Hardskill']; }
-            if (isset($grouped['Softskill'])) { $final_grouped['Soft Skills'] = $grouped['Softskill']; }
-            if (isset($grouped['Outros'])) { $final_grouped['Outros Tipos'] = $grouped['Outros']; }
-            
-            return $final_grouped;
-            
-        } catch (PDOException $e) {
-            error_log("Erro ao buscar habilidades agrupadas: " . $e->getMessage());
+            // Renomeia chaves para exibição amigável
+            $finalGrouped = [];
+            if (!empty($grouped['Hardskill'])) {
+                $finalGrouped['Hard Skills (Técnicas)'] = $grouped['Hardskill'];
+            }
+            if (!empty($grouped['Softskill'])) {
+                $finalGrouped['Soft Skills (Comportamentais)'] = $grouped['Softskill'];
+            }
+
+            return $finalGrouped;
+
+        } catch (\PDOException $e) {
+            error_log("Erro ao buscar lookup agrupado de habilidades: " . $e->getMessage());
             return [];
+        }
+    }
+
+    /**
+     * Salva (cria ou atualiza) uma Habilidade.
+     */
+    public function save(array $data): int
+    {
+        $tableName = 'habilidades';
+
+        // 1. Coleta de Dados
+        $id = (int)($data['habilidadeId'] ?? 0);
+        $nome = trim($data['habilidadeNome'] ?? '');
+        $tipo = trim($data['habilidadeTipo'] ?? '');
+        $descricao = trim($data['habilidadeDescricao'] ?? null);
+        $isUpdating = $id > 0;
+
+        // 2. Validação de Permissão e Dados
+        $permissionNeeded = $isUpdating ? 'cadastros:manage' : 'cadastros:manage'; 
+        // ======================================================
+        // PASSO 3: Adicionar verificação de permissão
+        // ======================================================
+        $this->authService->checkAndFail($permissionNeeded);
+
+        if (empty($nome) || empty($tipo)) {
+            throw new Exception("Nome e Tipo da Habilidade são obrigatórios.");
+        }
+        if (!in_array($tipo, ['Hardskill', 'Softskill'])) {
+            throw new Exception("Tipo de habilidade inválido.");
+        }
+        
+        // 3. SQL
+        $params = [
+            ':nome' => $nome,
+            ':tipo' => $tipo,
+            ':descricao' => $descricao,
+        ];
+
+        try {
+            if ($isUpdating) {
+                $sql = "UPDATE {$tableName} SET habilidadeNome = :nome, habilidadeTipo = :tipo, habilidadeDescricao = :descricao WHERE habilidadeId = :id";
+                $params[':id'] = $id;
+                $this->pdo->prepare($sql)->execute($params);
+                $savedId = $id;
+                
+                // ======================================================
+                // PASSO 3: REGISTRAR O LOG DE UPDATE
+                // ======================================================
+                $this->auditService->log('UPDATE', $tableName, $savedId, $data);
+                
+            } else {
+                $sql = "INSERT INTO {$tableName} (habilidadeNome, habilidadeTipo, habilidadeDescricao) VALUES (:nome, :tipo, :descricao)";
+                $this->pdo->prepare($sql)->execute($params);
+                $savedId = (int)$this->pdo->lastInsertId();
+                
+                // ======================================================
+                // PASSO 3: REGISTRAR O LOG DE CREATE
+                // ======================================================
+                $this->auditService->log('CREATE', $tableName, $savedId, $data);
+            }
+            
+            return $savedId;
+
+        } catch (Exception $e) {
+            if (str_contains($e->getMessage(), 'Duplicate entry')) {
+                 throw new Exception("A habilidade '$nome' já existe.");
+            }
+            throw $e; // Propaga outros erros
+        }
+    }
+
+    /**
+     * Exclui uma Habilidade.
+     */
+    public function delete(int $id): bool
+    {
+        $tableName = 'habilidades';
+        
+        // ======================================================
+        // PASSO 3: Adicionar verificação de permissão
+        // ======================================================
+        $this->authService->checkAndFail('cadastros:manage');
+
+        try {
+            // 1. Verifica se a habilidade está sendo usada por um cargo
+            //
+            $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM habilidades_cargo WHERE habilidadeId = ?");
+            $stmtCheck->execute([$id]);
+            if ($stmtCheck->fetchColumn() > 0) {
+                throw new Exception("Esta habilidade não pode ser excluída pois está associada a um ou mais cargos.");
+            }
+
+            // 2. Exclui
+            $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE habilidadeId = ?");
+            $stmt->execute([$id]);
+            
+            $success = $stmt->rowCount() > 0;
+            
+            if ($success) {
+                // ======================================================
+                // PASSO 3: REGISTRAR O LOG DE DELETE
+                // ======================================================
+                $this->auditService->log('DELETE', $tableName, $id, ['deletedId' => $id]);
+            }
+            
+            return $success;
+
+        } catch (Exception $e) {
+            // Se for erro de FK (mesmo que tenhamos verificado, por segurança)
+            if (str_contains($e->getMessage(), 'foreign key constraint')) {
+                 throw new Exception("Esta habilidade não pode ser excluída pois está em uso.");
+            }
+            throw $e; // Propaga outros erros
         }
     }
 }

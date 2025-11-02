@@ -1,163 +1,196 @@
 <?php
-// Arquivo: src/Repository/FamiliaCboRepository.php
+// Arquivo: src/Repository/FamiliaCboRepository.php (Atualizado com Auditoria)
 
 namespace App\Repository;
 
 use App\Core\Database;
+use App\Service\AuditService;  // <-- PASSO 1: Incluir
+use App\Service\AuthService;   // <-- PASSO 1: Incluir
 use PDO;
 use Exception;
 
-/**
- * Lida com todas as operações de banco de dados para a entidade FamiliaCbo.
- */
 class FamiliaCboRepository
 {
     private PDO $pdo;
-    private string $tableName = 'familia_cbo';
-    private string $idColumn = 'familiaCboId';
-    private string $nameColumn = 'familiaCboNome';
+    private AuditService $auditService; // <-- PASSO 2: Adicionar propriedade
+    private AuthService $authService;   // <-- PASSO 2: Adicionar propriedade
 
     public function __construct()
     {
         $this->pdo = Database::getConnection();
+        // ======================================================
+        // PASSO 2: Inicializar os serviços
+        // ======================================================
+        $this->auditService = new AuditService();
+        $this->authService = new AuthService();
     }
 
     /**
-     * Salva (cria ou atualiza) um registro de família cbo.
-     * (Migrado de views/familia_cbo.php)
-     *
-     * @param array $data Dados vindos do formulário ($_POST)
-     * @return int O número de linhas afetadas.
-     * @throws Exception Se o nome estiver vazio.
+     * Busca uma família pelo ID.
+     */
+    public function find(int $id)
+    {
+        // Apenas quem pode gerenciar pode buscar os dados
+        $this->authService->checkAndFail('cadastros:manage');
+        
+        $stmt = $this->pdo->prepare("SELECT * FROM familia_cbo WHERE familiaCboId = ?");
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Busca todos as famílias (para o <select> no form de CBO).
+     */
+    public function findAllForLookup(): array
+    {
+        $stmt = $this->pdo->query("SELECT familiaCboId, familiaCboNome FROM familia_cbo ORDER BY familiaCboNome ASC");
+        return $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    }
+
+    /**
+     * Salva (cria ou atualiza) uma Família de CBO.
      */
     public function save(array $data): int
     {
-        $nome = trim($data[$this->nameColumn] ?? '');
-        $id = (int)($data[$this->idColumn] ?? 0);
-        $action = $data['action'] ?? '';
+        $tableName = 'familia_cbo';
 
+        // 1. Coleta de Dados
+        $id = (int)($data['familiaCboId'] ?? 0);
+        $nome = trim($data['familiaCboNome'] ?? '');
+        $isUpdating = $id > 0;
+        
+        // 2. Validação de Permissão e Dados
+        $permissionNeeded = $isUpdating ? 'cadastros:manage' : 'cadastros:manage';
+        $this->authService->checkAndFail($permissionNeeded);
+        
         if (empty($nome)) {
-            throw new Exception("O nome da Família CBO não pode estar vazio.");
+            throw new Exception("O nome da família é obrigatório.");
         }
-
+        
         try {
-            if ($action === 'insert') {
-                // Lógica de insertSimpleRecord
-                $sql = "INSERT INTO {$this->tableName} ({$this->nameColumn}) VALUES (?)";
+            if ($isUpdating) {
+                $sql = "UPDATE {$tableName} SET familiaCboNome = :nome WHERE familiaCboId = :id";
                 $stmt = $this->pdo->prepare($sql);
-                $stmt->execute([$nome]);
-                return $stmt->rowCount();
-
-            } elseif ($action === 'update' && $id > 0) {
-                // Lógica de update manual
-                $sql = "UPDATE {$this->tableName} SET {$this->nameColumn} = ? WHERE {$this->idColumn} = ?";
+                $stmt->execute([':nome' => $nome, ':id' => $id]);
+                $savedId = $id;
+                
+                // ======================================================
+                // PASSO 3: REGISTRAR O LOG DE UPDATE
+                // ======================================================
+                $this->auditService->log('UPDATE', $tableName, $savedId, $data);
+                
+            } else {
+                $sql = "INSERT INTO {$tableName} (familiaCboNome) VALUES (:nome)";
                 $stmt = $this->pdo->prepare($sql);
-                $stmt->execute([$nome, $id]);
-                return $stmt->rowCount();
+                $stmt->execute([':nome' => $nome]);
+                $savedId = (int)$this->pdo->lastInsertId();
+                
+                // ======================================================
+                // PASSO 3: REGISTRAR O LOG DE CREATE
+                // ======================================================
+                $this->auditService->log('CREATE', $tableName, $savedId, $data);
             }
             
-            return 0; // Nenhuma ação válida
+            return $savedId;
 
         } catch (\PDOException $e) {
-            error_log("Erro ao salvar Família CBO: " . $e->getMessage());
-            throw new Exception("Erro de banco de dados ao salvar. " . $e->getMessage());
-        }
-    }
-
-    /**
-     * Exclui um registro de família cbo.
-     * (Migrado de views/familia_cbo.php)
-     *
-     * @param int $id O ID a ser excluído.
-     * @return int O número de linhas afetadas.
-     * @throws Exception Em caso de falha.
-     */
-    public function delete(int $id): int
-    {
-        try {
-            $stmt = $this->pdo->prepare("DELETE FROM {$this->tableName} WHERE {$this->idColumn} = ?");
-            $stmt->execute([$id]);
-            return $stmt->rowCount();
-        } catch (\PDOException $e) {
-            error_log("Erro ao excluir Família CBO: " . $e->getMessage());
-            if ($e->getCode() == 23000) {
-                // Erro de chave estrangeira (FK)
-                throw new Exception("Erro: Esta Família CBO não pode ser excluída pois está sendo utilizada por um ou mais CBOs.");
+            if ($e->errorInfo[1] == 1062) { // Duplicate entry
+                throw new Exception("A família '$nome' já existe.");
             }
-            throw new Exception("Erro de banco de dados ao excluir. " . $e->getMessage());
+            throw $e;
         }
     }
 
     /**
-     * Busca registros de forma paginada, com filtro e ordenação.
-     * (Migrado de views/familia_cbo.php)
-     *
-     * @param array $params Parâmetros de busca (term, page, limit, order_by, sort_dir)
-     * @return array Contendo ['data', 'total', 'totalPages', 'currentPage']
+     * Exclui uma Família de CBO.
+     */
+    public function delete(int $id): bool
+    {
+        $tableName = 'familia_cbo';
+        
+        $this->authService->checkAndFail('cadastros:manage');
+        
+        try {
+            // Nota: A verificação de FK (uso na tabela 'cbos')
+            //
+            // é tratada pelo catch (PDOException) abaixo.
+            
+            $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE familiaCboId = ?");
+            $stmt->execute([$id]);
+            
+            $success = $stmt->rowCount() > 0;
+
+            if ($success) {
+                // ======================================================
+                // PASSO 3: REGISTRAR O LOG DE DELETE
+                // ======================================================
+                $this->auditService->log('DELETE', $tableName, $id, ['deletedId' => $id]);
+            }
+            
+            return $success;
+
+        } catch (\PDOException $e) {
+            if ($e->errorInfo[1] == 1451) { // Foreign key constraint
+                throw new Exception("Esta família não pode ser excluída pois está sendo utilizada em um ou mais CBOs.");
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Busca famílias de forma paginada, com filtro.
      */
     public function findAllPaginated(array $params = []): array
     {
-        // 1. Configuração da Paginação e Filtros
-        $itemsPerPage = (int)($params['limit'] ?? 10);
+        $itemsPerPage = (int)($params['limit'] ?? 15);
         $currentPage = (int)($params['page'] ?? 1);
-        $currentPage = max(1, $currentPage);
+        $offset = ($currentPage - 1) * $itemsPerPage;
         $term = $params['term'] ?? '';
         $sqlTerm = "%{$term}%";
-        $count_bindings = [];
-        $all_bindings = [];
-
-        // 2. Query para Contagem Total
-        $count_sql = "SELECT COUNT(*) FROM {$this->tableName}";
-        if (!empty($term)) {
-            $count_sql .= " WHERE {$this->nameColumn} LIKE ?";
-            $count_bindings[] = $sqlTerm;
-        }
-
-        try {
-            $count_stmt = $this->pdo->prepare($count_sql);
-            $count_stmt->execute($count_bindings);
-            $totalRecords = (int)$count_stmt->fetchColumn();
-        } catch (\PDOException $e) {
-            error_log("Erro ao contar Famílias CBO: " . $e->getMessage());
-            $totalRecords = 0;
-        }
-
-        // 3. Ajuste de Página
-        $totalPages = $totalRecords > 0 ? ceil($totalRecords / $itemsPerPage) : 1;
-        if ($currentPage > $totalPages) {
-            $currentPage = $totalPages;
-        }
-        $offset = ($currentPage - 1) * $itemsPerPage;
-
-        // 4. Query Principal
-        $sql = "SELECT * FROM {$this->tableName}";
-        if (!empty($term)) {
-            $sql .= " WHERE {$this->nameColumn} LIKE ?";
-            $all_bindings[] = $sqlTerm;
-        }
-
-        // 5. Ordenação
-        $orderBy = $params['order_by'] ?? $this->idColumn;
-        $sortDir = $params['sort_dir'] ?? 'ASC';
         
-        $validColumns = [$this->idColumn, $this->nameColumn, $this->idColumn.'DataCadastro', $this->idColumn.'DataAtualizacao'];
-        $orderBy = in_array($orderBy, $validColumns) ? $orderBy : $this->idColumn;
-        $sortDir = in_array(strtoupper($sortDir), ['ASC', 'DESC']) ? strtoupper($sortDir) : 'ASC';
+        $where = "";
+        $bindings = [];
 
-        $sql .= " ORDER BY {$orderBy} {$sortDir}";
-        $sql .= " LIMIT {$itemsPerPage} OFFSET {$offset}";
-
-        // 6. Executa a query principal
-        try {
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->execute($all_bindings);
-            $registros = $stmt->fetchAll();
-        } catch (\PDOException $e) {
-            error_log("Erro ao buscar Famílias CBO: " . $e->getMessage());
-            $registros = [];
+        if (!empty($term)) {
+            $where = " WHERE familiaCboNome LIKE :term";
+            $bindings[':term'] = $sqlTerm;
         }
+        
+        // Count total
+        $countSql = "SELECT COUNT(*) FROM familia_cbo" . $where;
+        $countStmt = $this->pdo->prepare($countSql);
+        $countStmt->execute($bindings);
+        $totalRecords = (int)$countStmt->fetchColumn();
+        $totalPages = $totalRecords > 0 ? ceil($totalRecords / $itemsPerPage) : 1;
 
-        // 7. Retorna o pacote completo
+        // Data query
+        $dataSql = "SELECT * FROM familia_cbo" . $where;
+        
+        // Order by
+        $sort_col = $params['sort_col'] ?? 'familiaCboNome';
+        $sort_dir = $params['sort_dir'] ?? 'ASC';
+        $validColumns = ['familiaCboId', 'familiaCboNome', 'familiaCboDataAtualizacao'];
+        $orderBy = in_array($sort_col, $validColumns) ? $sort_col : 'familiaCboNome';
+        $sortDir = in_array(strtoupper($sort_dir), ['ASC', 'DESC']) ? strtoupper($sort_dir) : 'ASC';
+        $dataSql .= " ORDER BY $orderBy $sortDir";
+        
+        $dataSql .= " LIMIT :limit OFFSET :offset";
+        $bindings[':limit'] = $itemsPerPage;
+        $bindings[':offset'] = $offset;
+
+        $stmt = $this->pdo->prepare($dataSql);
+        
+        foreach ($bindings as $key => &$val) {
+            if ($key == ':limit' || $key == ':offset') {
+                $stmt->bindParam($key, $val, PDO::PARAM_INT);
+            } else {
+                $stmt->bindParam($key, $val);
+            }
+        }
+        
+        $stmt->execute();
+        $registros = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
         return [
             'data' => $registros,
             'total' => $totalRecords,

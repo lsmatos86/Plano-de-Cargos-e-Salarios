@@ -4,159 +4,222 @@
 namespace App\Repository;
 
 use App\Core\Database;
+use App\Service\AuditService;  // <-- PASSO 1: Incluir
+use App\Service\AuthService;   // <-- PASSO 1: Incluir
 use PDO;
 use Exception;
 
 /**
- * Lida com todas as operações de banco de dados para a entidade Caracteristica.
+ * Lida com as operações de CRUD para a entidade Característica.
  */
 class CaracteristicaRepository
 {
     private PDO $pdo;
-    private string $tableName = 'caracteristicas';
-    private string $idColumn = 'caracteristicaId';
-    private string $nameColumn = 'caracteristicaNome';
-    private string $descColumn = 'caracteristicaDescricao';
+    private AuditService $auditService; // <-- PASSO 2: Adicionar propriedade
+    private AuthService $authService;   // <-- PASSO 2: Adicionar propriedade
 
     public function __construct()
     {
         $this->pdo = Database::getConnection();
+        // ======================================================
+        // PASSO 2: Inicializar os serviços
+        // ======================================================
+        $this->auditService = new AuditService();
+        $this->authService = new AuthService();
     }
 
     /**
-     * Salva (cria ou atualiza) um registro de característica.
-     * (Migrado de views/caracteristicas.php)
-     *
-     * @param array $data Dados vindos do formulário ($_POST)
-     * @return int O número de linhas afetadas.
-     * @throws Exception Se o nome estiver vazio.
+     * Busca uma característica pelo ID.
+     */
+    public function find(int $id)
+    {
+        // Apenas quem pode gerenciar pode buscar os dados
+        $this->authService->checkAndFail('cadastros:manage');
+        
+        $stmt = $this->pdo->prepare("SELECT * FROM caracteristicas WHERE caracteristicaId = ?");
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Salva (cria ou atualiza) uma Característica.
      */
     public function save(array $data): int
     {
-        $nome = trim($data[$this->nameColumn] ?? '');
-        $descricao = trim($data[$this->descColumn] ?? null); // Aceita nulo
-        $id = (int)($data[$this->idColumn] ?? 0);
-        $action = $data['action'] ?? '';
+        $tableName = 'caracteristicas';
+
+        // 1. Coleta de Dados
+        $id = (int)($data['caracteristicaId'] ?? 0);
+        $nome = trim($data['caracteristicaNome'] ?? '');
+        $descricao = trim($data['caracteristicaDescricao'] ?? null);
+        $isUpdating = $id > 0;
+
+        // 2. Validação de Permissão e Dados
+        $permissionNeeded = $isUpdating ? 'cadastros:manage' : 'cadastros:manage'; // Ou permissões separadas
+        $this->authService->checkAndFail($permissionNeeded);
 
         if (empty($nome)) {
-            throw new Exception("O nome da característica não pode estar vazio.");
+            throw new Exception("O nome da característica é obrigatório.");
         }
+        
+        // 3. SQL
+        $params = [
+            ':nome' => $nome,
+            ':descricao' => $descricao,
+        ];
 
         try {
-            if ($action === 'insert') {
-                $sql = "INSERT INTO {$this->tableName} ({$this->nameColumn}, {$this->descColumn}) VALUES (?, ?)";
-                $stmt = $this->pdo->prepare($sql);
-                $stmt->execute([$nome, $descricao]);
-                return $stmt->rowCount();
-
-            } elseif ($action === 'update' && $id > 0) {
-                $sql = "UPDATE {$this->tableName} SET {$this->nameColumn} = ?, {$this->descColumn} = ? WHERE {$this->idColumn} = ?";
-                $stmt = $this->pdo->prepare($sql);
-                $stmt->execute([$nome, $descricao, $id]);
-                return $stmt->rowCount();
+            if ($isUpdating) {
+                $sql = "UPDATE {$tableName} SET caracteristicaNome = :nome, caracteristicaDescricao = :descricao WHERE caracteristicaId = :id";
+                $params[':id'] = $id;
+                $this->pdo->prepare($sql)->execute($params);
+                $savedId = $id;
+                
+                // ======================================================
+                // PASSO 3: REGISTRAR O LOG DE UPDATE
+                // ======================================================
+                $this->auditService->log('UPDATE', $tableName, $savedId, $data);
+                
+            } else {
+                $sql = "INSERT INTO {$tableName} (caracteristicaNome, caracteristicaDescricao) VALUES (:nome, :descricao)";
+                $this->pdo->prepare($sql)->execute($params);
+                $savedId = (int)$this->pdo->lastInsertId();
+                
+                // ======================================================
+                // PASSO 3: REGISTRAR O LOG DE CREATE
+                // ======================================================
+                $this->auditService->log('CREATE', $tableName, $savedId, $data);
             }
             
-            return 0; // Nenhuma ação válida
+            return $savedId;
 
-        } catch (\PDOException $e) {
-            error_log("Erro ao salvar característica: " . $e->getMessage());
-            throw new Exception("Erro de banco de dados ao salvar. " . $e->getMessage());
-        }
-    }
-
-    /**
-     * Exclui um registro de característica.
-     * (Migrado de views/caracteristicas.php)
-     *
-     * @param int $id O ID a ser excluído.
-     * @return int O número de linhas afetadas.
-     * @throws Exception Em caso de falha.
-     */
-    public function delete(int $id): int
-    {
-        try {
-            $stmt = $this->pdo->prepare("DELETE FROM {$this->tableName} WHERE {$this->idColumn} = ?");
-            $stmt->execute([$id]);
-            return $stmt->rowCount();
-        } catch (\PDOException $e) {
-            error_log("Erro ao excluir característica: " . $e->getMessage());
-            if ($e->getCode() == 23000) {
-                // Erro de chave estrangeira (FK)
-                throw new Exception("Erro: Esta característica não pode ser excluída pois está sendo utilizada por um ou mais cargos.");
+        } catch (Exception $e) {
+            if (str_contains($e->getMessage(), 'Duplicate entry')) {
+                 throw new Exception("A característica '$nome' já existe.");
             }
-            throw new Exception("Erro de banco de dados ao excluir. " . $e->getMessage());
+            throw $e; // Propaga outros erros
         }
     }
 
     /**
-     * Busca registros de forma paginada, com filtro e ordenação.
-     * (Migrado de views/caracteristicas.php)
-     *
-     * @param array $params Parâmetros de busca (term, page, limit, order_by, sort_dir)
-     * @return array Contendo ['data', 'total', 'totalPages', 'currentPage']
+     * Exclui uma Característica.
+     */
+    public function delete(int $id): bool
+    {
+        $tableName = 'caracteristicas';
+        
+        $this->authService->checkAndFail('cadastros:manage');
+
+        try {
+            // 1. Verifica se a característica está sendo usada por um cargo
+            //
+            $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM caracteristicas_cargo WHERE caracteristicaId = ?");
+            $stmtCheck->execute([$id]);
+            if ($stmtCheck->fetchColumn() > 0) {
+                throw new Exception("Esta característica não pode ser excluída pois está associada a um ou mais cargos.");
+            }
+
+            // 2. Exclui
+            $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE caracteristicaId = ?");
+            $stmt->execute([$id]);
+            
+            $success = $stmt->rowCount() > 0;
+            
+            if ($success) {
+                // ======================================================
+                // PASSO 3: REGISTRAR O LOG DE DELETE
+                // ======================================================
+                $this->auditService->log('DELETE', $tableName, $id, ['deletedId' => $id]);
+            }
+            
+            return $success;
+
+        } catch (Exception $e) {
+            // Se for erro de FK (mesmo que tenhamos verificado, por segurança)
+            if (str_contains($e->getMessage(), 'foreign key constraint')) {
+                 throw new Exception("Esta característica não pode ser excluída pois está em uso.");
+            }
+            throw $e; // Propaga outros erros
+        }
+    }
+    
+    /**
+     * Busca características de forma paginada, com filtro.
      */
     public function findAllPaginated(array $params = []): array
     {
         // 1. Configuração da Paginação e Filtros
-        $itemsPerPage = (int)($params['limit'] ?? 10);
+        $itemsPerPage = (int)($params['limit'] ?? 15);
         $currentPage = (int)($params['page'] ?? 1);
-        $currentPage = max(1, $currentPage);
+        $currentPage = max(1, $currentPage); 
         $term = $params['term'] ?? '';
         $sqlTerm = "%{$term}%";
-        $count_bindings = [];
-        $all_bindings = [];
+        
+        $where = [];
+        $bindings = [];
 
-        // 2. Query para Contagem Total (Filtra por nome OU descrição)
-        $count_sql = "SELECT COUNT(*) FROM {$this->tableName}";
+        // 2. Montagem dos Filtros
         if (!empty($term)) {
-            $count_sql .= " WHERE {$this->nameColumn} LIKE ? OR {$this->descColumn} LIKE ?";
-            $count_bindings[] = $sqlTerm;
-            $count_bindings[] = $sqlTerm;
+            $where[] = "(caracteristicaNome LIKE :term OR caracteristicaDescricao LIKE :term)";
+            $bindings[':term'] = $sqlTerm;
+        }
+        
+        $sqlWhere = "";
+        if (!empty($where)) {
+            $sqlWhere = " WHERE " . implode(" AND ", $where);
         }
 
+        // 3. Query para Contagem Total
+        $count_sql = "SELECT COUNT(*) FROM caracteristicas" . $sqlWhere;
+        
         try {
             $count_stmt = $this->pdo->prepare($count_sql);
-            $count_stmt->execute($count_bindings);
+            $count_stmt->execute($bindings);
             $totalRecords = (int)$count_stmt->fetchColumn();
         } catch (\PDOException $e) {
             error_log("Erro ao contar características: " . $e->getMessage());
             $totalRecords = 0;
         }
 
-        // 3. Ajuste de Página
+        // 4. Ajuste de Página
         $totalPages = $totalRecords > 0 ? ceil($totalRecords / $itemsPerPage) : 1;
         if ($currentPage > $totalPages) {
             $currentPage = $totalPages;
         }
         $offset = ($currentPage - 1) * $itemsPerPage;
 
-        // 4. Query Principal
-        $sql = "SELECT * FROM {$this->tableName}";
-        if (!empty($term)) {
-            $sql .= " WHERE {$this->nameColumn} LIKE ? OR {$this->descColumn} LIKE ?";
-            $all_bindings[] = $sqlTerm;
-            $all_bindings[] = $sqlTerm;
-        }
-
-        // 5. Ordenação
-        $orderBy = $params['order_by'] ?? $this->idColumn;
-        $sortDir = $params['sort_dir'] ?? 'ASC';
+        // 5. Query Principal
+        $sql = "SELECT * FROM caracteristicas" . $sqlWhere;
         
-        // Colunas válidas para ordenação
-        $validColumns = [$this->idColumn, $this->nameColumn, $this->descColumn, $this->idColumn.'DataCadastro', $this->idColumn.'DataAtualizacao'];
-        $orderBy = in_array($orderBy, $validColumns) ? $orderBy : $this->idColumn;
-        $sortDir = in_array(strtoupper($sortDir), ['ASC', 'DESC']) ? strtoupper($sortDir) : 'ASC';
+        // Validação de Colunas de Ordenação
+        $sort_col = $params['sort_col'] ?? 'caracteristicaNome';
+        $sort_dir = $params['sort_dir'] ?? 'ASC';
+        $validColumns = ['caracteristicaId', 'caracteristicaNome', 'caracteristicaDataAtualizacao'];
+        $orderBy = in_array($sort_col, $validColumns) ? $sort_col : 'caracteristicaNome';
+        $sortDir = in_array(strtoupper($sort_dir), ['ASC', 'DESC']) ? strtoupper($sort_dir) : 'ASC';
 
         $sql .= " ORDER BY {$orderBy} {$sortDir}";
-        $sql .= " LIMIT {$itemsPerPage} OFFSET {$offset}";
+        $sql .= " LIMIT :limit OFFSET :offset";
+
+        $bindings[':limit'] = $itemsPerPage;
+        $bindings[':offset'] = $offset;
 
         // 6. Executa a query principal
         try {
             $stmt = $this->pdo->prepare($sql);
-            $stmt->execute($all_bindings);
-            $registros = $stmt->fetchAll();
+            
+            foreach ($bindings as $key => &$val) {
+                if ($key == ':limit' || $key == ':offset') {
+                    $stmt->bindParam($key, $val, PDO::PARAM_INT);
+                } else {
+                    $stmt->bindParam($key, $val);
+                }
+            }
+            
+            $stmt->execute();
+            $registros = $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
-            error_log("Erro ao buscar características: " . $e->getMessage());
+            error_log("Erro ao buscar características: " . $e->getMessage() . " SQL: " . $sql);
             $registros = [];
         }
 

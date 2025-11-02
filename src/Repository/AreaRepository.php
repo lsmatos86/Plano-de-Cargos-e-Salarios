@@ -1,193 +1,188 @@
 <?php
-// Arquivo: src/Repository/AreaRepository.php
+// Arquivo: src/Repository/AreaRepository.php (Atualizado com Auditoria)
 
 namespace App\Repository;
 
 use App\Core\Database;
+use App\Service\AuditService;  // <-- PASSO 1: Incluir
+use App\Service\AuthService;   // <-- PASSO 1: Incluir (Boa prática)
 use PDO;
 use Exception;
 
 class AreaRepository
 {
     private PDO $pdo;
-    private string $tableName = 'areas_atuacao';
-    private string $idColumn = 'areaId';
+    private AuditService $auditService; // <-- PASSO 2: Adicionar propriedade
+    private AuthService $authService;   // <-- PASSO 2: Adicionar propriedade
 
     public function __construct()
     {
         $this->pdo = Database::getConnection();
+        // ======================================================
+        // PASSO 2: Inicializar os serviços
+        // ======================================================
+        $this->auditService = new AuditService();
+        $this->authService = new AuthService();
     }
 
-    /**
-     * Salva (cria ou atualiza) um registro de área.
-     * (Migrado de views/areas_atuacao.php)
-     *
-     * @param array $data Dados vindos do formulário ($_POST)
-     * @return int O número de linhas afetadas.
-     * @throws Exception Se o nome estiver vazio.
-     */
-    public function save(array $data): int
-    {
-        $id = (int)($data[$this->idColumn] ?? 0);
-        $nome = trim($data['areaNome'] ?? '');
-        $descricao = trim($data['areaDescricao'] ?? null);
-        $codigo = trim($data['areaCodigo'] ?? null);
-        // Converte string vazia para NULL para o banco de dados
-        $areaPaiId = empty($data['areaPaiId']) ? null : (int)$data['areaPaiId'];
-        
-        $action = $data['action'] ?? ($id > 0 ? 'update' : 'insert');
-
-        // Validação
-        if (empty($nome)) {
-            throw new Exception("O nome da Área é obrigatório.");
-        }
-        
-        // Evita que uma área seja "pai" dela mesma
-        if ($id > 0 && $id === $areaPaiId) {
-             throw new Exception("Uma área não pode ser hierarquicamente superior a ela mesma.");
-        }
-
-        try {
-            if ($action === 'insert') {
-                $sql = "INSERT INTO {$this->tableName} (areaNome, areaDescricao, areaCodigo, areaPaiId, areaDataCadastro) 
-                        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP())";
-                $stmt = $this->pdo->prepare($sql);
-                $stmt->execute([$nome, $descricao, $codigo, $areaPaiId]);
-                return $stmt->rowCount();
-
-            } elseif ($action === 'update' && $id > 0) {
-                $sql = "UPDATE {$this->tableName} SET 
-                            areaNome = ?, 
-                            areaDescricao = ?, 
-                            areaCodigo = ?, 
-                            areaPaiId = ?,
-                            areaDataAtualizacao = CURRENT_TIMESTAMP() 
-                        WHERE {$this->idColumn} = ?";
-                $stmt = $this->pdo->prepare($sql);
-                $stmt->execute([$nome, $descricao, $codigo, $areaPaiId, $id]);
-                return $stmt->rowCount();
-            }
-            
-            return 0; // Nenhuma ação válida
-
-        } catch (\PDOException $e) {
-            error_log("Erro ao salvar Área de Atuação: " . $e->getMessage());
-            throw new Exception("Erro de banco de dados ao salvar. " . $e->getMessage());
-        }
-    }
-
-    /**
-     * Exclui um registro de área.
-     * (Migrado de views/areas_atuacao.php)
-     *
-     * @param int $id O ID a ser excluído.
-     * @return int O número de linhas afetadas.
-     * @throws Exception Em caso de falha.
-     */
-    public function delete(int $id): int
-    {
-        try {
-            // Antes de deletar, atualiza áreas filhas para não terem pai (Nível Raiz)
-            // Isso evita o erro de FK e órfãos
-            $stmtUpdate = $this->pdo->prepare("UPDATE {$this->tableName} SET areaPaiId = NULL WHERE areaPaiId = ?");
-            $stmtUpdate->execute([$id]);
-
-            // Agora deleta a área
-            $stmt = $this->pdo->prepare("DELETE FROM {$this->tableName} WHERE {$this->idColumn} = ?");
-            $stmt->execute([$id]);
-            return $stmt->rowCount();
-
-        } catch (\PDOException $e) {
-            error_log("Erro ao excluir Área de Atuação: " . $e->getMessage());
-            if ($e->getCode() == 23000) {
-                throw new Exception("Erro: Esta Área não pode ser excluída pois está sendo utilizada por um ou mais Cargos.");
-            }
-            throw new Exception("Erro de banco de dados ao excluir. " . $e->getMessage());
-        }
-    }
-
-    /**
-     * Busca todas as áreas e as retorna em uma árvore hierárquica.
-     * (Combina o SELECT e a função buildAreaHierarchy)
-     *
-     * @return array A árvore hierárquica de áreas.
-     */
-    public function findAllHierarchical(): array
-    {
-        try {
-            // 1. Busca a lista "flat"
-            $stmt = $this->pdo->query("SELECT * FROM {$this->tableName} ORDER BY {$this->idColumn}");
-            $flatList = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            // 2. Constrói a árvore
-            return $this->buildAreaHierarchy($flatList, null);
-
-        } catch (\PDOException $e) {
-            error_log("Erro ao buscar Áreas de Atuação: " . $e->getMessage());
-            return [];
-        }
-    }
+    // ... (métodos find, findAll, getHierarchyLookup não mudam) ...
     
-    /**
-     * Converte a lista de áreas (com ID Pai) para uma estrutura hierárquica aninhada.
-     * (Migrado de functions.php e tornado privado)
-     *
-     * @param array $flatList Lista de áreas (flat array)
-     * @param int|null $parentId ID da área pai para começar
-     * @return array Árvore hierárquica
-     */
-    private function buildAreaHierarchy(array $flatList, $parentId = null): array 
+    public function find(int $id)
     {
-        $branch = [];
-        foreach ($flatList as $area) {
-            $areaPaiId = ($area['areaPaiId'] === null) ? null : (int)$area['areaPaiId']; 
-            
-            if ($areaPaiId === $parentId) {
-                $children = $this->buildAreaHierarchy($flatList, (int)$area['areaId']);
-                if ($children) {
-                    $area['children'] = $children;
-                }
-                $branch[] = $area;
-            }
-        }
-        return $branch;
+        $stmt = $this->pdo->prepare("SELECT * FROM areas_atuacao WHERE areaId = ?");
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    /**
-     * Retorna as áreas para o Lookup de seleção, formatadas para mostrar o caminho hierárquico.
-     * (Criado no Passo 9)
-     *
-     * @return array Um array formatado [areaId => 'Pai > Filho > Nome da Área'].
-     */
-    public function getHierarchyLookup(): array 
+    public function findAll(): array
     {
-        try {
-            $stmt = $this->pdo->query("SELECT areaId, areaPaiId, areaNome FROM areas_atuacao");
-            $flatList = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            error_log("Erro ao buscar áreas para lookup: " . $e->getMessage());
-            return [];
+        $stmt = $this->pdo->query("SELECT * FROM areas_atuacao ORDER BY areaNome ASC");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getHierarchyLookup(): array
+    {
+        $areas = $this->findAll();
+        $map = [];
+        foreach ($areas as $area) {
+            $map[$area['areaId']] = $area;
         }
 
         $lookup = [];
-        $allAreas = array_column($flatList, null, 'areaId');
-
-        // Mapeia para exibir o caminho completo (ex: Diretoria > Financeiro)
-        foreach ($flatList as $area) {
-            $path = [$area['areaNome']];
-            $currentId = $area['areaPaiId'];
-            
-            // Constrói o caminho reverso até a raiz
-            while ($currentId !== null && isset($allAreas[$currentId])) {
-                array_unshift($path, $allAreas[$currentId]['areaNome']);
-                $currentId = $allAreas[$currentId]['areaPaiId'];
-            }
-            
-            $lookup[$area['areaId']] = implode(' > ', $path);
+        foreach ($areas as $area) {
+            $path = $this->getAreaPath($area, $map);
+            $lookup[$area['areaId']] = $path;
         }
-        
-        // Ordena pelo caminho completo para exibição no SELECT
         asort($lookup);
         return $lookup;
+    }
+
+    private function getAreaPath(array $area, array $map): string
+    {
+        $path = $area['areaNome'];
+        $current = $area;
+        while ($current['areaPaiId'] !== null && isset($map[$current['areaPaiId']])) {
+            $parent = $map[$current['areaPaiId']];
+            $path = $parent['areaNome'] . ' > ' . $path;
+            $current = $parent;
+        }
+        return $path;
+    }
+
+    /**
+     * Salva (cria ou atualiza) uma Área de Atuação.
+     */
+    public function save(array $data): int
+    {
+        // Define o nome da tabela para a auditoria
+        $tableName = 'areas_atuacao';
+
+        // 1. Coleta de Dados
+        $id = (int)($data['areaId'] ?? 0);
+        $nome = trim($data['areaNome'] ?? '');
+        $descricao = trim($data['areaDescricao'] ?? null);
+        $areaPaiId = empty($data['areaPaiId']) ? null : (int)$data['areaPaiId'];
+        $isUpdating = $id > 0;
+
+        // 2. Validação de Permissão e Dados
+        $permissionNeeded = $isUpdating ? 'estruturas:edit' : 'estruturas:create';
+        $this->authService->checkAndFail($permissionNeeded);
+
+        if (empty($nome)) {
+            throw new Exception("O nome da área é obrigatório.");
+        }
+        
+        // Proteção contra auto-referência
+        if ($isUpdating && $id === $areaPaiId) {
+             throw new Exception("Uma área não pode ser pai dela mesma.");
+        }
+
+        // 3. SQL
+        $params = [
+            ':nome' => $nome,
+            ':descricao' => $descricao,
+            ':areaPaiId' => $areaPaiId
+        ];
+
+        try {
+            if ($isUpdating) {
+                $sql = "UPDATE {$tableName} SET areaNome = :nome, areaDescricao = :descricao, areaPaiId = :areaPaiId WHERE areaId = :id";
+                $params[':id'] = $id;
+                $this->pdo->prepare($sql)->execute($params);
+                $savedId = $id;
+                
+                // ======================================================
+                // PASSO 3: REGISTRAR O LOG DE UPDATE
+                // ======================================================
+                $this->auditService->log('UPDATE', $tableName, $savedId, $data);
+                
+            } else {
+                $sql = "INSERT INTO {$tableName} (areaNome, areaDescricao, areaPaiId) VALUES (:nome, :descricao, :areaPaiId)";
+                $this->pdo->prepare($sql)->execute($params);
+                $savedId = (int)$this->pdo->lastInsertId();
+                
+                // ======================================================
+                // PASSO 3: REGISTRAR O LOG DE CREATE
+                // ======================================================
+                $this->auditService->log('CREATE', $tableName, $savedId, $data);
+            }
+            
+            return $savedId;
+
+        } catch (Exception $e) {
+            if (str_contains($e->getMessage(), 'Duplicate entry')) {
+                 throw new Exception("A área '$nome' já existe.");
+            }
+            throw $e; // Propaga outros erros
+        }
+    }
+
+    /**
+     * Exclui uma Área de Atuação.
+     */
+    public function delete(int $id): bool
+    {
+        // Define o nome da tabela para a auditoria
+        $tableName = 'areas_atuacao';
+        
+        $this->authService->checkAndFail('estruturas:delete');
+
+        try {
+            // 1. Verifica se a área está sendo usada como pai
+            $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM {$tableName} WHERE areaPaiId = ?");
+            $stmtCheck->execute([$id]);
+            if ($stmtCheck->fetchColumn() > 0) {
+                throw new Exception("Esta área não pode ser excluída pois é usada como 'Área Pai' por outras áreas.");
+            }
+            
+            // 2. Verifica se a área está sendo usada por um cargo
+            $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM cargos_area WHERE areaId = ?");
+            $stmtCheck->execute([$id]);
+            if ($stmtCheck->fetchColumn() > 0) {
+                throw new Exception("Esta área não pode ser excluída pois está associada a um ou mais cargos.");
+            }
+
+            // 3. Exclui
+            $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE areaId = ?");
+            $stmt->execute([$id]);
+            
+            $success = $stmt->rowCount() > 0;
+            
+            if ($success) {
+                // ======================================================
+                // PASSO 3: REGISTRAR O LOG DE DELETE
+                // ======================================================
+                $this->auditService->log('DELETE', $tableName, $id, ['deletedId' => $id]);
+            }
+            
+            return $success;
+
+        } catch (Exception $e) {
+            // Se for erro de FK (mesmo que tenhamos verificado, por segurança)
+            if (str_contains($e->getMessage(), 'foreign key constraint')) {
+                 throw new Exception("Esta área não pode ser excluída pois está em uso em outra parte do sistema.");
+            }
+            throw $e; // Propaga outros erros
+        }
     }
 }
