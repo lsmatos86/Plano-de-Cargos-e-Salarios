@@ -1,20 +1,29 @@
-/* --- ESTILOS GERAIS (TELA E IMPRESSÃO) --- */
+/* --- ESTILOS GERAIS (TELA E PDF) --- */
 body {
     font-family: 'Helvetica', sans-serif;
     font-size: 10pt;
     line-height: 1.4;
-    background-color: #f4f4f4;
     color: #333;
 }
 
+/* O .container base é 'limpo' para o PDF */
 .container {
+    width: 100%;
+}
+
+/* Estilos de "card" (sombra, margem, padding) aplicados APENAS ao body.html-render (navegador) */
+body.html-render {
+    background-color: #f4f4f4;
+}
+body.html-render .container {
     width: 90%;
     margin: 20px auto;
-    background-color: #fff;
     padding: 30px;
     border-radius: 8px;
+    background-color: #fff;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
+
 
 .report-header-final {
     text-align: center;
@@ -46,7 +55,7 @@ body {
     margin-top: 30px;
     margin-bottom: 15px;
     font-weight: bold;
-    page-break-after: avoid;
+    page-break-after: avoid; /* Não quebrar página DEPOIS do título */
 }
 
 .h5-custom {
@@ -55,7 +64,7 @@ body {
     color: #333;
     margin-top: 15px;
     margin-bottom: 5px;
-    page-break-after: avoid;
+    page-break-after: avoid; /* Não quebrar página DEPOIS do sub-título */
 }
 
 /* Tabelas de Dados (Informações Essenciais, Hierarquia) */
@@ -63,6 +72,8 @@ table.data-list {
     width: 100%;
     border-collapse: collapse;
     margin-bottom: 20px;
+}
+table.data-list tr {
     page-break-inside: avoid;
 }
 
@@ -93,6 +104,8 @@ table.riscos-table {
     border-collapse: collapse;
     margin-top: 10px;
     border: 1px solid #ddd;
+}
+table.riscos-table tr {
     page-break-inside: avoid;
 }
 
@@ -120,7 +133,6 @@ table.riscos-table td i {
     background-color: #fdfdfd;
     border: 1px solid #eee;
     border-radius: 5px;
-    page-break-inside: avoid;
 }
 
 /* Listas (Habilidades, Cursos, Características) */
@@ -138,20 +150,18 @@ table.riscos-table td i {
     padding: 8px 0;
     border-bottom: 1px dotted #eee;
     page-break-inside: avoid;
-    display: flex; /* Alinha o ícone com o texto */
-    align-items: flex-start;
+    overflow: hidden; /* Clearfix para o float do ícone */
 }
 
 .habilidade-nome {
     font-size: 10.5pt;
     color: #222;
-    /* font-weight: bold; <-- REMOVIDO */
 }
 
 .habilidade-descricao {
     font-size: 9pt;
     color: #555;
-    padding-left: 20px; /* Alinha com o texto principal, não com o ícone */
+    padding-left: 20px; 
 }
 
 .skill-type-header {
@@ -165,29 +175,29 @@ table.riscos-table td i {
     margin-right: 5px;
 }
 
-/*
- * AJUSTE: Ícones de todas as listas unificados.
- * O ícone de Cursos (fa-check-circle) terá sua cor definida inline no PHP.
- */
 .curso-list li i,
 .caracteristica-list li i,
-.habilidade-list li i { /* <-- HABILIDADE ADICIONADA AQUI */
+.habilidade-list li i {
     color: #198754;
     margin-right: 8px;
-    margin-top: 4px; /* Ajuste vertical leve */
-    width: 12px;     /* Garante alinhamento */
+    margin-top: 4px; 
+    width: 12px;
+    float: left; 
+}
+
+.item-content {
+    display: block;
+    overflow: hidden; /* Força o div a ocupar o espaço ao lado do ícone flutuante */
 }
 
 .caracteristica-list li {
-    /* font-weight: normal; (já é o padrão) */
+    /* font-weight: normal; */
 }
-
 
 /* Layout de 2 colunas para Habilidades */
 .skill-container {
     width: 100%;
     overflow: hidden; /* Clearfix para floats */
-    page-break-inside: avoid;
 }
 .skill-column {
     width: 49%;
@@ -196,13 +206,22 @@ table.riscos-table td i {
 .skill-column:first-child {
     margin-right: 2%;
 }
-/* Divisor para o conteúdo do item (para o ícone e o texto) */
-.item-content {
-    flex: 1;
+
+/* NOVO: Layout de 2 colunas para Seções (Qualificação/Riscos) */
+.section-container {
+    width: 100%;
+    overflow: hidden; /* Clearfix para floats */
+}
+.section-column {
+    width: 49%;
+    float: left;
+}
+.section-column:first-child {
+    margin-right: 2%;
 }
 
 
-/* --- ESTILOS DE IMPRESSÃO --- */
+/* --- ESTILOS DE IMPRESSÃO (E PDF) --- */
 @media print {
     body {
         font-size: 9pt;
@@ -214,12 +233,15 @@ table.riscos-table td i {
         display: none !important;
     }
 
+    /* Reseta o container para o modo de impressão */
     .container {
         width: 100%;
         margin: 0;
         padding: 0;
         box-shadow: none;
         border: none;
+        border-radius: 0;
+        background-color: #fff;
     }
 
     /* Força a impressão de cores/ícones do FontAwesome */
@@ -266,23 +288,20 @@ table.riscos-table td i {
         background-color: #fff !important;
         border: 1px solid #bbb;
     }
-
-    /* Gerenciamento de Quebra de Página */
-    table, .wysiwyg-content, .habilidade-list li, .curso-list li, .caracteristica-list li {
-        page-break-inside: avoid;
-    }
     
     a {
         text-decoration: none;
         color: #000;
     }
 
-    /* Garante que as colunas de skills voltem ao layout de 1 coluna */
-    .skill-container {
+    /* Na impressão, força 1 coluna (melhor para A4) */
+    .skill-container,
+    .section-container { /* Adicionado container da seção */
         width: 100%;
         overflow: visible;
     }
-    .skill-column {
+    .skill-column,
+    .section-column { /* Adicionada coluna da seção */
         width: 100%;
         float: none;
         margin-right: 0;
@@ -290,5 +309,6 @@ table.riscos-table td i {
 }
 
 @page {
+    /* Define as margens da página do PDF */
     margin: 1.5cm;
 }

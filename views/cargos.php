@@ -9,6 +9,7 @@ require_once '../config.php';
 use App\Repository\CargoRepository;
 
 // 3. Incluir functions.php (agora inclui login E os helpers de ordenação)
+//
 require_once '../includes/functions.php';
 
 // 4. Segurança
@@ -44,6 +45,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
     // $authService->checkAndFail('cargos:delete', 'cargos.php?error=Acesso+negado');
 
     try {
+        //
         $deleted = $cargoRepo->delete($id);
         
         if ($deleted) {
@@ -94,6 +96,7 @@ try {
         'limit' => $params['limit']
     ];
     
+    //
     $result = $cargoRepo->findAllPaginated($repoParams);
     
     $registros = $result['data'];
@@ -120,9 +123,9 @@ if (isset($_GET['message']) && empty($message)) {
 // --- Fim da Lógica da Página ---
 
 // 6. Inclui o Header (HTML, <head>, <nav>, etc.)
+//
 include '../includes/header.php';
 
-// (Todo o HTML, <nav> e <head> antigos foram removidos daqui)
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -179,14 +182,24 @@ include '../includes/header.php';
                                 <td><?php echo htmlspecialchars($row['cboTituloOficial'] ?? 'N/A'); ?></td>
                                 <td class="action-cell text-center">
                                     
-                                    <a href="../relatorios/cargo_individual.php?id=<?php echo $row['cargoId']; ?>&format=html" 
+                                    <?php
+                                    // Prepara os parâmetros de navegação (para o visualizador)
+                                    $nav_params = http_build_query([
+                                        'id' => $row['cargoId'],
+                                        'sort_col' => $params['sort_col'],
+                                        'sort_dir' => $params['sort_dir'],
+                                        'term' => $params['term']
+                                    ]);
+                                    ?>
+
+                                    <a href="../relatorios/cargo_individual.php?<?php echo $nav_params; ?>" 
                                        class="btn btn-sm btn-outline-secondary" 
                                        title="Visualizar HTML" 
                                        target="_blank">
                                         <i class="fas fa-eye"></i>
                                     </a>
 
-                                    <a href="../relatorios/cargo_individual.php?id=<?php echo $row['cargoId']; ?>&format=pdf" 
+                                    <a href="../relatorios/cargo_pdf.php?id=<?php echo $row['cargoId']; ?>" 
                                        class="btn btn-sm btn-secondary" 
                                        title="Gerar PDF" 
                                        target="_blank">
@@ -271,5 +284,6 @@ include '../includes/header.php';
 
 <?php
 // 7. Inclui o Footer (Scripts JS, </body>, </html>)
+//
 include '../includes/footer.php';
 ?>
