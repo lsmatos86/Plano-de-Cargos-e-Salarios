@@ -101,7 +101,8 @@ class AuthService
             return; // OK
         }
 
-        // Falhou
+        // REPARO/MELHORIA: No SRP, esta lógica de header/exit deveria estar no Controller/Ação.
+        // Mantendo a funcionalidade original:
         if ($redirectUrl) {
             header("Location: $redirectUrl?error=" . urlencode('Acesso negado'));
             exit;

@@ -189,8 +189,12 @@ class CargoRepository
 
         } catch (Exception $e) {
             $this->pdo->rollBack();
-            // Propaga a exceção para a View (Controller) tratar
-            throw new Exception("Erro fatal ao salvar no banco: " . $e->getMessage());
+            
+            // REPARO DE SEGURANÇA: Loga o erro detalhado e propaga uma exceção com mensagem genérica.
+            error_log('Falha fatal ao salvar Cargo: ' . $e->getMessage());
+            
+            // Propaga a exceção para a View (Controller) tratar, mas com uma mensagem segura.
+            throw new Exception("Erro fatal ao salvar o Cargo no banco. Tente novamente ou contate o suporte.");
         }
     }
 
@@ -509,7 +513,10 @@ class CargoRepository
             // 2.4. CURSOS
             $stmt_cur = $this->pdo->prepare("SELECT cur.cursoNome, c_c.cursoCargoObrigatorio, c_c.cursoCargoObs FROM cursos_cargo c_c JOIN cursos cur ON cur.cursoId = c_c.cursoId WHERE c_c.cargoId = ? ORDER BY c_c.cursoCargoObrigatorio DESC, cur.cursoNome ASC");
             $stmt_cur->execute([$cargoId]);
-            $data['cursos'] = $stmt_cur->fetchAll(PDO::FETCH_ASSOC); // Modificado
+            $data['cursos'] = array_map(function ($curso) {
+                $curso['obrigatorio'] = (bool)$curso['obrigatorio'];
+                return $curso;
+            }, $stmt_cur->fetchAll(PDO::FETCH_ASSOC));
 
             // 2.5. SINÔNIMOS
             $stmt_sin = $this->pdo->prepare("SELECT cargoSinonimoNome FROM cargo_sinonimos WHERE cargoId = ?"); 

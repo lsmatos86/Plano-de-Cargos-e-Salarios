@@ -32,8 +32,10 @@ class Database
             try {
                 self::$pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
             } catch (PDOException $e) {
-                // Em uma aplicação real, logaríamos este erro.
-                die("Erro de Conexão com o Banco de Dados: " . $e->getMessage());
+                // REPARO DE SEGURANÇA: Logar o erro completo e exibir uma mensagem genérica para o usuário.
+                error_log("Erro Crítico de Conexão com o Banco de Dados: " . $e->getMessage());
+                // Importante: Não expor a mensagem original $e->getMessage() para o usuário final.
+                die("Erro de Conexão com o Banco de Dados. Por favor, tente novamente mais tarde."); 
             }
         }
 

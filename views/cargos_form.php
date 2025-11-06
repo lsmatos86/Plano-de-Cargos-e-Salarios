@@ -43,25 +43,32 @@ $breadcrumb_items = [
 ];
 
 // ----------------------------------------------------
-// 1. CARREGAMENTO DOS LOOKUPS MESTRES
+// 1. CARREGAMENTO DOS LOOKUPS MESTRES (MANTIDO)
 // ----------------------------------------------------
 $lookupRepo = new LookupRepository();
 $habilidadeRepo = new HabilidadeRepository();
 $areaRepo = new AreaRepository();
 $cargoRepo = new CargoRepository(); 
 
-$cbos = $lookupRepo->getLookup('cbos', 'cboId', 'cboCod', 'cboTituloOficial');
-$escolaridades = $lookupRepo->getLookup('escolaridades', 'escolaridadeId', 'escolaridadeTitulo');
+// Lookups
+$cbos = array_column($lookupRepo->findCbos(), 'display_name', 'cboId');
+$escolaridades = array_column($lookupRepo->findEscolaridades(), 'escolaridadeTitulo', 'escolaridadeId');
 $habilidadesAgrupadas = $habilidadeRepo->getGroupedLookup();
-$habilidades = $lookupRepo->getLookup('habilidades', 'habilidadeId', 'habilidadeNome');
-$caracteristicas = $lookupRepo->getLookup('caracteristicas', 'caracteristicaId', 'caracteristicaNome');
-$riscos = $lookupRepo->getLookup('riscos', 'riscoId', 'riscoNome');
-$cursos = $lookupRepo->getLookup('cursos', 'cursoId', 'cursoNome');
-$recursosGrupos = $lookupRepo->getLookup('recursos_grupos', 'recursoGrupoId', 'recursoGrupoNome');
-$faixasSalariais = $lookupRepo->getLookup('faixas_salariais', 'faixaId', 'faixaNivel');
-$cargosSupervisor = $lookupRepo->getLookup('cargos', 'cargoId', 'cargoNome');
-$areasAtuacao = $areaRepo->getHierarchyLookup();
-$niveisOrdenados = $lookupRepo->getNivelHierarquicoLookup();
+$habilidades = array_column($lookupRepo->findHabilidades(), 'nome', 'id');
+$caracteristicas = array_column($lookupRepo->findCaracteristicas(), 'nome', 'id');
+$riscos = array_column($lookupRepo->findRiscos(), 'nome', 'id');
+$cursos = array_column($lookupRepo->findCursos(), 'nome', 'id');
+$recursosGrupos = array_column($lookupRepo->findRecursosGrupos(), 'nome', 'id');
+$faixasSalariais = array_column($lookupRepo->findFaixas(), 'faixaNivel', 'faixaId');
+$cargosSupervisor = array_column($lookupRepo->findCargosForSelect(), 'nome', 'id');
+$areasAtuacao = $areaRepo->getHierarchyLookup(); 
+
+// Níveis Hierárquicos
+$niveisHierarquicosData = $lookupRepo->findNivelHierarquico();
+$niveisOrdenados = [];
+foreach ($niveisHierarquicosData as $n) {
+    $niveisOrdenados[$n['nivelId']] = $n['nivelOrdem'] . 'º - ' . $n['tipoHierarquiaNome'] . ' (' . $n['nivelNome'] . ')';
+}
 
 // --- Variáveis de estado do Formulário ---
 $cargo = [];
@@ -72,6 +79,7 @@ $cargoRiscos = [];
 $cargoCursos = [];
 $cargoRecursosGrupos = [];
 $cargoSinonimos = [];
+
 
 // ----------------------------------------------------
 // 2. BUSCA DADOS PARA EDIÇÃO OU DUPLICAÇÃO
@@ -116,6 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cargoNome'])) {
         $novoCargoId = $cargoRepo->save($_POST);
         $message = "Cargo salvo com sucesso! ID: {$novoCargoId}";
         $message_type = 'success';
+        // Redireciona para o formulário no modo de edição do item recém-salvo
         header("Location: cargos_form.php?id={$novoCargoId}&message=" . urlencode($message) . "&type={$message_type}");
         exit;
 
@@ -123,24 +132,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cargoNome'])) {
         $message = "Erro fatal ao salvar. Erro: " . $e->getMessage();
         $message_type = 'danger';
         
-        // Repopula o formulário com os dados que o usuário enviou
+        // Repopulamento mais robusto com os lookups corretos
         $cargo = array_merge($cargo, $_POST);
-        $cargoId = (int)($_POST['cargoId'] ?? 0);
+        $currentFormId = (int)($_POST['cargoId'] ?? 0);
         
+        // Repopulando listas de relacionamento
         $cargoAreas = array_map(fn($id) => ['id' => $id, 'nome' => $areasAtuacao[$id] ?? 'N/A'], $_POST['areaId'] ?? []);
         $cargoHabilidades = array_map(fn($id) => ['id' => $id, 'nome' => $habilidades[$id] ?? 'N/A'], $_POST['habilidadeId'] ?? []);
         $cargoCaracteristicas = array_map(fn($id) => ['id' => $id, 'nome' => $caracteristicas[$id] ?? 'N/A'], $_POST['caracteristicaId'] ?? []);
         $cargoRecursosGrupos = array_map(fn($id) => ['id' => $id, 'nome' => $recursosGrupos[$id] ?? 'N/A'], $_POST['recursoGrupoId'] ?? []);
         $cargoSinonimos = array_map(fn($nome) => ['id' => $nome, 'nome' => $nome], $_POST['sinonimoNome'] ?? []);
         
+        // Repopulando listas complexas
         if(isset($_POST['riscoId'])) {
             foreach($_POST['riscoId'] as $index => $id) {
-                $cargoRiscos[] = ['id' => $id, 'nome' => $riscos[$id] ?? 'N/A', 'descricao' => $_POST['riscoDescricao'][$index] ?? ''];
+                $cargoRiscos[] = [
+                    'id' => (int)$id, 
+                    'nome' => $riscos[$id] ?? 'N/A', 
+                    'descricao' => $_POST['riscoDescricao'][$index] ?? ''
+                ];
             }
         }
         if(isset($_POST['cursoId'])) {
             foreach($_POST['cursoId'] as $index => $id) {
-                $cargoCursos[] = ['id' => $id, 'nome' => $cursos[$id] ?? 'N/A', 'obrigatorio' => (bool)($_POST['cursoCargoObrigatorio'][$index] ?? 0), 'obs' => $_POST['cursoCargoObs'][$index] ?? ''];
+                $cargoCursos[] = [
+                    'id' => (int)$id, 
+                    'nome' => $cursos[$id] ?? 'N/A', 
+                    'obrigatorio' => (bool)($_POST['cursoCargoObrigatorio'][$index] ?? 0), 
+                    'obs' => $_POST['cursoCargoObs'][$index] ?? ''
+                ];
             }
         }
     }
@@ -153,31 +173,26 @@ if (isset($_GET['message'])) {
 }
 
 // ----------------------------------------------------
-// 4. PREPARAÇÃO DOS DADOS JS (Global Scope)
+// 4. PREPARAÇÃO DOS DADOS JS (Global Scope) - CORRIGIDO
 // ----------------------------------------------------
 ?>
 <script>
-    const mapToSimpleState = (data) => data.map(item => ({
-        id: item.id ? (isNaN(item.id) ? item.id : parseInt(item.id)) : null,
-        nome: item.nome, 
-        tipo: item.tipo, 
-        descricao: item.descricao, 
-        obrigatorio: item.obrigatorio, 
-        obs: item.obs
-    }));
-
-    window.habilidadesAssociadas = mapToSimpleState(<?php echo json_encode($cargoHabilidades); ?>);
-    window.caracteristicasAssociadas = mapToSimpleState(<?php echo json_encode($cargoCaracteristicas); ?>);
-    window.riscosAssociados = mapToSimpleState(<?php echo json_encode($cargoRiscos); ?>);
-    window.cursosAssociados = mapToSimpleState(<?php echo json_encode($cargoCursos); ?>);
-    window.recursosGruposAssociados = mapToSimpleState(<?php echo json_encode($cargoRecursosGrupos); ?>);
-    window.areasAssociadas = mapToSimpleState(<?php echo json_encode($cargoAreas); ?>);
-    window.sinonimosAssociados = mapToSimpleState(<?php echo json_encode($cargoSinonimos); ?>);
+    // REPARO CRÍTICO: Removida a função mapToSimpleState desnecessária
+    // Os arrays PHP já estão na estrutura JSON correta e são injetados diretamente
+    
+    // CRÍTICO: Usar window. para garantir acesso pelo cargos_form.js (escopo global)
+    window.habilidadesAssociadas = <?php echo json_encode($cargoHabilidades); ?>;
+    window.caracteristicasAssociadas = <?php echo json_encode($cargoCaracteristicas); ?>;
+    window.riscosAssociados = <?php echo json_encode($cargoRiscos); ?>;
+    window.cursosAssociados = <?php echo json_encode($cargoCursos); ?>;
+    window.recursosGruposAssociados = <?php echo json_encode($cargoRecursosGrupos); ?>;
+    window.areasAssociadas = <?php echo json_encode($cargoAreas); ?>;
+    window.sinonimosAssociados = <?php echo json_encode($cargoSinonimos); ?>;
 </script>
 
 <?php
 // ======================================================
-// AJUSTE: Inclui o header.php padronizado
+// Inclui o header.php padronizado
 // ======================================================
 
 // Adiciona os links CSS e JS específicos desta página ANTES de fechar o </head>
@@ -417,7 +432,6 @@ include '../includes/header.php';
                 <i class="fas fa-plus"></i> Adicionar Curso
             </button>
             <div class="card p-0 mt-2 mb-4">
-                <div class="card-body p-0">
                     <table class="table table-sm mb-0">
                         <thead>
                             <tr>
@@ -429,7 +443,6 @@ include '../includes/header.php';
                         <tbody id="cursosGridBody">
                             </tbody>
                     </table>
-                </div>
             </div>
             <h4 class="mb-3"><i class="fas fa-wrench"></i> Grupos de Recursos</h4>
             <button type="button" class="btn btn-sm btn-outline-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAssociacaoRecursosGrupos">

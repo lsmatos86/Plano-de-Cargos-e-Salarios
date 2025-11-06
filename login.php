@@ -1,6 +1,6 @@
 <?php
 // Arquivo: login.php (Página de Login - Corrigido)
-
+session_start();    
 // 1. Inclui os arquivos necessários
 require_once 'vendor/autoload.php';
 require_once 'config.php';
