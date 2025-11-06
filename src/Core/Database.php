@@ -21,8 +21,15 @@ class Database
     {
         // Se a conexão ainda não foi criada, cria agora.
         if (self::$pdo === null) {
-            // A lógica exata da sua função getDbConnection()
-            $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
+            // Suporte para PostgreSQL (Replit) ou MySQL (desenvolvimento local)
+            $dbType = defined('DB_TYPE') ? DB_TYPE : 'pgsql';
+            
+            if ($dbType === 'pgsql') {
+                $dsn = "pgsql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME;
+            } else {
+                $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
+            }
+            
             $options = [
                 PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
