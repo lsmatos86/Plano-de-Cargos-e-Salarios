@@ -511,12 +511,16 @@ class CargoRepository
             $data['riscos'] = $stmt_ris->fetchAll(PDO::FETCH_ASSOC); // Modificado
             
             // 2.4. CURSOS
-            $stmt_cur = $this->pdo->prepare("SELECT cur.cursoNome, c_c.cursoCargoObrigatorio, c_c.cursoCargoObs FROM cursos_cargo c_c JOIN cursos cur ON cur.cursoId = c_c.cursoId WHERE c_c.cargoId = ? ORDER BY c_c.cursoCargoObrigatorio DESC, cur.cursoNome ASC");
+            // >>> REPARO CRÍTICO: Adiciona AS nome, AS obrigatorio, AS obs para evitar erro Undefined array key "obrigatorio"
+            $stmt_cur = $this->pdo->prepare("SELECT cur.cursoNome AS nome, c_c.cursoCargoObrigatorio AS obrigatorio, c_c.cursoCargoObs AS obs FROM cursos_cargo c_c JOIN cursos cur ON cur.cursoId = c_c.cursoId WHERE c_c.cargoId = ? ORDER BY obrigatorio DESC, nome ASC");
             $stmt_cur->execute([$cargoId]);
+            
             $data['cursos'] = array_map(function ($curso) {
+                // Agora, a chave 'obrigatorio' existe
                 $curso['obrigatorio'] = (bool)$curso['obrigatorio'];
                 return $curso;
             }, $stmt_cur->fetchAll(PDO::FETCH_ASSOC));
+            // FIM REPARO CRÍTICO <<<
 
             // 2.5. SINÔNIMOS
             $stmt_sin = $this->pdo->prepare("SELECT cargoSinonimoNome FROM cargo_sinonimos WHERE cargoId = ?"); 

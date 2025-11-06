@@ -54,6 +54,18 @@ $cargoRepo = new CargoRepository();
 $cbos = array_column($lookupRepo->findCbos(), 'display_name', 'cboId');
 $escolaridades = array_column($lookupRepo->findEscolaridades(), 'escolaridadeTitulo', 'escolaridadeId');
 $habilidadesAgrupadas = $habilidadeRepo->getGroupedLookup();
+
+// Cria um mapa plano que inclui o 'tipo' para repopulamento pós-erro
+$habilidadesMap = [];
+foreach ($habilidadesAgrupadas as $grupoNome => $habilidadesGrupo) {
+    foreach ($habilidadesGrupo as $id => $nome) {
+        $habilidadesMap[(int)$id] = [
+            'nome' => $nome, 
+            'tipo' => $grupoNome
+        ];
+    }
+}
+
 $habilidades = array_column($lookupRepo->findHabilidades(), 'nome', 'id');
 $caracteristicas = array_column($lookupRepo->findCaracteristicas(), 'nome', 'id');
 $riscos = array_column($lookupRepo->findRiscos(), 'nome', 'id');
@@ -136,18 +148,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cargoNome'])) {
         $cargo = array_merge($cargo, $_POST);
         $currentFormId = (int)($_POST['cargoId'] ?? 0);
         
-        // Repopulando listas de relacionamento
-        $cargoAreas = array_map(fn($id) => ['id' => $id, 'nome' => $areasAtuacao[$id] ?? 'N/A'], $_POST['areaId'] ?? []);
-        $cargoHabilidades = array_map(fn($id) => ['id' => $id, 'nome' => $habilidades[$id] ?? 'N/A'], $_POST['habilidadeId'] ?? []);
-        $cargoCaracteristicas = array_map(fn($id) => ['id' => $id, 'nome' => $caracteristicas[$id] ?? 'N/A'], $_POST['caracteristicaId'] ?? []);
-        $cargoRecursosGrupos = array_map(fn($id) => ['id' => $id, 'nome' => $recursosGrupos[$id] ?? 'N/A'], $_POST['recursoGrupoId'] ?? []);
+        // Repopulando listas de relacionamento (Aplicando (int) CAST para garantir chave correta)
+        $cargoAreas = array_map(fn($id) => ['id' => (int)$id, 'nome' => $areasAtuacao[(int)$id] ?? 'N/A'], $_POST['areaId'] ?? []);
+        
+        $cargoHabilidades = array_map(function($id) use ($habilidadesMap) {
+            $id = (int)$id;
+            $data = $habilidadesMap[$id] ?? ['nome' => 'N/A', 'tipo' => 'N/A'];
+            return [
+                'id' => $id, 
+                'nome' => $data['nome'], 
+                'tipo' => $data['tipo'] 
+            ];
+        }, $_POST['habilidadeId'] ?? []);
+        
+        $cargoCaracteristicas = array_map(fn($id) => ['id' => (int)$id, 'nome' => $caracteristicas[(int)$id] ?? 'N/A'], $_POST['caracteristicaId'] ?? []);
+        $cargoRecursosGrupos = array_map(fn($id) => ['id' => (int)$id, 'nome' => $recursosGrupos[(int)$id] ?? 'N/A'], $_POST['recursoGrupoId'] ?? []);
         $cargoSinonimos = array_map(fn($nome) => ['id' => $nome, 'nome' => $nome], $_POST['sinonimoNome'] ?? []);
         
         // Repopulando listas complexas
         if(isset($_POST['riscoId'])) {
             foreach($_POST['riscoId'] as $index => $id) {
+                $id = (int)$id;
                 $cargoRiscos[] = [
-                    'id' => (int)$id, 
+                    'id' => $id, 
                     'nome' => $riscos[$id] ?? 'N/A', 
                     'descricao' => $_POST['riscoDescricao'][$index] ?? ''
                 ];
@@ -155,8 +178,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cargoNome'])) {
         }
         if(isset($_POST['cursoId'])) {
             foreach($_POST['cursoId'] as $index => $id) {
+                $id = (int)$id;
                 $cargoCursos[] = [
-                    'id' => (int)$id, 
+                    'id' => $id, 
                     'nome' => $cursos[$id] ?? 'N/A', 
                     'obrigatorio' => (bool)($_POST['cursoCargoObrigatorio'][$index] ?? 0), 
                     'obs' => $_POST['cursoCargoObs'][$index] ?? ''
@@ -173,30 +197,21 @@ if (isset($_GET['message'])) {
 }
 
 // ----------------------------------------------------
-// 4. PREPARAÇÃO DOS DADOS JS (Global Scope) - CORRIGIDO
+// 4. PREPARAÇÃO DOS DADOS JS (Global Scope) - CORREÇÃO FINAL
 // ----------------------------------------------------
-?>
-<script>
-    // REPARO CRÍTICO: Removida a função mapToSimpleState desnecessária
-    // Os arrays PHP já estão na estrutura JSON correta e são injetados diretamente
-    
-    // CRÍTICO: Usar window. para garantir acesso pelo cargos_form.js (escopo global)
-    window.habilidadesAssociadas = <?php echo json_encode($cargoHabilidades); ?>;
-    window.caracteristicasAssociadas = <?php echo json_encode($cargoCaracteristicas); ?>;
-    window.riscosAssociados = <?php echo json_encode($cargoRiscos); ?>;
-    window.cursosAssociados = <?php echo json_encode($cargoCursos); ?>;
-    window.recursosGruposAssociados = <?php echo json_encode($cargoRecursosGrupos); ?>;
-    window.areasAssociadas = <?php echo json_encode($cargoAreas); ?>;
-    window.sinonimosAssociados = <?php echo json_encode($cargoSinonimos); ?>;
-</script>
-
-<?php
-// ======================================================
-// Inclui o header.php padronizado
-// ======================================================
 
 // Adiciona os links CSS e JS específicos desta página ANTES de fechar o </head>
 $extra_head_content = '
+    <script>
+        // Usando o operador ?? [] para garantir que as variáveis sejam arrays JSON válidos
+        window.habilidadesAssociadas = ' . json_encode($cargoHabilidades ?? []) . ';
+        window.caracteristicasAssociadas = ' . json_encode($cargoCaracteristicas ?? []) . ';
+        window.riscosAssociados = ' . json_encode($cargoRiscos ?? []) . ';
+        window.cursosAssociados = ' . json_encode($cargoCursos ?? []) . ';
+        window.recursosGruposAssociados = ' . json_encode($cargoRecursosGrupos ?? []) . ';
+        window.areasAssociadas = ' . json_encode($cargoAreas ?? []) . ';
+        window.sinonimosAssociados = ' . json_encode($cargoSinonimos ?? []) . ';
+    </script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
     <style>

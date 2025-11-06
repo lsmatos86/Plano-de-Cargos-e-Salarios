@@ -145,13 +145,13 @@ if (!isset($cargo) || !isset($section_counter)) {
             <?php else: ?>
                 <?php foreach ($data['cursos'] as $cur): ?>
                     <li>
-                        <i class="fas fa-check-circle" style="color: <?php echo $cur['cursoCargoObrigatorio'] ? '#dc3545' : '#198754'; ?>;"></i>
+                        <i class="fas fa-check-circle" style="color: <?php echo $cur['obrigatorio'] ? '#dc3545' : '#198754'; ?>;"></i>
                         <div class="item-content">
-                            <?php echo htmlspecialchars($cur['cursoNome']); ?>
-                            <span style="color: <?php echo $cur['cursoCargoObrigatorio'] ? '#dc3545' : '#555'; ?>; font-size: 0.9em;">
-                                (<?php echo $cur['cursoCargoObrigatorio'] ? 'OBRIGATÓRIO' : 'Recomendado'; ?>)
+                            <?php echo htmlspecialchars($cur['nome']); ?>
+                            <span style="color: <?php echo $cur['obrigatorio'] ? '#dc3545' : '#555'; ?>; font-size: 0.9em;">
+                                (<?php echo $cur['obrigatorio'] ? 'OBRIGATÓRIO' : 'Recomendado'; ?>)
                             </span>
-                            <?php echo !empty($cur['cursoCargoObs']) ? '<br><small style="color: #555;">Observação: '. htmlspecialchars($cur['cursoCargoObs']) . '</small>' : '' ?>
+                            <?php echo !empty($cur['obs']) ? '<br><small style="color: #555;">Observação: '. htmlspecialchars($cur['obs']) . '</small>' : '' ?>
                         </div>
                     </li>
                 <?php endforeach; ?>

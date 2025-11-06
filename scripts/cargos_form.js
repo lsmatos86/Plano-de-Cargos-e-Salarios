@@ -1,32 +1,19 @@
 // Arquivo: scripts/cargos_form.js
 // Depende das seguintes variáveis globais inicializadas em views/cargos_form.php:
-// habilidadesAssociadas, caracteristicasAssociadas, riscosAssociados, 
-// cursosAssociados, recursosGruposAssociados, areasAssociadas, sinonimosAssociados.
+// window.habilidadesAssociadas, window.caracteristicasAssociadas, etc.
 
 $(document).ready(function() {
     
-    // --- 1. VARIÁVEIS DE ESTADO (Inicializadas pelo PHP no escopo global) ---
-    // Acessando variáveis globais definidas via PHP
+    // --- 1. FUNÇÕES GENÉRICAS E MAPAS DE ESTADO ---
     
-    // --- 2. FUNÇÕES GENÉRICAS E MAPAS DE ESTADO ---
-    
-    // Função auxiliar para buscar o array de estado global correto
+    // Função auxiliar para buscar o array de estado global correto de forma segura
     const getEntityMap = (entityName) => {
-        switch (entityName) {
-            case 'habilidade': return habilidadesAssociadas;
-            case 'caracteristica': return caracteristicasAssociadas;
-            case 'risco': return riscosAssociados;
-            case 'curso': return cursosAssociados;
-            case 'recursoGrupo': return recursosGruposAssociados;
-            case 'area': return areasAssociadas;
-            case 'sinonimo': return sinonimosAssociados;
-            default: return null;
-        }
+        const globalVar = window[`${entityName}sAssociadas`];
+        return Array.isArray(globalVar) ? globalVar : [];
     };
     
     /**
      * Adiciona um item SIMPLES (ID/Nome) e o input oculto à grade.
-     * Usado por Característica, RecursoGrupo e Área.
      */
     const addSimpleGridRow = (gridBodyId, itemId, itemName, inputName, hasEditButton = false, entityName) => {
         const gridBody = document.getElementById(gridBodyId);
@@ -40,7 +27,6 @@ $(document).ready(function() {
         const newRow = gridBody.insertRow();
         newRow.setAttribute('data-id', itemId);
         
-        // Adiciona me-1 (margin-end: 1) para separação horizontal dos botões
         const actionHtml = hasEditButton ? 
             `<button type="button" class="btn btn-sm btn-info text-white btn-edit-${entityName} me-1" 
                 data-id="${itemId}" data-bs-toggle="modal" data-bs-target="#modalEdicao${entityName.charAt(0).toUpperCase() + entityName.slice(1)}" title="Visualizar">
@@ -66,6 +52,7 @@ $(document).ready(function() {
     // --- 3. FUNÇÕES DE RENDERIZAÇÃO DE GRADES ---
 
     const normalizeTipo = (tipo) => {
+        if (typeof tipo !== 'string') return 'Outros Tipos'; 
         if (tipo === 'Hardskill' || tipo === 'Hard Skills') return 'Hard Skills';
         if (tipo === 'Softskill' || tipo === 'Soft Skills') return 'Soft Skills';
         return 'Outros Tipos';
@@ -75,8 +62,19 @@ $(document).ready(function() {
         const gridBody = document.getElementById('habilidadesGridBody');
         let html = '';
         
-        // LEITURA da variável global
-        habilidadesAssociadas.sort((a, b) => a.nome.localeCompare(b.nome)); 
+        const habilidadesAssociadas = getEntityMap('habilidade'); // Usa getEntityMap para segurança
+
+        if (habilidadesAssociadas.length === 0) {
+             gridBody.innerHTML = '<tr><td colspan="2" class="text-muted">Nenhuma Habilidade associada.</td></tr>';
+             return;
+        }
+        
+        // Ordenação defensiva
+        habilidadesAssociadas.sort((a, b) => {
+             const nomeA = a.nome || '';
+             const nomeB = b.nome || '';
+             return nomeA.localeCompare(nomeB);
+        }); 
 
         const habilidadesAgrupadas = habilidadesAssociadas.reduce((acc, item) => {
             const tipo = normalizeTipo(item.tipo); 
@@ -86,12 +84,14 @@ $(document).ready(function() {
         }, {});
 
         const gruposOrdenados = ['Hard Skills', 'Soft Skills', 'Outros Tipos'];
+        let hasContent = false;
         
         gruposOrdenados.forEach(tipo => {
             const grupoItens = habilidadesAgrupadas[tipo];
             
             if (grupoItens && grupoItens.length > 0) {
                 html += `<tr class="table-group-separator"><td colspan="2" class="fw-bold"><i class="fas fa-tag me-2"></i> ${tipo}</td></tr>`;
+                hasContent = true;
                 
                 grupoItens.forEach(item => {
                     const itemId = item.id;
@@ -120,42 +120,50 @@ $(document).ready(function() {
         });
         
         gridBody.innerHTML = html;
+        if (!hasContent) { // Fallback para caso não haja grupos, embora o primeiro if já trate isso
+             gridBody.innerHTML = '<tr><td colspan="2" class="text-muted">Nenhuma Habilidade associada.</td></tr>';
+        }
         attachEditListeners('habilidade');
     };
     
-    const renderCaracteristicasGrid = () => {
-        const gridBody = document.getElementById('caracteristicasGridBody');
+    // FUNÇÃO GERAL PARA RENDERS SIMPLES
+    const renderSimpleGrid = (entityName, hasEditButton = false, cols = 2) => {
+        const gridBody = document.getElementById(`${entityName}sGridBody`);
         gridBody.innerHTML = '';
-        // LEITURA da variável global
-        caracteristicasAssociadas.forEach(item => {
-            addSimpleGridRow('caracteristicasGridBody', item.id, item.nome, 'caracteristicaId', true, 'caracteristica');
-        });
-        attachEditListeners('caracteristica');
-    };
+        
+        const dataArray = getEntityMap(entityName);
 
-    const renderRecursosGruposGrid = () => {
-        const gridBody = document.getElementById('recursosGruposGridBody');
-        gridBody.innerHTML = '';
-        // LEITURA da variável global
-        recursosGruposAssociados.forEach(item => {
-            addSimpleGridRow('recursosGruposGridBody', item.id, item.nome, 'recursoGrupoId', true, 'recursoGrupo');
-        });
-        attachEditListeners('recursoGrupo');
-    };
+        if (dataArray.length === 0) {
+             gridBody.innerHTML = `<tr><td colspan="${cols}" class="text-muted">Nenhuma ${entityName.charAt(0).toUpperCase() + entityName.slice(1)} associada.</td></tr>`;
+             return;
+        }
 
-    const renderAreasAtuacaoGrid = () => {
-        const gridBody = document.getElementById('areasAtuacaoGridBody');
-        gridBody.innerHTML = '';
-        // LEITURA da variável global
-        areasAssociadas.forEach(item => {
-            addSimpleGridRow('areasAtuacaoGridBody', item.id, item.nome, 'areaId', false, 'area');
+        dataArray.forEach(item => {
+            addSimpleGridRow(`${entityName}sGridBody`, item.id, item.nome, `${entityName}Id`, hasEditButton, entityName);
         });
+        
+        if (hasEditButton) {
+            attachEditListeners(entityName);
+        }
     };
+    
+    // MAPEAMENTO DAS FUNÇÕES SIMPLES
+    const renderCaracteristicasGrid = () => renderSimpleGrid('caracteristica', true);
+    const renderRecursosGruposGrid = () => renderSimpleGrid('recursoGrupo', true);
+    const renderAreasAtuacaoGrid = () => renderSimpleGrid('area', false);
+
     
     const renderRiscosGrid = () => {
         const gridBody = document.getElementById('riscosGridBody');
         gridBody.innerHTML = '';
         
+        const riscosAssociados = getEntityMap('risco');
+
+        if (riscosAssociados.length === 0) {
+             gridBody.innerHTML = '<tr><td colspan="3" class="text-muted">Nenhum Risco de Exposição associado.</td></tr>';
+             return;
+        }
+
         // LEITURA da variável global
         riscosAssociados.forEach(item => {
             const newRow = gridBody.insertRow();
@@ -192,6 +200,13 @@ $(document).ready(function() {
         const gridBody = document.getElementById('cursosGridBody');
         gridBody.innerHTML = '';
         
+        const cursosAssociados = getEntityMap('curso');
+
+        if (cursosAssociados.length === 0) {
+             gridBody.innerHTML = '<tr><td colspan="3" class="text-muted">Nenhum Curso associado.</td></tr>';
+             return;
+        }
+
         // LEITURA da variável global
         cursosAssociados.forEach(item => {
             const isObrigatorio = item.obrigatorio === true || item.obrigatorio === 1;
@@ -234,6 +249,13 @@ $(document).ready(function() {
         const gridBody = document.getElementById('sinonimosGridBody');
         gridBody.innerHTML = '';
         
+        const sinonimosAssociados = getEntityMap('sinonimo');
+
+        if (sinonimosAssociados.length === 0) {
+             gridBody.innerHTML = '<tr><td colspan="2" class="text-muted">Nenhum Sinônimo associado.</td></tr>';
+             return;
+        }
+
         // LEITURA da variável global
         sinonimosAssociados.forEach(item => {
             const itemId = item.id ? item.id.toString() : 'new-' + item.nome.replace(/\s/g, '-'); 
@@ -277,7 +299,7 @@ $(document).ready(function() {
 
             // Lê o array global correto para encontrar o item
             const stateArray = getEntityMap(entityName);
-            if (!stateArray) return;
+            if (stateArray.length === 0) return;
 
             const item = stateArray.find(i => i.id === itemId);
             if (!item) return;
@@ -314,7 +336,7 @@ $(document).ready(function() {
         const isObrigatorio = $('#cursoEditObrigatorio').prop('checked');
         const obs = $('#cursoEditObs').val().trim();
 
-        const item = cursosAssociados.find(i => i.id === id); // Atualiza o array global
+        const item = getEntityMap('curso').find(i => i.id === id); // Atualiza o array global
         if (item) {
             item.obrigatorio = isObrigatorio ? 1 : 0;
             item.obs = obs;
@@ -340,7 +362,7 @@ $(document).ready(function() {
         const descricao = $('#riscoEditDescricao').val().trim();
 
         if (descricao) {
-            const item = riscosAssociados.find(i => i.id === id); // Atualiza o array global
+            const item = getEntityMap('risco').find(i => i.id === id); // Atualiza o array global
             if (item) {
                 item.descricao = descricao;
                 renderRiscosGrid(); // Re-renderiza lendo o array global
@@ -409,8 +431,9 @@ $(document).ready(function() {
         return data;
     };
     
-    const handleMultiSelectAssociation = (selectId, stateArray, renderFunction) => {
+    const handleMultiSelectAssociation = (selectId, entityName, renderFunction) => {
         const selectedItems = getSelectedOptionsData(selectId);
+        const stateArray = getEntityMap(entityName);
         let addedCount = 0;
 
         selectedItems.forEach(data => {
@@ -428,25 +451,25 @@ $(document).ready(function() {
     };
     
     document.getElementById('btnAssociarHabilidade').onclick = function() {
-        handleMultiSelectAssociation('habilidadeSelect', habilidadesAssociadas, renderHabilidadesGrid);
+        handleMultiSelectAssociation('habilidadeSelect', 'habilidade', renderHabilidadesGrid);
         $('#habilidadeSelect').val(null).trigger('change');
         bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAssociacaoHabilidades')).hide();
     };
     
     document.getElementById('btnAssociarCaracteristica').onclick = function() {
-        handleMultiSelectAssociation('caracteristicaSelect', caracteristicasAssociadas, renderCaracteristicasGrid);
+        handleMultiSelectAssociation('caracteristicaSelect', 'caracteristica', renderCaracteristicasGrid);
         $('#caracteristicaSelect').val(null).trigger('change');
         bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAssociacaoCaracteristicas')).hide();
     };
 
     document.getElementById('btnAssociarRecursosGrupos').onclick = function() {
-        handleMultiSelectAssociation('recursosGruposSelect', recursosGruposAssociados, renderRecursosGruposGrid);
+        handleMultiSelectAssociation('recursosGruposSelect', 'recursoGrupo', renderRecursosGruposGrid);
         $('#recursosGruposSelect').val(null).trigger('change');
         bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAssociacaoRecursosGrupos')).hide();
     };
 
     document.getElementById('btnAssociarAreasAtuacao').onclick = function() {
-        handleMultiSelectAssociation('areasAtuacaoSelect', areasAssociadas, renderAreasAtuacaoGrid);
+        handleMultiSelectAssociation('areasAtuacaoSelect', 'area', renderAreasAtuacaoGrid);
         $('#areasAtuacaoSelect').val(null).trigger('change');
         bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAssociacaoAreasAtuacao')).hide();
     };
@@ -454,6 +477,7 @@ $(document).ready(function() {
     document.getElementById('btnAssociarRisco').onclick = function() {
         const data = getSelectedOptionsData('riscoSelect')[0];
         const descricao = document.getElementById('riscoDescricaoInput').value.trim();
+        const riscosAssociados = getEntityMap('risco');
 
         if (data && descricao) {
             const isDuplicate = riscosAssociados.some(item => item.id === data.id);
@@ -476,6 +500,7 @@ $(document).ready(function() {
         const selectedItems = getSelectedOptionsData('cursoSelect');
         const isObrigatorio = document.getElementById('cursoObrigatorioInput').checked;
         const obs = document.getElementById('cursoObsInput').value.trim();
+        const cursosAssociados = getEntityMap('curso');
         let addedCount = 0;
 
         selectedItems.forEach(data => {
@@ -505,6 +530,7 @@ $(document).ready(function() {
     document.getElementById('btnAddSinonimo').onclick = function() {
         const input = document.getElementById('sinonimoInput');
         const nome = input.value.trim();
+        const sinonimosAssociados = getEntityMap('sinonimo');
 
         if (nome) {
             const isDuplicate = sinonimosAssociados.some(item => item.nome.toLowerCase() === nome.toLowerCase());
@@ -579,14 +605,10 @@ $(document).ready(function() {
     
     
     // --- 7. EVENT DELEGATION PARA REMOÇÃO (CORRIGIDO) ---
-    //
-    // Esta lógica agora MODIFICA o array global original,
-    // em vez de criar um novo, resolvendo o bug de referência.
-    //
     $(document).on('click', '#cargoForm .btn-remove-entity', function() {
         
         const entityName = $(this).data('entity');
-        const itemId = $(this).data('id'); // Pode ser número (352) ou string ("new-Foo")
+        const itemId = $(this).data('id'); 
 
         if (!entityName || itemId === undefined) {
             console.error('Botão de remoção sem data-entity or data-id');
@@ -595,14 +617,14 @@ $(document).ready(function() {
 
         // Pega o array de estado global CORRETO
         const stateArray = getEntityMap(entityName);
-        if (!stateArray) {
-            console.error('ERRO: Mapa de estado não encontrado para:', entityName);
+        if (stateArray.length === 0) {
+            console.error('ERRO: Mapa de estado não encontrado ou vazio para:', entityName);
             return;
         }
 
         let novoArray;
         
-        // Checa se o itemId é um sinônimo recém-adicionado (ex: "new-Foo-Bar")
+        // Checa se o itemId é um sinônimo recém-adicionado 
         const isNewSinonimo = (entityName === 'sinonimo' && isNaN(itemId));
 
         if (isNewSinonimo) {
@@ -623,7 +645,6 @@ $(document).ready(function() {
             });
         }
         
-        // --- A CORREÇÃO CRÍTICA ---
         // 1. Limpa o array original (mantendo a referência)
         stateArray.length = 0; 
         
