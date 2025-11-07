@@ -776,6 +776,12 @@ $(document).ready(function() {
             document.getElementById('cursoObsInput').value = '';
             document.getElementById('cursoObrigatorioInput').checked = false;
             $('#cursoSelect').val(null).trigger('change');
+            
+            // --- CORREÇÃO ADICIONADA AQUI ---
+            // Remove o foco do botão ANTES de fechar o modal
+            $(this).trigger('blur'); 
+            // ---------------------------------
+            
             bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAssociacaoCursos')).hide();
         };
     })();

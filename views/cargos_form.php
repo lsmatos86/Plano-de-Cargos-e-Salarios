@@ -99,7 +99,19 @@ require_once $root_path . 'includes/header.php';
 <div class="container mt-4 mb-5">
     
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="mb-0"><?php echo htmlspecialchars($page_title); ?></h1>
+        <h1 class="mb-0">
+            <?php 
+            // Verifica se está editando E se o nome do cargo existe
+            if ($isEditing && !empty($cargo['cargoNome'])) {
+                // Exibe o nome do cargo e o status "Editando" com ícone
+                echo htmlspecialchars($cargo['cargoNome']);
+                echo ' <small class="text-muted fs-6" style="font-weight: 500;">(Editando) <i class="fas fa-pencil-alt fa-xs"></i></small>';
+            } else {
+                // Caso contrário (Novo Cargo, Duplicar, Erro), exibe o título padrão
+                echo htmlspecialchars($page_title); 
+            }
+            ?>
+        </h1>
         
         <div>
             <a href="cargos.php" class="btn btn-outline-secondary btn-sm">
