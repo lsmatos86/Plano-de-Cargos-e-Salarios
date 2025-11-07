@@ -6,7 +6,6 @@ $(document).ready(function() {
     console.log("--- DEBUG START DOM READY ---: Inicializando rotina de renderização das grids.");
 
     // Mapeamento explícito das entidades (opção A)
-    // Defina aqui o nome da variável global injetada pelo PHP e o ID do <tbody> correspondente
     const ENTITY_CONFIG = {
         habilidade:   { global: 'habilidadesAssociadas',    tbody: 'habilidadesGridBody' },
         caracteristica: { global: 'caracteristicasAssociadas', tbody: 'caracteristicasGridBody' },
@@ -17,129 +16,24 @@ $(document).ready(function() {
         sinonimo:     { global: 'sinonimosAssociados',       tbody: 'sinonimosGridBody' }
     };
 
-    // DEBUG: lista de entidades que esperamos encontrar (vai logar o que foi detectado)
-    const logDetectedGlobals = () => {
-        const found = {};
-        Object.keys(ENTITY_CONFIG).forEach(e => {
-            const cfg = ENTITY_CONFIG[e];
-            const val = window[cfg.global];
-            let len = 0;
-            let type = typeof val;
-            let sample = null;
-            if (Array.isArray(val)) {
-                len = val.length;
-                type = 'array';
-                sample = val.length > 0 ? { id: val[0].id, nome: val[0].nome } : null;
-            } else if (val && typeof val === 'object') {
-                // possible associative array encoded as object
-                const keys = Object.keys(val);
-                if (keys.length > 0 && keys.every(k => /^\d+$/.test(k))) {
-                    len = keys.length;
-                    type = 'assoc_object';
-                    sample = val[keys[0]];
-                } else {
-                    len = keys.length;
-                    type = 'object';
-                }
-            }
-            found[e] = { length: len, type, sample };
-        });
-
-        // Além disso, reporte quaisquer variáveis globais encontradas que não estiverem no mapa
-        const extras = {};
-        Object.keys(window).forEach(k => {
-            if (k.endsWith('Associadas') || k.endsWith('Associados')) {
-                if (!Object.values(ENTITY_CONFIG).some(cfg => cfg.global === k)) {
-                    const val = window[k];
-                    extras[k] = Array.isArray(val) ? { length: val.length, sample: val[0] } : typeof val;
-                }
-            }
-        });
-        console.log('DEBUG: Detected globals counts:', found, 'extras:', extras);
-    };
-
-    // chama o logger de detecção (ajuda no debug quando nomes não batem)
-    // NOTE: a invocação real será feita mais abaixo, depois das definições auxiliares (getEntityMap/resoveGridBodyId)
-
-    // --- 1. FUNÇÕES GENÉRICAS E MAPAS DE ESTADO ---
-    
     // Função auxiliar para buscar o array de estado global de forma segura
-    // Usa o mapa explícito ENTITY_CONFIG como primeiro caminho, com fallback heurístico
     const getEntityMap = (entityName) => {
         const cfg = ENTITY_CONFIG[entityName];
         if (cfg) {
-            const direct = window[cfg.global];
-            if (Array.isArray(direct)) return direct;
-            if (direct && typeof direct === 'object') {
-                // convert associative object with numeric keys to array
-                const keys = Object.keys(direct);
-                if (keys.length > 0 && keys.every(k => /^\d+$/.test(k))) {
-                    return keys.map(k => direct[k]);
-                }
+            const globalVar = window[cfg.global];
+            // Garante que é um array ou tenta converter o objeto associativo (se PHP não fez)
+            if (Array.isArray(globalVar)) return globalVar;
+            if (globalVar && typeof globalVar === 'object') {
+                return Object.values(globalVar); 
             }
         }
-
-        // fallback heurístico: procura por algumas convenções conhecidas (plural/masculine/feminine)
-        const candidates = [
-            `${entityName}sAssociadas`,
-            `${entityName}Associadas`,
-            `${entityName}sAssociados`,
-            `${entityName}Associados`,
-            `${entityName}s`,
-            `${entityName}`,
-            'recursosGruposAssociados',
-            'recursosGruposAssociadas',
-            'recursosAssociadas',
-            'recursosAssociados'
-        ];
-        for (const name of candidates) {
-            const val = window[name];
-            if (Array.isArray(val)) return val;
-            if (val && typeof val === 'object') {
-                const keys = Object.keys(val);
-                if (keys.length > 0 && keys.every(k => /^\d+$/.test(k))) {
-                    return keys.map(k => val[k]);
-                }
-            }
-        }
-
-        // heurística avançada: procurar por chaves que contenham todas as palavras do entityName
-        const parts = entityName.replace(/([A-Z])/g, ' $1').split(/[^a-zA-Z0-9]+/).filter(Boolean).map(p => p.toLowerCase());
-        for (const k of Object.keys(window)) {
-            const kl = k.toLowerCase();
-            if (parts.every(p => kl.includes(p))) {
-                const val = window[k];
-                if (Array.isArray(val)) return val;
-                if (val && typeof val === 'object') {
-                    const keys = Object.keys(val);
-                    if (keys.length > 0 && keys.every(key => /^\d+$/.test(key))) return keys.map(key => val[key]);
-                }
-            }
-        }
-
         return [];
     };
-
-    // chama o logger de detecção (ajuda no debug quando nomes não batem)
-    try { logDetectedGlobals(); } catch (err) { console.warn('DEBUG: falha ao rodar logDetectedGlobals', err); }
 
     // Resolve o ID do <tbody> para um dado entityName usando ENTITY_CONFIG como fonte de verdade
     const resolveGridBodyId = (entityName) => {
         const cfg = ENTITY_CONFIG[entityName];
         if (cfg && cfg.tbody && document.getElementById(cfg.tbody)) return cfg.tbody;
-
-        const candidates = [
-            `${entityName}sGridBody`,
-            `${entityName}GridBody`,
-            'areasAtuacaoGridBody',
-            'recursosGruposGridBody'
-        ];
-
-        for (const id of candidates) {
-            if (document.getElementById(id)) return id;
-        }
-
-        // fallback para convenção padrão
         return `${entityName}sGridBody`;
     };
 
@@ -166,7 +60,6 @@ $(document).ready(function() {
      * Adiciona um item SIMPLES (ID/Nome) e o input oculto à grade.
      */
     const addSimpleGridRow = (gridBodyId, itemId, itemName, inputName, hasEditButton = false, entityName) => {
-        console.log(`DEBUG: Adding row to ${gridBodyId}:`, { itemId, itemName, inputName });
         const gridBody = document.getElementById(gridBodyId);
         if (!gridBody) {
             console.warn(`Grid body ${gridBodyId} not found`);
@@ -240,26 +133,18 @@ $(document).ready(function() {
 
     const renderHabilidadesGrid = () => {
         try {
-            console.log('DEBUG: renderHabilidadesGrid starting...');
             const gridBody = document.getElementById('habilidadesGridBody');
-            if (!gridBody) {
-                console.warn('Grid body habilidadesGridBody not found');
-                return;
-            }
-            const habilidadesAssociadas = getEntityMap('habilidade');
-            console.log('DEBUG: habilidadesAssociadas mapped to:', habilidadesAssociadas);
-            console.log('DEBUG: Sample habilidade item:', habilidadesAssociadas[0]);
-            console.log('DEBUG: Expected properties:', {
-                id: typeof habilidadesAssociadas[0]?.id,
-                nome: typeof habilidadesAssociadas[0]?.nome,
-                tipo: typeof habilidadesAssociadas[0]?.tipo
-            });
+            if (!gridBody) return;
+            
+            const habilidadesAssociadas = getEntityMap('habilidade'); 
 
             if (habilidadesAssociadas.length === 0) {
                 createEmptyRow(gridBody, 2, 'Nenhuma Habilidade associada.');
                 return;
             }
             
+            clearElementChildren(gridBody); // Limpa antes de renderizar
+
             habilidadesAssociadas.sort((a, b) => {
                 const nomeA = a.nome || '';
                 const nomeB = b.nome || '';
@@ -314,12 +199,11 @@ $(document).ready(function() {
                         btnView.setAttribute('data-id', String(itemId));
                         btnView.setAttribute('data-bs-toggle', 'modal');
                         btnView.setAttribute('data-bs-target', '#modalEdicaoHabilidade');
-                        btnView.title = 'Visualizar';
                         const iView = document.createElement('i'); iView.className = 'fas fa-eye'; btnView.appendChild(iView);
 
                         const btnDel = document.createElement('button');
                         btnDel.type = 'button'; btnDel.className = 'btn btn-sm btn-danger btn-remove-entity';
-                        btnDel.setAttribute('data-id', String(itemId)); btnDel.setAttribute('data-entity', 'habilidade'); btnDel.title = 'Remover';
+                        btnDel.setAttribute('data-id', String(itemId)); btnDel.setAttribute('data-entity', 'habilidade');
                         const iDel = document.createElement('i'); iDel.className = 'fas fa-trash-alt'; btnDel.appendChild(iDel);
 
                         divAct.appendChild(btnView); divAct.appendChild(btnDel);
@@ -331,9 +215,13 @@ $(document).ready(function() {
                 }
             });
 
-            if (!hasContent) {
-                createEmptyRow(gridBody, 2, 'Nenhuma Habilidade associada.');
+            if (!hasContent && habilidadesAssociadas.length > 0) { 
+                // Fallback caso o loop falhe mas haja dados
+                createEmptyRow(gridBody, 2, 'Erro interno de agrupamento de Habilidades.');
+            } else if (!hasContent && habilidadesAssociadas.length === 0) {
+                 createEmptyRow(gridBody, 2, 'Nenhuma Habilidade associada.');
             }
+
             attachEditListeners('habilidade');
         } catch (e) {
             console.error("ERRO CRÍTICO [Habilidades]:", e);
@@ -365,8 +253,20 @@ $(document).ready(function() {
             }
 
             dataArray.forEach(item => {
+                // CLÁUSULA DE GUARDA ADICIONADA: Ignora itens com dados incompletos ou nulos.
+                if (item.id === null || item.id === undefined || item.nome === null || item.nome === undefined) {
+                     console.error(`Item inválido encontrado em ${entityName}, pulando.`, item);
+                     return; // Pula este item e evita erro silencioso
+                }
+                
                 addSimpleGridRow(gridBodyId, item.id, item.nome, `${entityName}Id`, hasEditButton, entityName);
             });
+            
+            // VERIFICAÇÃO ADICIONAL: Se havia dados mas nada foi renderizado (após a limpeza e iteração)
+            if (dataArray.length > 0 && gridBody.children.length === 0) {
+                 console.error(`ERRO LÓGICO: Havia ${dataArray.length} itens para ${entityName}, mas nenhum foi renderizado.`);
+                 createEmptyRow(gridBody, cols, `ERRO LÓGICO. Verifique console para ${entityName}.`);
+            }
             
             if (hasEditButton) {
                 attachEditListeners(entityName);

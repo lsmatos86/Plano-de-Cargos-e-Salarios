@@ -1,5 +1,5 @@
 <?php
-// Arquivo: includes/functions.php (Completo)
+// Arquivo: includes/functions.php (Completo e Corrigido)
 
 /**
  * Este arquivo é responsável por funções globais e pela inicialização de serviços.
@@ -14,6 +14,7 @@ if (session_status() === PHP_SESSION_NONE) {
 use App\Core\Database;
 use App\Service\AuthService;
 use App\Service\AuditService;
+// PDO é uma classe global e não precisa ser importada com 'use'.
 
 // 3. INICIALIZAR SERVIÇOS GLOBAIS
 global $authService, $auditService;
@@ -47,6 +48,7 @@ function authenticateUser(string $email, string $password): bool
     global $auditService; 
 
     try {
+        // Uso direto da classe global PDO, sem necessidade de 'use PDO;'
         $db = Database::getConnection();
 
         $stmt = $db->prepare("SELECT usuarioId, nome, email, senha, ativo FROM usuarios WHERE email = :email LIMIT 1");
@@ -131,8 +133,19 @@ function logoutUser(): void
     session_destroy();
 }
 
+// 7. FUNÇÃO DE CONEXÃO COM O BANCO DE DADOS
+/**
+ * Retorna a conexão PDO com o banco de dados.
+ * (Wrapper para App\Core\Database::getConnection)
+ * @return PDO
+ */
+function getDbConnection(): PDO
+{
+    return Database::getConnection();
+}
 
-// 7. FUNÇÃO DE VALIDAÇÃO
+
+// 8. FUNÇÃO DE VALIDAÇÃO
 /**
  * Valida se um nome de tabela está em uma "lista segura".
  */
@@ -141,12 +154,102 @@ function isValidTableName(string $tableName): bool
     $allowedTables = [
         'cargos', 'habilidades', 'caracteristicas', 'riscos', 'usuarios',
         'cursos', 'areas_atuacao', 'nivel_hierarquico', 'faixas_salariais',
+        'cbos', 'escolaridades', 'recursos_grupos', // Adicionados para lookup
     ];
     return in_array($tableName, $allowedTables);
 }
 
 
-// 8. FUNÇÕES HELPER PARA ORDENAÇÃO DE TABELAS
+// 9. FUNÇÕES AUXILIARES DE LOOKUP DE DADOS
+// use PDO; // LINHA REMOVIDA (ANTIGA LINHA 164)
+
+/**
+ * Retorna dados de uma tabela simples como um array associativo [keyCol => value].
+ * Suporta a concatenação de duas colunas para o valor (e.g., CBO: código - título).
+ * @param PDO $pdo Conexão PDO.
+ * @param string $tableName Nome da tabela para lookup.
+ * @param string $keyCol Coluna a ser usada como chave (e.g., 'cboId').
+ * @param string $valueCol Coluna principal para o valor (e.g., 'cboCod').
+ * @param string|null $secondValueCol Coluna secundária para concatenar ao valor (e.g., 'cboTituloOficial').
+ * @return array
+ */
+function getLookupData(PDO $pdo, string $tableName, string $keyCol, string $valueCol, string $secondValueCol = null): array
+{
+    // Verifica se o nome da tabela é seguro antes de construir a query
+    if (!isValidTableName($tableName)) {
+        error_log("Tentativa de lookup em tabela não permitida: {$tableName}");
+        return []; 
+    }
+
+    $fields = $keyCol . ', ' . $valueCol;
+    if ($secondValueCol) {
+        $fields .= ', ' . $secondValueCol;
+    }
+
+    $sql = "SELECT {$fields} FROM {$tableName} ORDER BY {$valueCol}";
+    $stmt = $pdo->query($sql);
+    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $lookupArray = [];
+    foreach ($results as $row) {
+        $key = $row[$keyCol];
+        $value = $row[$valueCol];
+
+        if ($secondValueCol) {
+            // Concatena as duas colunas
+            $value = $row[$valueCol] . ' - ' . ($row[$secondValueCol] ?? '');
+        }
+
+        $lookupArray[$key] = $value;
+    }
+
+    return $lookupArray;
+}
+
+/**
+ * Retorna as habilidades agrupadas por tipo (Hard/Soft Skill).
+ * @param PDO $pdo Conexão PDO.
+ * @return array Um array aninhado [tipo => [habilidadeId => habilidadeNome]].
+ */
+function getHabilidadesGrouped(PDO $pdo): array
+{
+    // Assumindo a tabela 'habilidades' possui 'habilidadeId', 'habilidadeNome' e 'habilidadeTipo'
+    $sql = "SELECT habilidadeId, habilidadeNome, habilidadeTipo FROM habilidades ORDER BY habilidadeTipo, habilidadeNome";
+    $stmt = $pdo->query($sql);
+    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $groupedArray = [];
+    foreach ($results as $row) {
+        // Agrupa por habilidadeTipo
+        $groupedArray[$row['habilidadeTipo']][$row['habilidadeId']] = $row['habilidadeNome'];
+    }
+    return $groupedArray;
+}
+
+/**
+ * Retorna uma lista plana de áreas de atuação, com o nome possivelmente formatado 
+ * para refletir a hierarquia (e.g., 'Setor > Área').
+ * @param PDO $pdo Conexão PDO.
+ * @return array Um array associativo [areaId => areaNomeHierarquico].
+ */
+function getAreaHierarchyLookup(PDO $pdo): array
+{
+    // Usamos uma consulta que busca o nome e o ID, assumindo que a lógica de formatação hierárquica 
+    // será implementada posteriormente (ou já existe em um Repositório que não vemos).
+    $sql = "SELECT areaId, areaNome FROM areas_atuacao ORDER BY areaNome";
+    $stmt = $pdo->query($sql);
+    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    $lookupArray = [];
+    foreach ($results as $row) {
+        // Por enquanto, apenas retorna o nome simples.
+        $lookupArray[$row['areaId']] = $row['areaNome'];
+    }
+    return $lookupArray;
+}
+
+
+// 10. FUNÇÕES HELPER PARA ORDENAÇÃO DE TABELAS
 
 /**
  * Determina a próxima direção de ordenação (ASC/DESC).
@@ -196,7 +299,7 @@ function createSortLink(string $columnName, string $displayName, array $params):
 }
 
 
-// 9. FUNÇÃO HELPER PARA RELATÓRIOS (NOVA)
+// 11. FUNÇÃO HELPER PARA RELATÓRIOS (NOVA)
 
 /**
  * Retorna a classe do ícone Font Awesome para um tipo de risco.
