@@ -1,0 +1,65 @@
+
+/* Estilos Globais */
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: #f8f9fa; /* bg-light */
+    padding-top: 75px; /* Espaço para a navbar fixa */
+}
+
+/* Estilos de Grid */
+.grid-action-cell {
+    width: 100px;
+    max-width: 100px;
+}
+.table > :not(caption) > * > * {
+    padding: 0.5rem;
+    vertical-align: middle;
+}
+.table-group-separator {
+    background-color: #f8f9fa;
+}
+.table-group-separator td {
+    padding: 0.5rem !important;
+}
+
+/* Botões na Grid */
+.grid-action-cell .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.main-content {
+    flex: 1; 
+}
+.footer {
+    background-color: #343a40; /* bg-dark */
+    color: white;
+    padding: 1rem 0;
+    margin-top: auto; 
+}
+
+/* Estilos dos Ícones (globais) */
+.desktop-icon-container { text-decoration: none; color: inherit; }
+.desktop-icon {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 1.5rem 1rem; border: 1px solid #dee2e6; border-radius: 0.5rem;
+    background-color: #fff; height: 100%; min-height: 140px; 
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.desktop-icon:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+}
+.desktop-icon i { font-size: 3rem; margin-bottom: 0.75rem; }
+.desktop-icon h5 { font-size: 1rem; font-weight: 600; text-align: center; margin: 0; }
+.icon-gestao { color: #0d6efd; } .icon-relatorios { color: #dc3545; }
+.icon-admin { color: #6f42c1; } .icon-estrutura { color: #198754; }
+.icon-cadastros { color: #6c757d; } 
+
+/* Garante que o menu cascata seja slim */
+.navbar-cascata {
+    min-height: 48px;
+}

@@ -1,141 +1,24 @@
 <?php
-// Arquivo: views/riscos.php (REFATORADO COM HEADER/FOOTER)
+// Arquivo: views/riscos.php (VIEW: Apenas apresentação)
 
-// 1. Inclusão de arquivos
-require_once '../vendor/autoload.php';
-require_once '../config.php';
-require_once '../includes/functions.php'; // Para login e helpers
-
-// 2. Importa o novo Repositório
-use App\Repository\RiscoRepository;
-
-// 3. Segurança
-if (!isUserLoggedIn()) {
-    header('Location: ../login.php');
-    exit;
-}
-// (OPCIONAL - Verificação de permissão)
-$authService->checkAndFail('riscos:manage', '../index.php?error=Acesso+negado');
-
-
-// 4. Definições da Página (para o header.php)
+// 1. Definições da Página 
 $page_title = 'Gestão de Riscos de Exposição';
 $root_path = '../'; 
 $breadcrumb_items = [
-    'Dashboard' => '../index.php',
+    'Dashboard' => $root_path . 'index.php',
     'Gestão de Riscos' => null // Página ativa
 ];
-// NOVO: Informa ao footer.php qual script JS carregar
-$page_scripts = ['../scripts/riscos.js'];
+$page_scripts = [$root_path . 'scripts/riscos.js'];
 
+// 2. INCLUI O CONTROLLER (Caminho corrigido para Raiz/Controller/)
+// O Controller processa as requisições e prepara as variáveis de exibição.
+require_once $root_path . 'Controller/RiscoController.php';
 
-// Configurações específicas desta tabela
-$id_column = 'riscoId';
-$name_column = 'riscoNome';
-
-$message = '';
-$message_type = '';
-
-// Instancia o Repositório
-$repo = new RiscoRepository();
-
-// ----------------------------------------------------
-// LÓGICA DE CRUD (CREATE/UPDATE/DELETE)
-// ----------------------------------------------------
-try {
-    // 1. Lógica de CREATE/UPDATE (POST)
-    // (Esta página é especial, o nome é um ENUM, então só podemos INSERIR ou APAGAR)
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-        $titulo = trim($_POST[$name_column] ?? '');
-        
-        // Apenas 'insert' é permitido
-        if ($_POST['action'] === 'insert') {
-            $repo->save($_POST);
-            $message = "Risco '{$titulo}' cadastrado com sucesso!";
-            $message_type = 'success';
-        }
-    }
-
-    // 2. Lógica de DELETE (GET)
-    if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
-        $id = (int)$_GET['id'];
-        $deleted = $repo->delete($id);
-        
-        if ($deleted) {
-            $message = "Risco ID {$id} excluído com sucesso!";
-            $message_type = 'success';
-        } else {
-            $message = "Erro: Risco ID {$id} não encontrado ou já excluído.";
-            $message_type = 'danger';
-        }
-        
-        header("Location: riscos.php?message=" . urlencode($message) . "&type={$message_type}");
-        exit;
-    }
-
-} catch (Exception $e) {
-    if (strpos($e->getMessage(), 'Duplicate entry') !== false) {
-        $message = "Erro: O risco '{$titulo}' já está cadastrado.";
-        $message_type = 'danger';
-    } else {
-        $message = $e->getMessage();
-        $message_type = 'danger';
-    }
-}
-
-// Mensagens vindas de um redirecionamento (ex: após delete)
-if (empty($message) && isset($_GET['message'])) {
-    $message = htmlspecialchars($_GET['message']);
-    $message_type = htmlspecialchars($_GET['type'] ?? 'info');
-}
-
-// ----------------------------------------------------
-// LÓGICA DE LEITURA (READ)
-// ----------------------------------------------------
-// 1. Parâmetros de Filtro e Ordenação
-$params = [
-    'term' => $_GET['term'] ?? '',
-    'sort_col' => $_GET['sort_col'] ?? $id_column,
-    'sort_dir' => $_GET['sort_dir'] ?? 'ASC',
-    'page' => $_GET['page'] ?? 1,
-    'limit' => 10
-];
-
-// 2. Busca os dados
-try {
-    $repoParams = [
-        'term' => $params['term'],
-        'order_by' => $params['sort_col'], 
-        'sort_dir' => $params['sort_dir'],
-        'page' => $params['page'],
-        'limit' => $params['limit']
-    ];
-
-    $result = $repo->findAllPaginated($repoParams);
-    
-    $registros = $result['data'];
-    $totalRecords = $result['total'];
-    $totalPages = $result['totalPages'];
-    $currentPage = $result['currentPage'];
-
-} catch (Exception $e) {
-    $registros = [];
-    $totalRecords = 0;
-    $totalPages = 1;
-    $currentPage = 1;
-    $message = "Erro ao carregar dados: " . $e->getMessage();
-    $message_type = 'danger';
-}
-
-// Lista de riscos (ENUM) para o <select> do modal
-$tipos_risco_enum = [
-    'Físico', 'Químico', 'Ergonômico', 'Psicossocial', 'Acidental', 'Biológico'
-];
-
-
-// 7. Inclui o Header
-include '../includes/header.php';
+// 3. Inclui o Header
+include $root_path . 'includes/header.php';
 ?>
+
+<div class="container mb-5 ">
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="mb-0"><?php echo $page_title; ?></h1>
@@ -213,18 +96,20 @@ include '../includes/header.php';
         <nav aria-label="Navegação de página">
             <ul class="pagination mb-0">
                 
-                <li class="page-item <?php echo ($currentPage <= 1) ? 'disabled' : ''; ?>">
-                    <?php $prev_query = http_build_query(array_merge($params, ['page' => $currentPage - 1])); ?>
-                    <a class="page-link" href="?<?php echo $prev_query; ?>">Anterior</a>
-                </li>
-
                 <?php 
+                $prev_query = http_build_query(array_merge($params, ['page' => $currentPage - 1]));
+                $next_query = http_build_query(array_merge($params, ['page' => $currentPage + 1]));
                 $startPage = max(1, $currentPage - 2);
                 $endPage = min($totalPages, $currentPage + 2);
                 if ($endPage - $startPage < 4) { $startPage = max(1, $endPage - 4); }
                 if ($endPage - $startPage < 4) { $endPage = min($totalPages, $startPage + 4); }
+                ?>
 
-                for ($i = $startPage; $i <= $endPage; $i++): 
+                <li class="page-item <?php echo ($currentPage <= 1) ? 'disabled' : ''; ?>">
+                    <a class="page-link" href="?<?php echo $prev_query; ?>">Anterior</a>
+                </li>
+
+                <?php for ($i = $startPage; $i <= $endPage; $i++): 
                     $page_query = http_build_query(array_merge($params, ['page' => $i]));
                 ?>
                     <li class="page-item <?php echo ($i === $currentPage) ? 'active' : ''; ?>">
@@ -233,7 +118,6 @@ include '../includes/header.php';
                 <?php endfor; ?>
 
                 <li class="page-item <?php echo ($currentPage >= $totalPages) ? 'disabled' : ''; ?>">
-                    <?php $next_query = http_build_query(array_merge($params, ['page' => $currentPage + 1])); ?>
                     <a class="page-link" href="?<?php echo $next_query; ?>">Próxima</a>
                 </li>
             </ul>
@@ -251,7 +135,7 @@ include '../includes/header.php';
                 <h5 class="modal-title" id="modalLabel">Cadastrar Novo Risco</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="POST">
+            <form method="POST" action="<?php echo $root_path; ?>Controller/RiscoController.php"> 
                 <div class="modal-body">
                     <input type="hidden" name="action" id="modalAction" value="insert">
 
@@ -275,6 +159,6 @@ include '../includes/header.php';
 </div>
 
 <?php
-// 8. Inclui o Footer
-include '../includes/footer.php';
+// 4. Inclui o Footer
+include $root_path . 'includes/footer.php';
 ?>

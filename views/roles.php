@@ -56,8 +56,12 @@ try {
         if (!$editRole) {
             throw new Exception("Papel não encontrado.");
         }
-        // Busca os IDs das permissões que este papel já tem
-        $rolePermissions = $repo->getPermissionIdsForRole($id);
+        
+        // ==================================================================
+        // CORREÇÃO APLICADA AQUI: O método correto é findPermissionIds()
+        // ==================================================================
+        $rolePermissions = $repo->findPermissionIds($id); //
+        
         $page_title = "Editando Papel: " . htmlspecialchars($editRole['roleName']);
     }
     
@@ -82,139 +86,141 @@ $allPermissions = $repo->getAllPermissions(); // Lista de permissões para o for
 include '../includes/header.php';
 ?>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="mb-0"><?php echo $page_title; ?></h1>
+<div class="container mt-4 mb-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="mb-0"><?php echo $page_title; ?></h1>
     </div>
 
-<?php if ($message): ?>
-    <div class="alert alert-<?php echo $message_type; ?> alert-dismissible fade show" role="alert">
-        <?php echo htmlspecialchars($message); ?>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-<?php endif; ?>
+    <?php if ($message): ?>
+        <div class="alert alert-<?php echo $message_type; ?> alert-dismissible fade show" role="alert">
+            <?php echo htmlspecialchars($message); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
 
-<div class="row">
-    <div class="col-lg-5">
-        <div class="card shadow-sm mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <?php echo $editRole['roleId'] > 0 ? 'Editar Papel' : 'Novo Papel'; ?>
-                </h5>
-            </div>
-            <div class="card-body">
-                <form method="POST" action="roles.php">
-                    <input type="hidden" name="roleId" value="<?php echo $editRole['roleId']; ?>">
-                    
-                    <div class="mb-3">
-                        <label for="roleName" class="form-label">Nome do Papel *</label>
-                        <input type="text" class="form-control" id="roleName" name="roleName" 
-                               value="<?php echo htmlspecialchars($editRole['roleName']); ?>" required>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="roleDescription" class="form-label">Descrição</label>
-                        <textarea class="form-control" id="roleDescription" name="roleDescription" rows="2"><?php echo htmlspecialchars($editRole['roleDescription']); ?></textarea>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Permissões *</label>
-                        <style>
-                            .permission-group {
-                                max-height: 300px;
-                                overflow-y: auto;
-                                border: 1px solid #ddd;
-                                border-radius: 5px;
-                                padding: 10px;
-                            }
-                        </style>
-                        <div class="permission-group">
-                            <?php foreach ($allPermissions as $perm): ?>
-                                <?php
-                                // Verifica se a permissão atual está na lista de permissões do papel
-                                $isChecked = in_array($perm['permissionId'], $rolePermissions);
-                                ?>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="permissionIds[]" 
-                                           value="<?php echo $perm['permissionId']; ?>" 
-                                           id="perm_<?php echo $perm['permissionId']; ?>"
-                                           <?php echo $isChecked ? 'checked' : ''; ?>>
-                                    <label class="form-check-label" for="perm_<?php echo $perm['permissionId']; ?>">
-                                        <strong><?php echo htmlspecialchars($perm['permissionName']); ?></strong>
-                                        <small class="text-muted d-block"><?php echo htmlspecialchars($perm['permissionDescription']); ?></small>
-                                    </label>
-                                </div>
-                            <?php endforeach; ?>
+    <div class="row">
+        <div class="col-lg-5">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <?php echo $editRole['roleId'] > 0 ? 'Editar Papel' : 'Novo Papel'; ?>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="roles.php">
+                        <input type="hidden" name="roleId" value="<?php echo $editRole['roleId']; ?>">
+                        
+                        <div class="mb-3">
+                            <label for="roleName" class="form-label">Nome do Papel *</label>
+                            <input type="text" class="form-control" id="roleName" name="roleName" 
+                                   value="<?php echo htmlspecialchars($editRole['roleName']); ?>" required>
                         </div>
-                    </div>
+                        
+                        <div class="mb-3">
+                            <label for="roleDescription" class="form-label">Descrição</label>
+                            <textarea class="form-control" id="roleDescription" name="roleDescription" rows="2"><?php echo htmlspecialchars($editRole['roleDescription']); ?></textarea>
+                        </div>
 
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-check-circle"></i> Salvar Papel
-                    </button>
-                    <?php if ($editRole['roleId'] > 0): ?>
-                        <a href="roles.php" class="btn btn-secondary">
-                            <i class="fas fa-times"></i> Cancelar Edição
-                        </a>
-                    <?php endif; ?>
-                </form>
+                        <div class="mb-3">
+                            <label class="form-label">Permissões *</label>
+                            <style>
+                                .permission-group {
+                                    max-height: 300px;
+                                    overflow-y: auto;
+                                    border: 1px solid #ddd;
+                                    border-radius: 5px;
+                                    padding: 10px;
+                                }
+                            </style>
+                            <div class="permission-group">
+                                <?php foreach ($allPermissions as $perm): ?>
+                                    <?php
+                                    // Verifica se a permissão atual está na lista de permissões do papel
+                                    $isChecked = in_array($perm['permissionId'], $rolePermissions);
+                                    ?>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="permissionIds[]" 
+                                               value="<?php echo $perm['permissionId']; ?>" 
+                                               id="perm_<?php echo $perm['permissionId']; ?>"
+                                               <?php echo $isChecked ? 'checked' : ''; ?>>
+                                        <label class="form-check-label" for="perm_<?php echo $perm['permissionId']; ?>">
+                                            <strong><?php echo htmlspecialchars($perm['permissionName']); ?></strong>
+                                            <small class="text-muted d-block"><?php echo htmlspecialchars($perm['permissionDescription']); ?></small>
+                                        </label>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check-circle"></i> Salvar Papel
+                        </button>
+                        <?php if ($editRole['roleId'] > 0): ?>
+                            <a href="roles.php" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancelar Edição
+                            </a>
+                        <?php endif; ?>
+                    </form>
+                </div>
             </div>
         </div>
-    </div>
 
-    <div class="col-lg-7">
-        <div class="card shadow-sm">
-            <div class="card-header">
-                <h5 class="mb-0">Papéis Cadastrados</h5>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-striped table-hover mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th scope="col">ID</th>
-                                <th scope="col">Nome</th>
-                                <th scope="col">Descrição</th>
-                                <th scope="col" class="text-center">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (empty($allRoles)): ?>
+        <div class="col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">Papéis Cadastrados</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover mb-0">
+                            <thead class="table-light">
                                 <tr>
-                                    <td colspan="4" class="text-center p-4">Nenhum papel cadastrado.</td>
+                                    <th scope="col">ID</th>
+                                    <th scope="col">Nome</th>
+                                    <th scope="col">Descrição</th>
+                                    <th scope="col" class="text-center">Ações</th>
                                 </tr>
-                            <?php endif; ?>
-                            <?php foreach ($allRoles as $role): ?>
-                                <tr>
-                                    <td><?php echo $role['roleId']; ?></td>
-                                    <td><?php echo htmlspecialchars($role['roleName']); ?></td>
-                                    <td><?php echo htmlspecialchars($role['roleDescription']); ?></td>
-                                    <td class="text-center">
-                                        <a href="roles.php?edit=<?php echo $role['roleId']; ?>" class="btn btn-sm btn-info" title="Editar">
-                                            <i class="fas fa-pen"></i>
-                                        </a>
-                                        <?php if ($role['roleId'] != 1): // Não deixa excluir o Admin ?>
-                                            <a href="roles.php?delete=<?php echo $role['roleId']; ?>" 
-                                               class="btn btn-sm btn-danger" 
-                                               title="Excluir"
-                                               onclick="return confirm('Atenção: Excluir um papel irá removê-lo de todos os usuários. Deseja continuar?');">
-                                                <i class="fas fa-trash"></i>
+                            </thead>
+                            <tbody>
+                                <?php if (empty($allRoles)): ?>
+                                    <tr>
+                                        <td colspan="4" class="text-center p-4">Nenhum papel cadastrado.</td>
+                                    </tr>
+                                <?php endif; ?>
+                                <?php foreach ($allRoles as $role): ?>
+                                    <tr>
+                                        <td><?php echo $role['roleId']; ?></td>
+                                        <td><?php echo htmlspecialchars($role['roleName']); ?></td>
+                                        <td><?php echo htmlspecialchars($role['roleDescription']); ?></td>
+                                        <td class="text-center">
+                                            <a href="roles.php?edit=<?php echo $role['roleId']; ?>" class="btn btn-sm btn-info" title="Editar">
+                                                <i class="fas fa-pen"></i>
                                             </a>
-                                        <?php else: ?>
-                                            <button class="btn btn-sm btn-outline-secondary" disabled title="Não é possível excluir o Administrador">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        <?php endif; ?>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
+                                            <?php if ($role['roleId'] != 1): // Não deixa excluir o Admin ?>
+                                                <a href="roles.php?delete=<?php echo $role['roleId']; ?>" 
+                                                   class="btn btn-sm btn-danger" 
+                                                   title="Excluir"
+                                                   onclick="return confirm('Atenção: Excluir um papel irá removê-lo de todos os usuários. Deseja continuar?');">
+                                                    <i class="fas fa-trash"></i>
+                                                </a>
+                                            <?php else: ?>
+                                                <button class="btn btn-sm btn-outline-secondary" disabled title="Não é possível excluir o Administrador">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
-
-<?php
+    
+</div> <?php
 // 9. Inclui o Footer
 include '../includes/footer.php';
 ?>

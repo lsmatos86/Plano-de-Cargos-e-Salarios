@@ -11,7 +11,7 @@ $(document).ready(function() {
         caracteristica: { global: 'caracteristicasAssociadas', tbody: 'caracteristicasGridBody' },
         risco:        { global: 'riscosAssociados',          tbody: 'riscosGridBody' },
         curso:        { global: 'cursosAssociados',          tbody: 'cursosGridBody' },
-        recursoGrupo: { global: 'recursosGruposAssociadas',  tbody: 'recursosGruposGridBody' },
+        recursoGrupo: { global: 'recursosGruposAssociados',  tbody: 'recursosGruposGridBody' },
         area:         { global: 'areasAssociadas',           tbody: 'areasAtuacaoGridBody' },
         sinonimo:     { global: 'sinonimosAssociados',       tbody: 'sinonimosGridBody' }
     };

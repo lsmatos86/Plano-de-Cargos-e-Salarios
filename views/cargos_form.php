@@ -317,40 +317,34 @@ arsort($niveisOrdenados);
     window.sinonimosAssociados = normalizeState(<?php echo json_encode($cargoSinonimos); ?>);
 </script>
 
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $page_title; ?></title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
-    <style>
-        textarea { resize: vertical; }
-        .grid-header { background-color: #f8f9fa; border-top: 1px solid #dee2e6; padding-top: 10px; }
-        .grid-body tr:last-child td { border-bottom: none; }
-        .grid-action-cell { width: 80px; } 
-        .grid-risco-desc textarea { width: 100%; resize: vertical; min-height: 40px; border: 1px solid #ced4da; padding: 5px; }
-        .table-group-separator { background-color: #e9ecef; }
-        .grid-container { max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; }
-        /* Estilos para Select2 no modal */
-        .select2-container--bootstrap-5 .select2-dropdown { z-index: 1060; }
-        .form-control-sm { min-height: calc(1.5em + 0.5rem + 2px); }
-    </style>
-</head>
-<body>
+<?php 
+// INCLUSÕES PADRÃO DE LAYOUT
+$root_path = '../'; 
+
+// 1. INCLUSÃO DO HEADER: Deve conter <!DOCTYPE html>, <head>, links CSS/JS globais e <body> de abertura.
+// O $page_title já está definido, permitindo que o header.php o use.
+require_once $root_path . 'includes/header.php'; 
+?>
+
+<style>
+    textarea { resize: vertical; }
+    .grid-header { background-color: #f8f9fa; border-top: 1px solid #dee2e6; padding-top: 10px; }
+    .grid-body tr:last-child td { border-bottom: none; }
+    .grid-action-cell { width: 80px; } 
+    .grid-risco-desc textarea { width: 100%; resize: vertical; min-height: 40px; border: 1px solid #ced4da; padding: 5px; }
+    .table-group-separator { background-color: #e9ecef; }
+    .grid-container { max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; }
+    /* Estilos para Select2 no modal */
+    .select2-container--bootstrap-5 .select2-dropdown { z-index: 1060; }
+    .form-control-sm { min-height: calc(1.5em + 0.5rem + 2px); }
+</style>
 
 <?php 
-// CORREÇÃO: Substitui o navbar hardcoded pela inclusão do navbar padrão.
-$root_path = '../'; 
+// 2. INCLUSÃO DA NAVBAR PADRÃO
 require_once $root_path . 'includes/navbar.php'; 
 ?>
 
-<div class="container mt-4 mb-5">
+<div class="container pt-5 mb-5">
     
     <div class="d-flex justify-content-between align-items-center mb-3">
         <a href="cargos.php" class="btn btn-outline-secondary btn-sm">
@@ -1018,7 +1012,9 @@ require_once $root_path . 'includes/navbar.php';
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="../scripts/cargos_form.js"></script>
-</body>
-</html>
+
+<?php 
+// 4. INCLUSÃO DO FOOTER PADRÃO (fecha tags </body> e </html>, inclui scripts globais)
+require_once $root_path . 'includes/footer.php';
+?>
