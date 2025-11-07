@@ -8,7 +8,7 @@ use PDO;
 
 /**
  * Classe para gerenciar Autenticação e Autorização (Permissões).
- * (Versão corrigida com nomes de colunas em Português)
+ * (Versão corrigida com nomes de colunas em Português e lógica de URL)
  */
 class AuthService
 {
@@ -19,6 +19,13 @@ class AuthService
     {
         // Pega a conexão PDO da nossa classe de Database
         $this->db = Database::getConnection();
+        
+        // ==================================================================
+        // CORREÇÃO 1: Garante que a sessão esteja sempre iniciada
+        // ==================================================================
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
     }
 
     /**
@@ -40,7 +47,7 @@ class AuthService
             $this->loadUserPermissions($usuarioId);
         }
 
-        // 2. Verifica se a permissão existe no array
+        // 2. Verifica se a permissão existe no array (formato ['perm' => true])
         return isset($this->userPermissions[$permissionName]);
     }
 
@@ -57,11 +64,11 @@ class AuthService
                 FROM permissions p
                 JOIN role_permissions rp ON p.permissionId = rp.permissionId
                 JOIN user_roles ur ON rp.roleId = ur.roleId
-                WHERE ur.usuarioId = :usuarioId"; // <-- CORREÇÃO APLICADA AQUI
+                WHERE ur.usuarioId = :usuarioId"; //
         
         try {
             $stmt = $this->db->prepare($sql);
-            $stmt->bindParam(':usuarioId', $usuarioId, PDO::PARAM_INT); // <-- CORREÇÃO APLICADA AQUI
+            $stmt->bindParam(':usuarioId', $usuarioId, PDO::PARAM_INT); //
             $stmt->execute();
             
             $permissions = $stmt->fetchAll(PDO::FETCH_COLUMN);
@@ -79,6 +86,9 @@ class AuthService
     /**
      * Força o recarregamento das permissões (ex: após mudar o papel do usuário)
      */
+    // ==================================================================
+    // CORREÇÃO 2: Removido o "publicS public" duplicado
+    // ==================================================================
     public function refreshPermissions(): void
     {
         $this->userPermissions = null;
@@ -101,10 +111,25 @@ class AuthService
             return; // OK
         }
 
-        // REPARO/MELHORIA: No SRP, esta lógica de header/exit deveria estar no Controller/Ação.
-        // Mantendo a funcionalidade original:
+        // ==================================================================
+        // CORREÇÃO 3: Lógica de redirecionamento corrigida
+        // ==================================================================
         if ($redirectUrl) {
-            header("Location: $redirectUrl?error=" . urlencode('Acesso negado'));
+            
+            // Mensagem de erro padrão que os Controllers esperam
+            $errorMessage = urlencode("Acesso negado. Você não tem permissão para esta ação.");
+            
+            // Limpa o 'error=Acesso+negado' antigo se ele existir na URL base
+            $redirectUrl = str_replace("?error=Acesso+negado", "", $redirectUrl);
+            $redirectUrl = str_replace("&error=Acesso+negado", "", $redirectUrl);
+            
+            // Determina o separador correto ('?' ou '&')
+            $separator = (strpos($redirectUrl, '?') === false) ? '?' : '&';
+            
+            // Constrói a URL final corretamente (usando message e type)
+            $location = "{$redirectUrl}{$separator}message={$errorMessage}&type=danger";
+            
+            header("Location: $location");
             exit;
         } else {
             // Lança uma exceção que pode ser tratada

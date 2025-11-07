@@ -1,313 +1,73 @@
 <?php
-// Arquivo: views/cargos_form.php (Formulário de Cadastro e Edição de Cargos)
+// Arquivo: views/cargos_form.php (VIEW: Ponto de Entrada)
 
-// INCLUSÕES CRÍTICAS: Ordem FINAL e ROBUSTA para resolver classes, constantes e funções.
-
-// 1. Iniciar a sessão (DEVE ser a primeira instrução PHP para evitar "headers already sent")
+// 1. INCLUDES GLOBAIS E INICIALIZAÇÃO
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-
-// 2. Autoload do Composer (Resolve classes com namespace, ex: App\Core\Database)
-require_once '../vendor/autoload.php'; 
-
-// 3. Configurações (Define constantes de DB, ex: DB_HOST, usadas pelas classes/funções)
+require_once '../vendor/autoload.php';
 require_once '../config.php';
+require_once '../includes/functions.php'; // Para getDbConnection e lookups
 
-// 4. Funções (Define getDbConnection e isUserLoggedIn. A função deve estar definida aqui.)
-require_once '../includes/functions.php'; 
+// 2. IMPORTA O CONTROLLER E DEPENDÊNCIAS
+use App\Controller\CargoFormController; // Assegure-se que este Controller exista em src/Controller/
+use App\Service\AuthService;
+use App\Core\Database;
 
+// 3. DEFINIÇÕES DA PÁGINA (para o header e footer)
+$root_path = '../'; 
+$page_title = "Carregando..."; // Será sobrescrito pelo Controller
+$breadcrumb_items = [
+    'Dashboard' => $root_path . 'index.php',
+    'Gerenciamento de Cargos' => 'cargos.php',
+    'Formulário' => null 
+];
+// CORREÇÃO: Define o script que o footer.php deve carregar (depois do jQuery)
+$page_scripts = [$root_path . 'scripts/cargos_form.js']; 
 
-if (!isUserLoggedIn()) {
-    header('Location: ../login.php');
-    exit;
-}
+// 4. INSTANCIA O CONTROLLER E PROCESSA A REQUISIÇÃO
+try {
+    // Injeta as dependências (PDO e AuthService)
+    $pdo = Database::getConnection(); 
+    $authService = new AuthService(); 
+    $controller = new CargoFormController($pdo, $authService);
+    
+    $data = $controller->handleRequest($_GET, $_POST, $_SERVER['REQUEST_METHOD']);
 
-$pdo = getDbConnection();
-$message = '';
-$message_type = '';
+    // 5. EXTRAI AS VARIÁVEIS PARA A VIEW
+    extract($data);
+    // Sobrescreve o $page_title e $breadcrumb_items com o título vindo do controller
+    $breadcrumb_items['Formulário'] = $page_title;
 
-// Variáveis de Controle
-$originalId = (int)($_GET['id'] ?? 0);
-$action = $_GET['action'] ?? '';
-
-// Definindo o modo da página
-$isDuplicating = $action === 'duplicate' && $originalId > 0;
-$isEditing = !$isDuplicating && $originalId > 0;
-
-// O ID que será enviado no formulário (0 para novo/duplicação, ou o ID existente para edição)
-$currentFormId = $isEditing ? $originalId : 0; 
-$cargoId = $originalId; // ID usado para buscar os dados
-
-$page_title = $isDuplicating ? 'Duplicar Cargo (Novo Registro)' : ($isEditing ? 'Editar Cargo' : 'Novo Cargo');
-
-// ----------------------------------------------------
-// 1. CARREGAMENTO DOS LOOKUPS MESTRES
-// ----------------------------------------------------
-// AJUSTE: Renomeado cboNome para cboCod na chamada da função
-$cbos = getLookupData($pdo, 'cbos', 'cboId', 'cboCod', 'cboTituloOficial'); 
-$escolaridades = getLookupData($pdo, 'escolaridades', 'escolaridadeId', 'escolaridadeTitulo');
-// Habilidades agrupadas e simples (para select e lookup)
-$habilidadesAgrupadas = getHabilidadesGrouped($pdo);
-$habilidades = getLookupData($pdo, 'habilidades', 'habilidadeId', 'habilidadeNome'); 
-$caracteristicas = getLookupData($pdo, 'caracteristicas', 'caracteristicaId', 'caracteristicaNome');
-$riscos = getLookupData($pdo, 'riscos', 'riscoId', 'riscoNome'); 
-$cursos = getLookupData($pdo, 'cursos', 'cursoId', 'cursoNome');
-$recursosGrupos = getLookupData($pdo, 'recursos_grupos', 'recursoGrupoId', 'recursoGrupoNome');
-
-// Novos lookups de Hierarquia e Salário
-$faixasSalariais = getLookupData($pdo, 'faixas_salariais', 'faixaId', 'faixaNivel');
-$areasAtuacao = getAreaHierarchyLookup($pdo); 
-$cargosSupervisor = getLookupData($pdo, 'cargos', 'cargoId', 'cargoNome');
-
-// --- Variáveis de estado do Formulário ---
-$cargo = [];
-$cargoAreas = [];
-$cargoHabilidades = [];
-$cargoCaracteristicas = [];
-$cargoRiscos = []; 
-$cargoCursos = [];
-$cargoRecursosGrupos = [];
-$cargoSinonimos = [];
-
-
-// ----------------------------------------------------
-// 2. BUSCA DADOS PARA EDIÇÃO OU DUPLICAÇÃO
-// ----------------------------------------------------
-if ($isEditing || $isDuplicating) {
-    try {
-        $stmt = $pdo->prepare("SELECT * FROM cargos WHERE cargoId = ?");
-        $stmt->execute([$cargoId]); 
-        $cargo = $stmt->fetch();
-
-        if ($cargo) {
-            
-            // SINÔNIMOS (Livre texto)
-            $stmt = $pdo->prepare("SELECT cargoSinonimoId AS id, cargoSinonimoNome AS nome FROM cargo_sinonimos WHERE cargoId = ?");
-            $stmt->execute([$cargoId]);
-            $cargoSinonimos = $stmt->fetchAll(PDO::FETCH_ASSOC); 
-
-            // RISCOS (COMPLEX N:M): Busca ID, Nome, Descricao
-            $stmt = $pdo->prepare("SELECT rc.riscoId AS id, r.riscoNome AS nome, rc.riscoDescricao AS descricao FROM riscos_cargo rc JOIN riscos r ON r.riscoId = rc.riscoId WHERE rc.cargoId = ?");
-            $stmt->execute([$cargoId]);
-            $cargoRiscos = $stmt->fetchAll(PDO::FETCH_ASSOC); 
-            
-            // ÁREAS DE ATUAÇÃO (SIMPLE N:M): Busca ID, Nome
-            $stmt = $pdo->prepare("SELECT ca.areaId AS id, a.areaNome AS nome FROM cargos_area ca JOIN areas_atuacao a ON a.areaId = ca.areaId WHERE ca.cargoId = ?");
-            $stmt->execute([$cargoId]);
-            $cargoAreas = $stmt->fetchAll(PDO::FETCH_ASSOC); 
-            
-            // HABILIDADES (SIMPLE N:M): Busca ID, Nome, Tipo
-            $stmt = $pdo->prepare("SELECT hc.habilidadeId AS id, h.habilidadeNome AS nome, h.habilidadeTipo AS tipo FROM habilidades_cargo hc JOIN habilidades h ON h.habilidadeId = hc.habilidadeId WHERE hc.cargoId = ?");
-            $stmt->execute([$cargoId]);
-            $cargoHabilidades = $stmt->fetchAll(PDO::FETCH_ASSOC); 
-            
-            // CARACTERÍSTICAS (SIMPLE N:M): Busca ID, Nome
-            $stmt = $pdo->prepare("SELECT cc.caracteristicaId AS id, c.caracteristicaNome AS nome FROM caracteristicas_cargo cc JOIN caracteristicas c ON c.caracteristicaId = cc.caracteristicaId WHERE cc.cargoId = ?");
-            $stmt->execute([$cargoId]);
-            $cargoCaracteristicas = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // CURSOS (COMPLEX N:M): Busca ID, Nome, Obrigatório, Observação
-            $stmt = $pdo->prepare("SELECT curc.cursoId AS id, cur.cursoNome AS nome, curc.cursoCargoObrigatorio AS obrigatorio, curc.cursoCargoObs AS obs FROM cursos_cargo curc JOIN cursos cur ON cur.cursoId = curc.cursoId WHERE curc.cargoId = ?");
-            $stmt->execute([$cargoId]);
-            // Converte o campo 'obrigatorio' (0/1) para boolean para o JS
-            $cargoCursos = array_map(function($curso) {
-                $curso['obrigatorio'] = (bool)$curso['obrigatorio'];
-                return $curso;
-            }, $stmt->fetchAll(PDO::FETCH_ASSOC));
-            
-            // GRUPOS DE RECURSOS (SIMPLE N:M): Busca ID, Nome
-            $stmt = $pdo->prepare("SELECT rgc.recursoGrupoId AS id, rg.recursoGrupoNome AS nome FROM recursos_grupos_cargo rgc JOIN recursos_grupos rg ON rg.recursoGrupoId = rgc.recursoGrupoId WHERE rgc.cargoId = ?");
-            $stmt->execute([$cargoId]);
-            $cargoRecursosGrupos = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            if ($isDuplicating) {
-                $cargo['cargoNome'] = ($cargo['cargoNome'] ?? 'Cargo Duplicado') . ' (CÓPIA)';
-                unset($cargo['cargoId']); 
-            }
-        } else {
-            $message = "Cargo não encontrado.";
-            $message_type = 'danger';
-            $isEditing = false;
-        }
-
-    } catch (PDOException $e) {
-        $message = "Erro ao carregar dados: " . $e->getMessage();
-        $message_type = 'danger';
-    }
+} catch (Exception $e) {
+    // Se o Controller falhar (ex: Acesso Negado), trata aqui
+    $page_title = 'Erro';
+    $message = $e->getMessage();
+    $message_type = 'danger';
+    
+    // Define variáveis padrão para evitar erros no HTML
+    $cargo = []; $cbos = []; $escolaridades = []; $habilidadesAgrupadas = [];
+    $habilidades = []; $caracteristicas = []; $riscos = []; $cursos = [];
+    $recursosGrupos = []; $faixasSalariais = []; $areasAtuacao = [];
+    $cargosSupervisor = []; $niveisOrdenados = []; $cargoAreas = [];
+    $cargoHabilidades = []; $cargoCaracteristicas = []; $cargoRiscos = [];
+    $cargoCursos = []; $cargoRecursosGrupos = []; $cargoSinonimos = [];
+    $originalId = 0; $isEditing = false; $isDuplicating = false; $currentFormId = 0;
 }
 
 
-// ----------------------------------------------------
-// 3. LÓGICA DE SALVAMENTO (POST)
-// ----------------------------------------------------
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cargoNome'])) {
-    
-    $cargoIdSubmissao = (int)($_POST['cargoId'] ?? 0);
-    $isUpdating = $cargoIdSubmissao > 0;
-    
-    // 3.1 Captura dos Dados Principais (omitido para brevidade)
-    $data = [
-        'cargoNome' => trim($_POST['cargoNome'] ?? ''), 'cargoDescricao' => trim($_POST['cargoDescricao'] ?? null),
-        'cboId' => trim($_POST['cboId'] ?? 0), 
-        'cargoResumo' => trim($_POST['cargoResumo'] ?? null),
-        'escolaridadeId' => (int)($_POST['escolaridadeId'] ?? 0), 
-        'cargoExperiencia' => trim($_POST['cargoExperiencia'] ?? null),
-        'cargoCondicoes' => trim($_POST['cargoCondicoes'] ?? null), 
-        'cargoComplexidade' => trim($_POST['cargoComplexidade'] ?? null),
-        'cargoResponsabilidades' => trim($_POST['cargoResponsabilidades'] ?? null),
-        'faixaId' => empty($_POST['faixaId']) ? null : (int)$_POST['faixaId'],
-        'nivelHierarquicoId' => empty($_POST['nivelHierarquicoId']) ? null : (int)$_POST['nivelHierarquicoId'],
-        'cargoSupervisorId' => empty($_POST['cargoSupervisorId']) ? null : (int)$_POST['cargoSupervisorId'],
-    ];
-
-    // Relacionamentos N:M SIMPLES
-    $relacionamentosSimples = [
-        'cargos_area' => ['coluna' => 'areaId', 'valores' => (array)($_POST['areaId'] ?? [])],
-        'habilidades_cargo' => ['coluna' => 'habilidadeId', 'valores' => (array)($_POST['habilidadeId'] ?? [])],
-        'caracteristicas_cargo' => ['coluna' => 'caracteristicaId', 'valores' => (array)($_POST['caracteristicaId'] ?? [])],
-        'recursos_grupos_cargo' => ['coluna' => 'recursoGrupoId', 'valores' => (array)($_POST['recursoGrupoId'] ?? [])],
-    ];
-    
-    // Relacionamentos N:M COMPLEXOS (Riscos e Cursos)
-    $riscosInput = [
-        'riscoId' => (array)($_POST['riscoId'] ?? []),
-        'riscoDescricao' => (array)($_POST['riscoDescricao'] ?? []),
-    ];
-    
-    $cursosInput = [
-        'cursoId' => (array)($_POST['cursoId'] ?? []),
-        'cursoCargoObrigatorio' => (array)($_POST['cursoCargoObrigatorio'] ?? []), // Array de 0 ou 1
-        'cursoCargoObs' => (array)($_POST['cursoCargoObs'] ?? []),
-    ];
-
-    $sinonimosInput = (array)($_POST['sinonimoNome'] ?? []); // Sinônimos
-    
-    if (empty($data['cargoNome']) || empty($data['cboId']) || $data['escolaridadeId'] <= 0) {
-        $message = "Os campos Nome do Cargo, CBO e Escolaridade são obrigatórios.";
-        $message_type = 'danger';
-        $cargo = array_merge($cargo, $_POST);
-        $cargoId = $cargoIdSubmissao;
-    } else {
-
-        try {
-            $pdo->beginTransaction();
-
-            // 3.3 PREPARAÇÃO DA QUERY PRINCIPAL (UPDATE/CREATE)
-            $fields = array_keys($data); $bindings = array_values($data);
-            if ($isUpdating) {
-                $sql_fields = implode(' = ?, ', $fields) . ' = ?';
-                $sql = "UPDATE cargos SET {$sql_fields}, cargoDataAtualizacao = CURRENT_TIMESTAMP() WHERE cargoId = ?";
-                $bindings[] = $cargoIdSubmissao;
-                $stmt = $pdo->prepare($sql); $stmt->execute($bindings);
-                $novoCargoId = $cargoIdSubmissao;
-            } else {
-                $sql_fields = implode(', ', $fields); $placeholders = implode(', ', array_fill(0, count($fields), '?'));
-                $sql = "INSERT INTO cargos ({$sql_fields}) VALUES ({$placeholders})";
-                $stmt = $pdo->prepare($sql); $stmt->execute($bindings);
-                $novoCargoId = $pdo->lastInsertId();
-            }
-            
-            // 3.4 SALVAMENTO DOS RELACIONAMENTOS N:M SIMPLES
-            foreach ($relacionamentosSimples as $tableName => $rel) {
-                $column = $rel['coluna'];
-                $valores = $rel['valores'];
-                $pdo->prepare("DELETE FROM {$tableName} WHERE cargoId = ?")->execute([$novoCargoId]);
-                if (!empty($valores)) {
-                    $insert_sql = "INSERT INTO {$tableName} (cargoId, {$column}) VALUES (?, ?)";
-                    $stmt_rel = $pdo->prepare($insert_sql);
-                    foreach ($valores as $valorId) {
-                        $stmt_rel->execute([$novoCargoId, $valorId]);
-                    }
-                }
-            }
-            
-            // 3.5 SALVAMENTO DOS RISCOS (COMPLEX)
-            $pdo->prepare("DELETE FROM riscos_cargo WHERE cargoId = ?")->execute([$novoCargoId]);
-            if (!empty($riscosInput['riscoId'])) {
-                $sql_risco = "INSERT INTO riscos_cargo (cargoId, riscoId, riscoDescricao) VALUES (?, ?, ?)";
-                $stmt_risco = $pdo->prepare($sql_risco);
-                for ($i = 0; $i < count($riscosInput['riscoId']); $i++) {
-                    $stmt_risco->execute([$novoCargoId, (int)$riscosInput['riscoId'][$i], $riscosInput['riscoDescricao'][$i] ?? '']);
-                }
-            }
-
-            // 3.6 SALVAMENTO DOS CURSOS (COMPLEX)
-            $pdo->prepare("DELETE FROM cursos_cargo WHERE cargoId = ?")->execute([$novoCargoId]);
-            if (!empty($cursosInput['cursoId'])) {
-                $sql_curso = "INSERT INTO cursos_cargo (cargoId, cursoId, cursoCargoObrigatorio, cursoCargoObs) VALUES (?, ?, ?, ?)";
-                $stmt_curso = $pdo->prepare($sql_curso);
-                // Itera sobre o array de IDs de cursos
-                for ($i = 0; $i < count($cursosInput['cursoId']); $i++) {
-                    $obrigatorio = (int)($cursosInput['cursoCargoObrigatorio'][$i] ?? 0);
-                    $obs = $cursosInput['cursoCargoObs'][$i] ?? '';
-                    $stmt_curso->execute([$novoCargoId, (int)$cursosInput['cursoId'][$i], $obrigatorio, $obs]);
-                }
-            }
-            
-            // 3.7 SALVAMENTO DOS SINÔNIMOS
-            $pdo->prepare("DELETE FROM cargo_sinonimos WHERE cargoId = ?")->execute([$novoCargoId]);
-            if (!empty($sinonimosInput)) {
-                $sql_sin = "INSERT INTO cargo_sinonimos (cargoId, cargoSinonimoNome) VALUES (?, ?)";
-                $stmt_sin = $pdo->prepare($sql_sin);
-                foreach ($sinonimosInput as $sinonimoNome) {
-                     $stmt_sin->execute([$novoCargoId, trim($sinonimoNome)]);
-                }
-            }
-
-            $pdo->commit();
-            
-            $message = "Cargo salvo com sucesso! ID: {$novoCargoId}";
-            $message_type = 'success';
-            
-            header("Location: cargos_form.php?id={$novoCargoId}&message=" . urlencode($message) . "&type={$message_type}");
-            exit;
-
-        } catch (PDOException $e) {
-            $pdo->rollBack();
-            $message = "Erro fatal ao salvar. Erro: " . $e->getMessage();
-            $message_type = 'danger';
-            $cargo = array_merge($cargo, $_POST); 
-            $cargoId = $cargoIdSubmissao; 
-        }
-    }
-}
-
-// Mensagens após redirecionamento
-if (isset($_GET['message'])) {
-    $message = htmlspecialchars($_GET['message']);
-    $message_type = htmlspecialchars($_GET['type'] ?? 'info');
-}
-
-// Carrega os Níveis Hierárquicos já ordenados (mantido)
-$niveisOrdenados = [];
-foreach (getLookupData($pdo, 'nivel_hierarquico', 'nivelId', 'nivelOrdem') as $id => $ordem) {
-    $stmt = $pdo->prepare("SELECT nivelOrdem, nivelDescricao FROM nivel_hierarquico WHERE nivelId = ?");
-    $stmt->execute([$id]);
-    $nivelData = $stmt->fetch();
-    if ($nivelData) {
-        $niveisOrdenados[$id] = "{$nivelData['nivelOrdem']}º - " . ($nivelData['nivelDescricao'] ?? 'N/A');
-    }
-}
-arsort($niveisOrdenados); 
-
-// ----------------------------------------------------
-// 4. PREPARAÇÃO DOS DADOS JS (Global Scope)
-// ----------------------------------------------------
+// 6. PREPARAÇÃO DOS DADOS JS (Global Scope)
 ?>
-
 <script>
-    // Função utilitária para garantir que IDs numéricos sejam inteiros (melhor prática)
-    // Isso resolve o problema de incompatibilidade de tipo no JS sem remapear a estrutura.
+    // Função utilitária para garantir que IDs numéricos sejam inteiros
     const normalizeState = (data) => data.map(item => {
-        // Tenta converter ID para inteiro se for string numérica e não tiver o prefixo 'new-' (para sinônimos temporários)
         if (item.id && !isNaN(item.id) && typeof item.id === 'string' && !String(item.id).startsWith('new-')) {
             item.id = parseInt(item.id);
         }
         return item;
     });
 
-    // Inicializa as variáveis globais diretamente com o estado do PHP
+    // Inicializa as variáveis globais diretamente com o estado do Controller
     window.habilidadesAssociadas = normalizeState(<?php echo json_encode($cargoHabilidades); ?>);
     window.caracteristicasAssociadas = normalizeState(<?php echo json_encode($cargoCaracteristicas); ?>);
     window.riscosAssociados = normalizeState(<?php echo json_encode($cargoRiscos); ?>);
@@ -318,11 +78,8 @@ arsort($niveisOrdenados);
 </script>
 
 <?php 
-// INCLUSÕES PADRÃO DE LAYOUT
-$root_path = '../'; 
-
-// 1. INCLUSÃO DO HEADER: Deve conter <!DOCTYPE html>, <head>, links CSS/JS globais e <body> de abertura.
-// O $page_title já está definido, permitindo que o header.php o use.
+// 7. INCLUSÃO DO HEADER (Início do HTML)
+// O $page_title e $breadcrumb_items já estão definidos
 require_once $root_path . 'includes/header.php'; 
 ?>
 
@@ -334,51 +91,43 @@ require_once $root_path . 'includes/header.php';
     .grid-risco-desc textarea { width: 100%; resize: vertical; min-height: 40px; border: 1px solid #ced4da; padding: 5px; }
     .table-group-separator { background-color: #e9ecef; }
     .grid-container { max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; }
-    /* Estilos para Select2 no modal */
+    /* Estilos para Select2 no modal (necessário z-index alto) */
     .select2-container--bootstrap-5 .select2-dropdown { z-index: 1060; }
     .form-control-sm { min-height: calc(1.5em + 0.5rem + 2px); }
 </style>
 
-<?php 
-// 2. INCLUSÃO DA NAVBAR PADRÃO
-require_once $root_path . 'includes/navbar.php'; 
-?>
-
-<div class="container pt-5 mb-5">
-    
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <a href="cargos.php" class="btn btn-outline-secondary btn-sm">
-            <i class="fas fa-arrow-left"></i> Voltar para Cargos
-        </a>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="../index.php">Página Inicial</a></li>
-                <li class="breadcrumb-item"><a href="cargos.php">Gerenciamento de Cargos</a></li>
-                <li class="breadcrumb-item active" aria-current="page"><?php echo $page_title; ?></li>
-            </ol>
-        </nav>
-    </div>
+<div class="container mt-4 mb-5">
     
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="mb-0"><?php echo $page_title; ?></h1>
+        <h1 class="mb-0"><?php echo htmlspecialchars($page_title); ?></h1>
         
-        <?php if ($isEditing && $originalId > 0): ?>
-             <a href="cargos_form.php?id=<?php echo $originalId; ?>&action=duplicate" 
-                class="btn btn-warning btn-sm" 
-                title="Criar um novo registro com base neste.">
-                <i class="fas fa-copy"></i> Duplicar Cadastro
+        <div>
+            <a href="cargos.php" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left"></i> Voltar para Cargos
             </a>
-        <?php endif; ?>
+            <?php if ($isEditing && $originalId > 0): ?>
+                 <a href="cargos_form.php?id=<?php echo $originalId; ?>&action=duplicate" 
+                    class="btn btn-warning btn-sm" 
+                    title="Criar um novo registro com base neste.">
+                    <i class="fas fa-copy"></i> Duplicar Cadastro
+                </a>
+            <?php endif; ?>
+        </div>
     </div>
-
 
     <?php if ($message): ?>
         <div class="alert alert-<?php echo $message_type; ?> alert-dismissible fade show" role="alert">
-            <?php echo $message; ?>
+            <?php echo htmlspecialchars($message); ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
-    <?php endif; ?> <form method="POST" action="cargos_form.php" id="cargoForm">
+    <?php endif; ?> 
+    
+    <form method="POST" action="cargos_form.php" id="cargoForm">
         <input type="hidden" name="cargoId" value="<?php echo htmlspecialchars($currentFormId); ?>">
+        <?php if ($isDuplicating): ?>
+            <input type="hidden" name="originalId" value="<?php echo htmlspecialchars($originalId); ?>">
+        <?php endif; ?>
+
 
         <ul class="nav nav-tabs" id="cargoTabs" role="tablist">
             <li class="nav-item" role="presentation">
@@ -476,6 +225,7 @@ require_once $root_path . 'includes/navbar.php';
                         <select class="form-select searchable-select" id="cargoSupervisorId" name="cargoSupervisorId">
                             <option value="">--- Nível Superior / Nenhum ---</option>
                             <?php foreach ($cargosSupervisor as $id => $nome): 
+                                // Impede que um cargo seja supervisor de si mesmo
                                 if ($isEditing && (int)($originalId) === (int)$id): continue; endif; 
                             ?>
                                 <option value="<?php echo $id; ?>" <?php echo (int)($cargo['cargoSupervisorId'] ?? 0) === (int)$id ? 'selected' : ''; ?>>
@@ -501,7 +251,7 @@ require_once $root_path . 'includes/navbar.php';
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                        <div class="form-text">Lembre-se de cadastrar as faixas salariais.</div>
+                        <div class="form-text"><a href="faixas_salariais.php" target="_blank">Gerenciar Faixas Salariais</a></div>
                     </div>
                 </div>
                 
@@ -655,7 +405,7 @@ require_once $root_path . 'includes/navbar.php';
                                 </tr>
                             </thead>
                             <tbody id="sinonimosGridBody">
-                            </tbody>
+                                </tbody>
                         </table>
                     </div>
                 </div>
@@ -692,9 +442,7 @@ require_once $root_path . 'includes/navbar.php';
         <?php endif; ?>
 
     </form>
-</div>
-
-<div class="modal fade" id="modalAssociacaoHabilidades" tabindex="-1" aria-labelledby="modalHabilidadesLabel" aria-hidden="true">
+</div> <div class="modal fade" id="modalAssociacaoHabilidades" tabindex="-1" aria-labelledby="modalHabilidadesLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-success text-white">
@@ -886,6 +634,7 @@ require_once $root_path . 'includes/navbar.php';
     </div>
 </div>
 
+
 <div class="modal fade" id="modalEdicaoHabilidade" tabindex="-1" aria-labelledby="modalEdicaoHabilidadeLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -1012,9 +761,9 @@ require_once $root_path . 'includes/navbar.php';
     </div>
 </div>
 
-<script src="../scripts/cargos_form.js"></script>
 
 <?php 
-// 4. INCLUSÃO DO FOOTER PADRÃO (fecha tags </body> e </html>, inclui scripts globais)
+// 8. INCLUSÃO DO FOOTER
+// O footer.php irá carregar o jQuery, Bootstrap JS, e DEPOIS o cargos_form.js (via $page_scripts)
 require_once $root_path . 'includes/footer.php';
 ?>
