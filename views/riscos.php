@@ -1,7 +1,15 @@
 <?php
-// Arquivo: views/riscos.php (VIEW: Apenas apresentação)
+// Arquivo: views/riscos.php (VIEW: Ponto de Entrada)
 
-// 1. Definições da Página 
+// 1. INCLUDES GLOBAIS
+require_once '../vendor/autoload.php'; // Carrega o autoload do Composer
+require_once '../config.php';
+require_once '../includes/functions.php'; // Necessário para isUserLoggedIn() e createSortLink()
+
+// 2. IMPORTA O CONTROLLER
+use App\Controller\RiscoController;
+
+// 3. DEFINIÇÕES DA PÁGINA 
 $page_title = 'Gestão de Riscos de Exposição';
 $root_path = '../'; 
 $breadcrumb_items = [
@@ -10,15 +18,22 @@ $breadcrumb_items = [
 ];
 $page_scripts = [$root_path . 'scripts/riscos.js'];
 
-// 2. INCLUI O CONTROLLER (Caminho corrigido para Raiz/Controller/)
-// O Controller processa as requisições e prepara as variáveis de exibição.
-require_once $root_path . 'Controller/RiscoController.php';
+// 4. INSTANCIA O CONTROLLER E PROCESSA A REQUISIÇÃO
+// O Controller fará a segurança, o CRUD (e redirecionará se necessário),
+// ou buscará os dados para a listagem.
+$controller = new RiscoController();
+$data = $controller->handleRequest($_GET, $_POST, $_SERVER['REQUEST_METHOD']);
 
-// 3. Inclui o Header
+// 5. EXTRAI AS VARIÁVEIS PARA A VIEW
+// Isso cria $registros, $params, $message, $id_column, etc.
+extract($data);
+
+// 6. Inclui o Header (HTML)
+// (O header.php agora aplica o padding-top globalmente)
 include $root_path . 'includes/header.php';
 ?>
 
-<div class="container mb-5 ">
+<div class="container mt-4 mb-5">
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="mb-0"><?php echo $page_title; ?></h1>
@@ -29,7 +44,7 @@ include $root_path . 'includes/header.php';
 
 <?php if ($message): ?>
     <div class="alert alert-<?php echo $message_type; ?> alert-dismissible fade show" role="alert">
-        <?php echo $message; ?>
+        <?php echo htmlspecialchars($message); ?>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 <?php endif; ?>
@@ -126,16 +141,14 @@ include $root_path . 'includes/header.php';
     </div>
     <?php endif; ?>
 
-</div>
-
-<div class="modal fade" id="cadastroModal" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
+</div> </div> <div class="modal fade" id="cadastroModal" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title" id="modalLabel">Cadastrar Novo Risco</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="POST" action="<?php echo $root_path; ?>Controller/RiscoController.php"> 
+            <form method="POST" action="riscos.php"> 
                 <div class="modal-body">
                     <input type="hidden" name="action" id="modalAction" value="insert">
 
@@ -159,6 +172,6 @@ include $root_path . 'includes/header.php';
 </div>
 
 <?php
-// 4. Inclui o Footer
+// 7. Inclui o Footer
 include $root_path . 'includes/footer.php';
 ?>
