@@ -28,11 +28,38 @@ $is_dashboard = $is_dashboard ?? false;
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     
     <style>
+        /* Estilos Globais */
         body {
             display: flex;
             flex-direction: column;
             min-height: 100vh;
             background-color: #f8f9fa; /* bg-light */
+        }
+        
+        /* Estilos de Grid */
+        .grid-action-cell {
+            width: 100px;
+            max-width: 100px;
+        }
+        .table > :not(caption) > * > * {
+            padding: 0.5rem;
+            vertical-align: middle;
+        }
+        .table-group-separator {
+            background-color: #f8f9fa;
+        }
+        .table-group-separator td {
+            padding: 0.5rem !important;
+        }
+        
+        /* Botões na Grid */
+        .grid-action-cell .btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+        
+        /* Layout Principal */
             
             /* * Ajuste dinâmico do padding-top
              * Se for dashboard (só 1 nav), padding menor.

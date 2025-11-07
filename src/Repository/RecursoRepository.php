@@ -52,8 +52,9 @@ class RecursoRepository
 
         // 1. Coleta de Dados
         $id = (int)($data['recursoId'] ?? 0);
-        $nome = trim($data['recursoNome'] ?? '');
-        $descricao = trim($data['recursoDescricao'] ?? null);
+    $nome = trim($data['recursoNome'] ?? '');
+    // Garante que não chamamos trim() sobre null (pode gerar warnings/TypeError em algumas versões PHP)
+    $descricao = isset($data['recursoDescricao']) ? trim((string)$data['recursoDescricao']) : null;
         $isUpdating = $id > 0;
 
         // 2. Validação de Permissão e Dados
@@ -164,12 +165,13 @@ class RecursoRepository
      */
     public function findAllPaginated(array $params = []): array
     {
-        // 1. Configuração da Paginação e Filtros
-        $itemsPerPage = (int)($params['limit'] ?? 15);
-        $currentPage = (int)($params['page'] ?? 1);
-        $currentPage = max(1, $currentPage); 
-        $term = $params['term'] ?? '';
-        $sqlTerm = "%{$term}%";
+    // 1. Configuração da Paginação e Filtros
+    // Garante que itemsPerPage nunca seja zero (evita divisão por zero)
+    $itemsPerPage = max(1, (int)($params['limit'] ?? 15));
+    $currentPage = (int)($params['page'] ?? 1);
+    $currentPage = max(1, $currentPage);
+    $term = trim($params['term'] ?? '');
+    $sqlTerm = "%{$term}%";
         
         $where = [];
         $bindings = [];
@@ -190,10 +192,15 @@ class RecursoRepository
         
         try {
             $count_stmt = $this->pdo->prepare($count_sql);
-            $count_stmt->execute($bindings);
+            // Liga com bindValue para tipos seguros (evita problemas com referências)
+            foreach ($bindings as $key => $val) {
+                // TERM é string, outros possíveis bindings podem ser tratados aqui
+                $count_stmt->bindValue($key, $val);
+            }
+            $count_stmt->execute();
             $totalRecords = (int)$count_stmt->fetchColumn();
         } catch (\PDOException $e) {
-            error_log("Erro ao contar recursos: " . $e->getMessage());
+            error_log("Erro ao contar recursos: " . $e->getMessage() . " SQL: " . $count_sql . " BINDINGS: " . var_export($bindings, true));
             $totalRecords = 0;
         }
 
@@ -224,11 +231,12 @@ class RecursoRepository
         try {
             $stmt = $this->pdo->prepare($sql);
             
-            foreach ($bindings as $key => &$val) {
+            // Usa bindValue para evitar problemas com referências quando ligado em loop
+            foreach ($bindings as $key => $val) {
                 if ($key == ':limit' || $key == ':offset') {
-                    $stmt->bindParam($key, $val, PDO::PARAM_INT);
+                    $stmt->bindValue($key, (int)$val, PDO::PARAM_INT);
                 } else {
-                    $stmt->bindParam($key, $val);
+                    $stmt->bindValue($key, $val);
                 }
             }
             

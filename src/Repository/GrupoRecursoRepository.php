@@ -1,5 +1,5 @@
 <?php
-// Arquivo: src/Repository/FamiliaCboRepository.php
+// Arquivo: src/Repository/GrupoRecursoRepository.php
 
 namespace App\Repository;
 
@@ -9,11 +9,14 @@ use App\Service\AuthService;
 use PDO;
 use Exception;
 
-class FamiliaCboRepository
+class GrupoRecursoRepository
 {
     private PDO $pdo;
     private AuditService $auditService;
     private AuthService $authService;
+    private $tableName = 'recursos_grupos';
+    private $idColumn = 'recursoGrupoId';
+    private $nameColumn = 'recursoGrupoNome';
 
     public function __construct()
     {
@@ -27,24 +30,21 @@ class FamiliaCboRepository
     // ======================================================
 
     /**
-     * Retorna todas as Famílias CBO de forma simples (id, nome) para SELECTs.
+     * Retorna todos os grupos de recurso de forma simples (id, nome) para SELECTs.
      */
     public function findAllSimple(): array
     {
         try {
-            $stmt = $this->pdo->query("SELECT familiaCboId AS id, familiaCboNome AS nome FROM familia_cbo ORDER BY familiaCboNome ASC");
-            // O erro na views/cbos.php na linha 102 deve ser corrigido por esta implementação.
+            $stmt = $this->pdo->query("SELECT {$this->idColumn} AS id, {$this->nameColumn} AS nome FROM {$this->tableName} ORDER BY {$this->nameColumn} ASC");
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
-            error_log("Erro ao buscar Famílias CBO (simples): " . $e->getMessage());
+            error_log("Erro ao buscar Grupos de Recurso (simples): " . $e->getMessage());
             return [];
         }
     }
 
     /**
-     * Busca Famílias CBO de forma paginada para a listagem principal.
-     * @param array $params Parâmetros de busca (term, page, limit, order_by, sort_dir)
-     * @return array Contendo ['data', 'total', 'totalPages', 'currentPage']
+     * Busca Grupos de Recurso de forma paginada para a listagem principal.
      */
     public function findAllPaginated(array $params = []): array
     {
@@ -52,14 +52,15 @@ class FamiliaCboRepository
         $currentPage = (int)($params['page'] ?? 1);
         $term = $params['term'] ?? '';
         
-        $sortCol = in_array($params['order_by'] ?? 'familiaCboNome', ['familiaCboNome', 'familiaCboId']) ? $params['order_by'] : 'familiaCboNome';
+        $sortCol = in_array($params['order_by'] ?? $this->nameColumn, [$this->nameColumn, $this->idColumn]) ? $params['order_by'] : $this->nameColumn;
         $sortDir = in_array(strtoupper($params['sort_dir'] ?? 'ASC'), ['ASC', 'DESC']) ? $params['sort_dir'] : 'ASC';
 
         $termParam = "%{$term}%";
         $bindings = [$termParam];
+        $where = " WHERE t.{$this->nameColumn} LIKE ?";
 
-        // 1. Query para Contagem Total
-        $countSql = "SELECT COUNT(f.familiaCboId) FROM familia_cbo f WHERE f.familiaCboNome LIKE ?";
+        // 1. Count total
+        $countSql = "SELECT COUNT(t.{$this->idColumn}) FROM {$this->tableName} t" . $where;
 
         try {
             $countStmt = $this->pdo->prepare($countSql);
@@ -70,12 +71,12 @@ class FamiliaCboRepository
             $currentPage = max(1, min($currentPage, $totalPages));
             $offset = ($currentPage - 1) * $itemsPerPage;
             
-            // 2. Query Principal
+            // 2. Data query
             $sql = "
                 SELECT 
-                    f.familiaCboId, f.familiaCboNome, f.familiaCboDescricao
-                FROM familia_cbo f
-                WHERE f.familiaCboNome LIKE ?
+                    t.recursoGrupoId, t.recursoGrupoNome, t.recursoGrupoDescricao
+                FROM {$this->tableName} t
+                {$where}
                 ORDER BY {$sortCol} {$sortDir} 
                 LIMIT ? OFFSET ?
             ";
@@ -95,14 +96,14 @@ class FamiliaCboRepository
             ];
 
         } catch (\PDOException $e) {
-            error_log("Erro em FamiliaCboRepository::findAllPaginated: " . $e->getMessage());
+            error_log("Erro em GrupoRecursoRepository::findAllPaginated: " . $e->getMessage());
             return ['data' => [], 'total' => 0, 'totalPages' => 1, 'currentPage' => 1];
         }
     }
     
     public function find(int $id)
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM familia_cbo WHERE familiaCboId = ?");
+        $stmt = $this->pdo->prepare("SELECT * FROM {$this->tableName} WHERE {$this->idColumn} = ?");
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
@@ -113,17 +114,16 @@ class FamiliaCboRepository
 
     public function save(array $data): int
     {
-        $tableName = 'familia_cbo';
-        $id = (int)($data['familiaCboId'] ?? 0);
-        $nome = trim($data['familiaCboNome'] ?? '');
-        $descricao = trim($data['familiaCboDescricao'] ?? null);
+        $id = (int)($data[$this->idColumn] ?? 0);
+        $nome = trim($data[$this->nameColumn] ?? '');
+        $descricao = trim($data['recursoGrupoDescricao'] ?? null);
         $isUpdating = $id > 0;
 
-        $permissionNeeded = $isUpdating ? 'cbos:edit' : 'cbos:create';
+        $permissionNeeded = $isUpdating ? 'cadastros:manage' : 'cadastros:create';
         $this->authService->checkAndFail($permissionNeeded);
 
         if (empty($nome)) {
-            throw new Exception("O nome da Família CBO é obrigatório.");
+            throw new Exception("O nome do Grupo de Recurso é obrigatório.");
         }
 
         $params = [
@@ -133,26 +133,26 @@ class FamiliaCboRepository
 
         try {
             if ($isUpdating) {
-                $sql = "UPDATE {$tableName} SET familiaCboNome = :nome, familiaCboDescricao = :descricao WHERE familiaCboId = :id";
+                $sql = "UPDATE {$this->tableName} SET {$this->nameColumn} = :nome, recursoGrupoDescricao = :descricao WHERE {$this->idColumn} = :id";
                 $params[':id'] = $id;
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = $id;
                 
-                $this->auditService->log('UPDATE', $tableName, $savedId, $data);
+                $this->auditService->log('UPDATE', $this->tableName, $savedId, $data);
                 
             } else {
-                $sql = "INSERT INTO {$tableName} (familiaCboNome, familiaCboDescricao) VALUES (:nome, :descricao)";
+                $sql = "INSERT INTO {$this->tableName} ({$this->nameColumn}, recursoGrupoDescricao) VALUES (:nome, :descricao)";
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = (int)$this->pdo->lastInsertId();
                 
-                $this->auditService->log('CREATE', $tableName, $savedId, $data);
+                $this->auditService->log('CREATE', $this->tableName, $savedId, $data);
             }
             
             return $savedId;
 
         } catch (Exception $e) {
             if (str_contains($e->getMessage(), 'Duplicate entry')) {
-                 throw new Exception("A Família CBO '$nome' já existe.");
+                 throw new Exception("O Grupo de Recurso '$nome' já existe.");
             }
             throw $e;
         }
@@ -160,32 +160,31 @@ class FamiliaCboRepository
 
     public function delete(int $id): bool
     {
-        $tableName = 'familia_cbo';
-        $this->authService->checkAndFail('cbos:delete');
+        $this->authService->checkAndFail('cadastros:manage');
 
         try {
-            // Verifica se a família está sendo usada por algum CBO
-            $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM cbos WHERE familiaCboId = ?");
+            // Verifica se o grupo está sendo usado em um cargo
+            $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM recursos_grupos_cargo WHERE recursoGrupoId = ?");
             $stmtCheck->execute([$id]);
             if ($stmtCheck->fetchColumn() > 0) {
-                throw new Exception("Esta Família CBO não pode ser excluída pois está associada a um ou mais CBOs.");
+                throw new Exception("Este Grupo de Recurso não pode ser excluído pois está associado a um ou mais Cargos.");
             }
 
             // Exclui
-            $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE familiaCboId = ?");
+            $stmt = $this->pdo->prepare("DELETE FROM {$this->tableName} WHERE {$this->idColumn} = ?");
             $stmt->execute([$id]);
             
             $success = $stmt->rowCount() > 0;
             
             if ($success) {
-                $this->auditService->log('DELETE', $tableName, $id, ['deletedId' => $id]);
+                $this->auditService->log('DELETE', $this->tableName, $id, ['deletedId' => $id]);
             }
             
             return $success;
 
         } catch (Exception $e) {
             if (str_contains($e->getMessage(), 'foreign key constraint')) {
-                 throw new Exception("Esta Família CBO não pode ser excluída pois está em uso em outra parte do sistema.");
+                 throw new Exception("Este Grupo de Recurso não pode ser excluído pois está em uso em outra parte do sistema.");
             }
             throw $e;
         }

@@ -99,7 +99,7 @@ if (empty($message) && isset($_GET['message'])) {
 // ----------------------------------------------------
 
 // 1. Busca Grupos (para o <select> e para a tabela)
-$todosGrupos = $grupoRepo->findAllSimple(); // (Assumindo que este método existe)
+$todosGrupos = $grupoRepo->findAllSimple(); // Retorna [id => ..., nome => ...]
 
 // 2. Parâmetros de Filtro e Paginação (para Recursos)
 $params = [
@@ -120,7 +120,9 @@ try {
         'limit' => $params['limit']
     ];
 
-    $result = $recursoRepo->findAllPaginated($repoParams);
+    // O método RecursoRepository::findAllPaginated precisa ser implementado
+    // Assumindo que retorna 'recursoNome', 'recursoId', 'recursoDescricao', 'recursoGrupoId'
+    $result = $recursoRepo->findAllPaginated($repoParams); 
     
     $registrosRecursos = $result['data'];
     $totalRecords = $result['total'];
@@ -179,17 +181,17 @@ include '../includes/header.php';
                             <?php if (count($todosGrupos) > 0): ?>
                                 <?php foreach ($todosGrupos as $grupo): ?>
                                     <tr>
-                                        <td><strong><?php echo htmlspecialchars($grupo['recursoGrupoNome']); ?></strong></td>
+                                        <td><strong><?php echo htmlspecialchars($grupo['nome']); ?></strong></td>
                                         <td class="text-center">
                                             <button class="btn btn-sm btn-info text-white btn-edit-grupo" 
                                                     data-bs-toggle="modal" 
                                                     data-bs-target="#modalGrupo"
-                                                    data-id="<?php echo $grupo['recursoGrupoId']; ?>"
-                                                    data-nome="<?php echo htmlspecialchars($grupo['recursoGrupoNome']); ?>"
+                                                    data-id="<?php echo $grupo['id']; ?>"
+                                                    data-nome="<?php echo htmlspecialchars($grupo['nome']); ?>"
                                                     title="Editar">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <a href="recursos.php?action=delete&type=grupo&id=<?php echo $grupo['recursoGrupoId']; ?>" 
+                                            <a href="recursos.php?action=delete&type=grupo&id=<?php echo $grupo['id']; ?>" 
                                                class="btn btn-sm btn-danger" 
                                                title="Excluir"
                                                onclick="return confirm('Deseja realmente excluir este Grupo?');">

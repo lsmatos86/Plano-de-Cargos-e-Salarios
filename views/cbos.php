@@ -179,17 +179,17 @@ include '../includes/header.php';
                             <?php if (count($todasFamilias) > 0): ?>
                                 <?php foreach ($todasFamilias as $familia): ?>
                                     <tr>
-                                        <td><strong><?php echo htmlspecialchars($familia['familiaCboNome']); ?></strong></td>
+                                        <td><strong><?php echo htmlspecialchars($familia['nome']); ?></strong></td>
                                         <td class="text-center">
                                             <button class="btn btn-sm btn-info text-white btn-edit-familia" 
                                                     data-bs-toggle="modal" 
                                                     data-bs-target="#modalFamilia"
-                                                    data-id="<?php echo $familia['familiaCboId']; ?>"
-                                                    data-nome="<?php echo htmlspecialchars($familia['familiaCboNome']); ?>"
+                                                    data-id="<?php echo $familia['id']; ?>"
+                                                    data-nome="<?php echo htmlspecialchars($familia['nome']); ?>"
                                                     title="Editar">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <a href="cbos.php?action=delete&type=familia&id=<?php echo $familia['familiaCboId']; ?>" 
+                                            <a href="cbos.php?action=delete&type=familia&id=<?php echo $familia['id']; ?>" 
                                                class="btn btn-sm btn-danger" 
                                                title="Excluir"
                                                onclick="return confirm('Deseja realmente excluir esta Família? Se houver CBOs ligados a ela, a exclusão falhará.');">
@@ -239,7 +239,7 @@ include '../includes/header.php';
                                     <tr>
                                         <td><?php echo htmlspecialchars($row['cboCod']); ?></td>
                                         <td><strong><?php echo htmlspecialchars($row['cboTituloOficial']); ?></strong></td>
-                                        <td><?php echo htmlspecialchars($row['familiaCboNome']); ?></td>
+                                        <td><?php echo htmlspecialchars($row['familiaCboNome'] ?? 'N/A'); ?></td>
                                         <td class="text-center">
                                             <button class="btn btn-sm btn-info text-white btn-edit-cbo" 
                                                     data-bs-toggle="modal" 
@@ -354,8 +354,8 @@ include '../includes/header.php';
                         <select class="form-select" id="cboFamiliaId" name="familiaCboId" required>
                             <option value="">-- Selecione a Família --</option>
                             <?php foreach ($todasFamilias as $familia): ?>
-                                <option value="<?php echo $familia['familiaCboId']; ?>">
-                                    <?php echo htmlspecialchars($familia['familiaCboNome']); ?>
+                                <option value="<?php echo $familia['id']; ?>">
+                                    <?php echo htmlspecialchars($familia['nome']); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>

@@ -1,23 +1,7 @@
 <?php
 // Arquivo: views/cargos_form.php (Refatorado com Header/Footer)
 
-// 1. Incluir Autoload e Config
-require_once '../vendor/autoload.php';
-require_once '../config.php';
-
-// 2. Importar as classes
-use App\Repository\LookupRepository;
-use App\Repository\HabilidadeRepository;
-use App\Repository\AreaRepository;
-use App\Repository\CargoRepository;
-
-// 3. Incluir functions.php
-require_once '../includes/functions.php';
-
-if (!isUserLoggedIn()) {
-    header('Location: ../login.php');
-    exit;
-}
+// (Dados JS injetados no <head> através de $extra_head_content para evitar duplicação)
 
 // Inicializa variáveis
 $message = '';
@@ -41,6 +25,18 @@ $breadcrumb_items = [
     'Gerenciamento de Cargos' => 'cargos.php',
     $page_title => null // Página ativa
 ];
+
+// ----------------------------------------------------
+// 0. AUTOLOAD, CONFIG E HELPERS (assegura classes/funcs disponíveis)
+// ----------------------------------------------------
+require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../includes/functions.php';
+
+use App\Repository\LookupRepository;
+use App\Repository\HabilidadeRepository;
+use App\Repository\AreaRepository;
+use App\Repository\CargoRepository;
 
 // ----------------------------------------------------
 // 1. CARREGAMENTO DOS LOOKUPS MESTRES (MANTIDO)
@@ -92,241 +88,182 @@ $cargoCursos = [];
 $cargoRecursosGrupos = [];
 $cargoSinonimos = [];
 
-
 // ----------------------------------------------------
 // 2. BUSCA DADOS PARA EDIÇÃO OU DUPLICAÇÃO
 // ----------------------------------------------------
 if ($isEditing || $isDuplicating) {
-    try {
-        $cargoData = $cargoRepo->findFormData($cargoId);
-
-        if ($cargoData) {
-            $cargo = $cargoData['cargo'];
-            $cargoSinonimos = $cargoData['sinonimos'];
-            $cargoRiscos = $cargoData['riscos'];
-            $cargoAreas = $cargoData['areas'];
-            $cargoHabilidades = $cargoData['habilidades'];
-            $cargoCaracteristicas = $cargoData['caracteristicas'];
-            $cargoCursos = $cargoData['cursos'];
-            $cargoRecursosGrupos = $cargoData['recursos_grupos'];
-
-            if ($isDuplicating) {
-                $cargo['cargoNome'] = ($cargo['cargoNome'] ?? 'Cargo Duplicado') . ' (CÓPIA)';
-                unset($cargo['cargoId']);
-            }
-        } else {
-            $message = "Cargo não encontrado.";
-            $message_type = 'danger';
-            $isEditing = false;
-        }
-
-    } catch (Exception $e) { 
-        $message = "Erro ao carregar dados: " . $e->getMessage();
-        $message_type = 'danger';
+    // use the repository helper that returns the full payload for the form
+    $formData = $cargoRepo->findFormData($originalId);
+    if ($formData) {
+        // Assign the pieces returned by findFormData()
+        $cargo = $formData['cargo'] ?? [];
+        $cargoSinonimos = $formData['sinonimos'] ?? [];
+        $cargoRiscos = $formData['riscos'] ?? [];
+        $cargoAreas = $formData['areas'] ?? [];
+        $cargoHabilidades = $formData['habilidades'] ?? [];
+        $cargoCaracteristicas = $formData['caracteristicas'] ?? [];
+        $cargoCursos = $formData['cursos'] ?? [];
+        // note: repository returns recursos_grupos key name
+        $cargoRecursosGrupos = $formData['recursos_grupos'] ?? [];
     }
 }
 
-
-// ----------------------------------------------------
-// 3. LÓGICA DE SALVAMENTO (POST)
-// ----------------------------------------------------
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cargoNome'])) {
-    
-    try {
-        $novoCargoId = $cargoRepo->save($_POST);
-        $message = "Cargo salvo com sucesso! ID: {$novoCargoId}";
-        $message_type = 'success';
-        // Redireciona para o formulário no modo de edição do item recém-salvo
-        header("Location: cargos_form.php?id={$novoCargoId}&message=" . urlencode($message) . "&type={$message_type}");
-        exit;
-
-    } catch (Exception $e) {
-        $message = "Erro fatal ao salvar. Erro: " . $e->getMessage();
-        $message_type = 'danger';
-        
-        // Repopulamento mais robusto com os lookups corretos
-        $cargo = array_merge($cargo, $_POST);
-        $currentFormId = (int)($_POST['cargoId'] ?? 0);
-        
-        // Repopulando listas de relacionamento (Aplicando (int) CAST para garantir chave correta)
-        $cargoAreas = array_map(fn($id) => ['id' => (int)$id, 'nome' => $areasAtuacao[(int)$id] ?? 'N/A'], $_POST['areaId'] ?? []);
-        
-        $cargoHabilidades = array_map(function($id) use ($habilidadesMap) {
-            $id = (int)$id;
-            $data = $habilidadesMap[$id] ?? ['nome' => 'N/A', 'tipo' => 'N/A'];
-            return [
-                'id' => $id, 
-                'nome' => $data['nome'], 
-                'tipo' => $data['tipo'] 
-            ];
-        }, $_POST['habilidadeId'] ?? []);
-        
-        $cargoCaracteristicas = array_map(fn($id) => ['id' => (int)$id, 'nome' => $caracteristicas[(int)$id] ?? 'N/A'], $_POST['caracteristicaId'] ?? []);
-        $cargoRecursosGrupos = array_map(fn($id) => ['id' => (int)$id, 'nome' => $recursosGrupos[(int)$id] ?? 'N/A'], $_POST['recursoGrupoId'] ?? []);
-        $cargoSinonimos = array_map(fn($nome) => ['id' => $nome, 'nome' => $nome], $_POST['sinonimoNome'] ?? []);
-        
-        // Repopulando listas complexas
-        if(isset($_POST['riscoId'])) {
-            foreach($_POST['riscoId'] as $index => $id) {
-                $id = (int)$id;
-                $cargoRiscos[] = [
-                    'id' => $id, 
-                    'nome' => $riscos[$id] ?? 'N/A', 
-                    'descricao' => $_POST['riscoDescricao'][$index] ?? ''
-                ];
-            }
-        }
-        if(isset($_POST['cursoId'])) {
-            foreach($_POST['cursoId'] as $index => $id) {
-                $id = (int)$id;
-                $cargoCursos[] = [
-                    'id' => $id, 
-                    'nome' => $cursos[$id] ?? 'N/A', 
-                    'obrigatorio' => (bool)($_POST['cursoCargoObrigatorio'][$index] ?? 0), 
-                    'obs' => $_POST['cursoCargoObs'][$index] ?? ''
-                ];
-            }
-        }
-    }
-}
-
-// Mensagens após redirecionamento
-if (isset($_GET['message'])) {
-    $message = htmlspecialchars($_GET['message']);
-    $message_type = htmlspecialchars($_GET['type'] ?? 'info');
-}
-
-// ----------------------------------------------------
-// 4. PREPARAÇÃO DOS DADOS JS (Global Scope) - CORREÇÃO FINAL
-// ----------------------------------------------------
-
-// Adiciona os links CSS e JS específicos desta página ANTES de fechar o </head>
-$extra_head_content = '
-    <script>
-        // Usando o operador ?? [] para garantir que as variáveis sejam arrays JSON válidos
-        window.habilidadesAssociadas = ' . json_encode($cargoHabilidades ?? []) . ';
-        window.caracteristicasAssociadas = ' . json_encode($cargoCaracteristicas ?? []) . ';
-        window.riscosAssociados = ' . json_encode($cargoRiscos ?? []) . ';
-        window.cursosAssociados = ' . json_encode($cargoCursos ?? []) . ';
-        window.recursosGruposAssociados = ' . json_encode($cargoRecursosGrupos ?? []) . ';
-        window.areasAssociadas = ' . json_encode($cargoAreas ?? []) . ';
-        window.sinonimosAssociados = ' . json_encode($cargoSinonimos ?? []) . ';
-    </script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
-    <style>
-        textarea { resize: vertical; }
-        .grid-header { background-color: #f8f9fa; border-top: 1px solid #dee2e6; padding-top: 10px; }
-        .grid-body tr:last-child td { border-bottom: none; }
-        .grid-action-cell { width: 80px; } 
-        .grid-risco-desc textarea { width: 100%; resize: vertical; min-height: 40px; border: 1px solid #ced4da; padding: 5px; }
-        .table-group-separator { background-color: #e9ecef; }
-        .grid-container { max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; }
-        .select2-container--bootstrap-5 .select2-dropdown { z-index: 1060; }
-        .form-control-sm { min-height: calc(1.5em + 0.5rem + 2px); }
-    </style>
-';
-
-//
-include '../includes/header.php';
-
-// ======================================================
-// AJUSTE: O <nav> manual foi REMOVIDO
-// ======================================================
+// Prepara os dados para o JavaScript
+$jsonData = [
+    'cargo' => $cargo,
+    'habilidades' => array_map(function($h) use ($habilidadesMap) {
+        return [
+            'id' => $h['id'],
+            'nome' => $h['nome'],
+            'tipo' => $h['tipo'] ?? $habilidadesMap[$h['id']]['tipo'] ?? 'Outros'
+        ];
+    }, $cargoHabilidades),
+    'caracteristicas' => array_map(function($c) {
+        return ['id' => $c['id'], 'nome' => $c['nome']];
+    }, $cargoCaracteristicas),
+    'riscos' => $cargoRiscos,
+    'cursos' => $cargoCursos,
+    'recursosGrupos' => $cargoRecursosGrupos,
+    'areas' => $cargoAreas,
+    'sinonimos' => $cargoSinonimos
+];
 ?>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="mb-0">
-        <?php if ($isEditing && isset($cargo['cargoNome'])): ?>
-            <?php echo htmlspecialchars($originalId); ?> - <?php echo htmlspecialchars($cargo['cargoNome']); ?>
-            <small class="text-primary fw-normal ms-2">
-                (editando)
-                <i class="fas fa-pencil-alt ms-1"></i>
-            </small>
-        <?php else: ?>
-            <?php echo $page_title; ?>
-        <?php endif; ?>
-    </h1>
-    <?php if ($isEditing && $originalId > 0): ?>
-         <a href="cargos_form.php?id=<?php echo $originalId; ?>&action=duplicate" 
-            class="btn btn-warning btn-sm" 
-            title="Criar um novo registro com base neste.">
-            <i class="fas fa-copy"></i> Duplicar Cadastro
-        </a>
-    <?php endif; ?>
-</div>
+<script>
+    // Dados do servidor injetados no escopo global
+    window.DEBUG_PHP_WINDOW_FULL = <?php echo json_encode($jsonData, JSON_PRETTY_PRINT); ?>;
 
+    // Mapeamento para nomes esperados pelo cargos_form.js
+    window.habilidadesAssociadas = window.DEBUG_PHP_WINDOW_FULL.habilidades || [];
+    window.caracteristicasAssociadas = window.DEBUG_PHP_WINDOW_FULL.caracteristicas || [];
+    window.riscosAssociados = window.DEBUG_PHP_WINDOW_FULL.riscos || [];
+    window.cursosAssociados = window.DEBUG_PHP_WINDOW_FULL.cursos || [];
+    window.recursosGruposAssociados = window.DEBUG_PHP_WINDOW_FULL.recursosGrupos || [];
+    window.areasAssociadas = window.DEBUG_PHP_WINDOW_FULL.areas || [];
+    window.sinonimosAssociados = window.DEBUG_PHP_WINDOW_FULL.sinonimos || [];
+</script>
 
-<?php if ($message): ?>
-    <div class="alert alert-<?php echo $message_type; ?> alert-dismissible fade show" role="alert">
-        <?php echo $message; ?>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-<?php endif; ?> 
+<?php
+            echo json_encode([
+                'habilidades' => $cargoHabilidades,
+                'caracteristicas' => $cargoCaracteristicas,
+                'riscos' => $cargoRiscos,
+                'cursos' => $cargoCursos,
+                'recursosGrupos' => $cargoRecursosGrupos,
+                'areas' => $cargoAreas,
+                'sinonimos' => $cargoSinonimos,
+                'cargo' => $cargo
+            ], JSON_PRETTY_PRINT);
+        ?>;
 
-<form method="POST" action="cargos_form.php" id="cargoForm">
-    <input type="hidden" name="cargoId" value="<?php echo htmlspecialchars($currentFormId); ?>">
-
-    <ul class="nav nav-tabs" id="cargoTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="basicas-tab" data-bs-toggle="tab" data-bs-target="#basicas" type="button" role="tab" aria-controls="basicas" aria-selected="true">
-                <i class="fas fa-info-circle"></i> Dados Básicos
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="hierarquia-tab" data-bs-toggle="tab" data-bs-target="#hierarquia" type="button" role="tab" aria-controls="hierarquia" aria-selected="false">
-                <i class="fas fa-sitemap"></i> Hierarquia e Áreas
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="requisitos-tab" data-bs-toggle="tab" data-bs-target="#requisitos" type="button" role="tab" aria-controls="requisitos" aria-selected="false">
-                <i class="fas fa-list-alt"></i> Requisitos e Riscos
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="sinonimos-tab" data-bs-toggle="tab" data-bs-target="#sinonimos" type="button" role="tab" aria-controls="sinonimos" aria-selected="false">
-                <i class="fas fa-tags"></i> Sinônimos
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="descricoes-tab" data-bs-toggle="tab" data-bs-target="#descricoes" type="button" role="tab" aria-controls="descricoes" aria-selected="false">
-                <i class="fas fa-book"></i> Descrições Longas
-            </button>
-        </li>
-    </ul>
-
-    <div class="tab-content border border-top-0 p-3 mb-4" id="cargoTabsContent">
+        // Mapeamento para variáveis globais esperadas pelo cargos_form.js
+        window.habilidadesAssociadas = window.DEBUG_PHP_WINDOW_FULL.habilidades || [];
+        window.caracteristicasAssociadas = window.DEBUG_PHP_WINDOW_FULL.caracteristicas || [];
+        window.riscosAssociados = window.DEBUG_PHP_WINDOW_FULL.riscos || [];
+        window.cursosAssociados = window.DEBUG_PHP_WINDOW_FULL.cursos || [];
+        window.recursosGruposAssociados = window.DEBUG_PHP_WINDOW_FULL.recursosGrupos || [];
+        window.areasAssociadas = window.DEBUG_PHP_WINDOW_FULL.areas || [];
+        window.sinonimosAssociados = window.DEBUG_PHP_WINDOW_FULL.sinonimos || [];
+            "cargoId": 4,
+            "isEditing": true,
+            "cargo": {
+                "cargoId": 4,
+                "cargoNome": "ANALISTA DE EXPORTAÇÃO",
+                "cargoDescricao": "Supervisiona e coordena atividades logísticas e comerciais relacionadas à exportação de produtos. Negocia condições de compra e venda, elabora propostas, compatibiliza cronogramas de produção com contratos, e assegura a elaboração e controle da documentação necessária. Interage com clientes, fornecedores e prestadores de serviço.",
+                "cboId": 4,
+                "cargoResumo": "Coordena logística e comércio exterior, negocia vendas, elabora propostas, compatibiliza produção e garante a conformidade da documentação de exportação.",
+                "escolaridadeId": 5,
+                "faixaId": null,
+                "nivelHierarquicoId": null,
+                "cargoSupervisorId": null,
+                "cargoExperiencia": "Experiência prática de 2 a 3 anos é considerada essencial para domínio das rotinas e exigências da função.",
+                "cargoCondicoes": "Trabalho dinâmico, com grande atenção a prazos e detalhes operacionais. Pode ser realizado em escritório, home office ou in loco, exigindo acompanhamento da programação de navios, liberação de carga e logística. A comunicação com agentes internacionais exige domínio técnico e cultural.",
+                "cargoComplexidade": "Trata-se de um cargo técnico e estratégico que exige domínio de comércio exterior, conhecimento em logística internacional, legislação e processos aduaneiros. Requer capacidade de decisão rápida, comunicação assertiva e atenção aos detalhes. A complexidade está no gerenciamento de múltiplas etapas e riscos associados à exportação.",
+                "cargoResponsabilidades": "Negociar condições de compra e venda, elaborar propostas comerciais, coordenar cronogramas de produção, elaborar e conferir documentação de exportação, contratar e acompanhar serviços de terceiros, assegurar o recebimento de pagamentos (câmbio) e acompanhar a logística de exportação.",
+                "cargoDataCadastro": "2025-10-17 12:57:40",
+                "cargoDataAtualizacao": "2025-10-17 12:57:40"
+            },
+            "habilidades": [
+                { "id": 1, "nome": "Ética, Integridade e Honestidade", "tipo": "Softskill" },
+                { "id": 2, "nome": "Proatividade e Iniciativa", "tipo": "Softskill" },
+                { "id": 3, "nome": "Atitude Positiva e Otimismo", "tipo": "Softskill" },
+                { "id": 4, "nome": "Trabalho em Equipe e Colaboração", "tipo": "Softskill" },
+                { "id": 5, "nome": "Comunicação Eficaz e Assertiva", "tipo": "Softskill" },
+                { "id": 6, "nome": "Resiliência e Adaptabilidade", "tipo": "Softskill" },
+                { "id": 7, "nome": "Espírito de Pertencimento", "tipo": "Softskill" },
+                { "id": 8, "nome": "Senso de Responsabilidade e Comprometimento", "tipo": "Softskill" },
+                { "id": 9, "nome": "Empatia e Respeito Humano", "tipo": "Softskill" },
+                { "id": 10, "nome": "Senso de Comunidade e Bem-Estar Coletivo", "tipo": "Softskill" },
+                { "id": 11, "nome": "Capacidade de Aprendizado Contínuo", "tipo": "Hardskill" },
+                { "id": 12, "nome": "Atenção à Qualidade do Produto e/ou Serviço", "tipo": "Hardskill" },
+                { "id": 13, "nome": "Compromisso com Normas de Segurança e Sustentabilidade", "tipo": "Hardskill" },
+                { "id": 14, "nome": "Uso Consciente e Racional de Recursos", "tipo": "Hardskill" },
+                { "id": 15, "nome": "Conformidade com Normas e Boas Práticas (BP)", "tipo": "Hardskill" },
+                { "id": 35, "nome": "Negociação Comercial e Logística Internacional", "tipo": "Hardskill" },
+                { "id": 36, "nome": "Elaboração de Propostas Comerciais", "tipo": "Hardskill" },
+                { "id": 37, "nome": "Comunicação em Língua Estrangeira (Inglês)", "tipo": "Hardskill" },
+                { "id": 38, "nome": "Coordenação de Cronogramas de Produção", "tipo": "Hardskill" },
+                { "id": 39, "nome": "Elaboração e Conferência de Documentos para Exportação", "tipo": "Hardskill" },
+                { "id": 40, "nome": "Contratação e Acompanhamento de Serviços de Terceiros", "tipo": "Hardskill" },
+                { "id": 41, "nome": "Controle de Recebimentos (Câmbio) e Análise de Risco", "tipo": "Hardskill" },
+                { "id": 42, "nome": "Atualização Profissional e Conhecimento em Globalização", "tipo": "Hardskill" }
+            ],
+            "caracteristicas": [
+                { "id": 1, "nome": "Caráter (Fundamentado em Princípios Éticos)" },
+                { "id": 2, "nome": "Felicidade e Bom Humor no Ambiente de Trabalho" },
+                { "id": 3, "nome": "Ambição Saudável e Crescimento por Mérito" },
+            ]
+        };
         
-        <div class="tab-pane fade show active" id="basicas" role="tabpanel" aria-labelledby="basicas-tab">
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="cargoNome" class="form-label">Nome do Cargo *</label>
-                    <input type="text" class="form-control" id="cargoNome" name="cargoNome" value="<?php echo htmlspecialchars($cargo['cargoNome'] ?? ''); ?>" required>
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label for="cboId" class="form-label">CBO *</label>
-                    <select class="form-select searchable-select" id="cboId" name="cboId" required>
-                        <option value="">--- Selecione o CBO ---</option>
-                        <?php foreach ($cbos as $id => $nome): ?>
-                            <option value="<?php echo $id; ?>" <?php echo (isset($cargo['cboId']) && $cargo['cboId'] == $id) ? 'selected' : ''; ?>>
-                                <?php echo htmlspecialchars($nome); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-            </div>
-            <div class="mb-3">
-                <label for="cargoResumo" class="form-label">Resumo do Cargo</label>
-                <textarea class="form-control" id="cargoResumo" name="cargoResumo" rows="3"><?php echo htmlspecialchars($cargo['cargoResumo'] ?? ''); ?></textarea>
-                <div class="form-text">Descrição sumária das responsabilidades (máximo 250 caracteres, idealmente).</div>
-            </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="escolaridadeId" class="form-label">Escolaridade Mínima *</label>
-                    <select class="form-select searchable-select" id="escolaridadeId" name="escolaridadeId" required>
-                        <option value="">--- Selecione a Escolaridade ---</option>
+        // Mapeamento para nomes esperados pelo cargos_form.js
+        window.habilidadesAssociadas = window.DEBUG_PHP_WINDOW_FULL.habilidades || [];
+        window.caracteristicasAssociadas = window.DEBUG_PHP_WINDOW_FULL.caracteristicas || [];
+        window.riscosAssociados = window.DEBUG_PHP_WINDOW_FULL.riscos || [];
+        window.cursosAssociados = window.DEBUG_PHP_WINDOW_FULL.cursos || [];
+        window.recursosGruposAssociados = window.DEBUG_PHP_WINDOW_FULL.recursosGrupos || [];
+        window.sinonimosAssociados = window.DEBUG_PHP_WINDOW_FULL.sinonimos || [];
+                { "id": 4, "nome": "Honestidade e Transparência nas Relações" },
+                { "id": 5, "nome": "Espiritualidade ou Senso de Propósito" },
+                { "id": 6, "nome": "Cuidado com a Saúde e Bem-Estar" },
+                { "id": 7, "nome": "Alinhamento com Princípios de Comércio Justo (Fairtrade)" }
+            ],
+            "riscos": [
+                { "id": 4, "nome": "Psicossocial", "descricao": "Pressão por prazos, tomada de decisões sob estresse" },
+                { "id": 5, "nome": "Acidental", "descricao": "Risco operacional: erro na documentação, atrasos logísticos" },
+                { "id": 4, "nome": "Psicossocial", "descricao": "Riscos econômicos: liberação de documentos sem recebimento, variação cambial" }
+            ],
+            "cursos": [
+                { "id": 5, "nome": "Informática Básica e Pacote Office (Excel)", "obrigatorio": true, "obs": null },
+                { "id": 6, "nome": "Comércio Exterior e Processos Aduaneiros", "obrigatorio": true, "obs": null },
+                { "id": 7, "nome": "Inglês Técnico e Comercial", "obrigatorio": false, "obs": null }
+            ],
+            "recursos_grupos": [
+                { "id": 1, "nome": "TI e Comunicação" },
+                { "id": 2, "nome": "Material de Escritório" },
+                { "id": 3, "nome": "Documentação e Registros" },
+                { "id": 5, "nome": "Maquinário e Veículos" }
+            ],
+            "areas": [],
+            "sinonimos": [
+                { "id": 16, "nome": "Especialista em Comércio Exterior" },
+                { "id": 17, "nome": "Analista de Logística Internacional" },
+                { "id": 18, "nome": "Coordenador de Documentação de Embarque" },
+                { "id": 19, "nome": "Analista de Vendas Internacionais" },
+                { "id": 20, "nome": "Consultor de Processos Aduaneiros" }
+            ]
+        };
+
+        // Map to the global names the client script expects
+        window.habilidadesAssociadas = window.DEBUG_PHP_WINDOW_FULL.habilidades || [];
+        window.caracteristicasAssociadas = window.DEBUG_PHP_WINDOW_FULL.caracteristicas || [];
+        window.riscosAssociados = window.DEBUG_PHP_WINDOW_FULL.riscos || [];
+        window.cursosAssociados = window.DEBUG_PHP_WINDOW_FULL.cursos || [];
+        window.recursosGruposAssociadas = window.DEBUG_PHP_WINDOW_FULL.recursos_grupos || [];
+        window.areasAssociadas = window.DEBUG_PHP_WINDOW_FULL.areas || [];
+        window.sinonimosAssociados = window.DEBUG_PHP_WINDOW_FULL.sinonimos || [];
+    </script>
                         <?php foreach ($escolaridades as $id => $nome): ?>
-                            <option value="<?php echo $id; ?>" <?php echo (int)($cargo['escolaridadeId'] ?? 0) === (int)$id ? 'selected' : ''; ?>>
+                            <option value="<?php echo $id; ?>" <?php echo (isset($cargo['escolaridadeId']) && $cargo['escolaridadeId'] == $id) ? 'selected' : ''; ?>>
                                 <?php echo htmlspecialchars($nome); ?>
                             </option>
                         <?php endforeach; ?>
@@ -346,7 +283,7 @@ include '../includes/header.php';
                     <select class="form-select searchable-select" id="nivelHierarquicoId" name="nivelHierarquicoId">
                         <option value="">--- Selecione o Nível ---</option>
                         <?php foreach ($niveisOrdenados as $id => $nome): ?>
-                            <option value="<?php echo $id; ?>" <?php echo (int)($cargo['nivelHierarquicoId'] ?? 0) === (int)$id ? 'selected' : ''; ?>>
+                            <option value="<?php echo $id; ?>" <?php echo (isset($cargo['nivelHierarquicoId']) && $cargo['nivelHierarquicoId'] == $id) ? 'selected' : ''; ?>>
                                 <?php echo htmlspecialchars($nome); ?>
                             </option>
                         <?php endforeach; ?>
@@ -873,13 +810,14 @@ include '../includes/header.php';
 
 <?php
 // ======================================================
-// AJUSTE: Inclui os scripts JS específicos desta página ANTES de incluir o footer
+// AJUSTE: Lista de scripts específicos desta página (o footer imprime $page_scripts)
 // ======================================================
-$extra_scripts = '
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
-    <script src="../scripts/cargos_form.js?v=4"></script>
-';
+$page_scripts = [
+    // jQuery first (Select2 and our script depend on it)
+    'https://code.jquery.com/jquery-3.6.0.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js',
+    '../scripts/cargos_form.js'
+];
 
-//
 include '../includes/footer.php';
-?>
+?>  

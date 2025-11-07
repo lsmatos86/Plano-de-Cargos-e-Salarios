@@ -46,6 +46,37 @@ class LookupRepository
     // ====================================================================
 
     /**
+     * NOVO MÉTODO IMPLEMENTADO.
+     * Busca dados genéricos de uma tabela para uso em SELECTs (ID => NOME).
+     *
+     * @param string $tableName O nome da tabela.
+     * @param string $idColumn A coluna a ser usada como chave.
+     * @param string $nameColumn A coluna a ser usada como valor.
+     * @return array Um array no formato [id => nome].
+     * @throws \Exception Se o nome da tabela for inválido ou a consulta falhar.
+     */
+    public function getLookup(string $tableName, string $idColumn, string $nameColumn): array
+    {
+        // Validação básica de nomes de tabela e coluna (previne injeção simples)
+        if (!preg_match('/^[a-zA-Z0-9_]+$/', $tableName) ||
+            !preg_match('/^[a-zA-Z0-9_]+$/', $idColumn) ||
+            !preg_match('/^[a-zA-Z0-9_]+$/', $nameColumn)) {
+            throw new \Exception("Nome de tabela ou coluna inválido para lookup.");
+        }
+
+        try {
+            $sql = "SELECT {$idColumn} AS id, {$nameColumn} AS nome FROM {$tableName} ORDER BY {$nameColumn} ASC";
+            $stmt = $this->pdo->query($sql);
+            
+            // Retorna um array associativo no formato [id => nome]
+            return array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'nome', 'id');
+        } catch (\PDOException $e) {
+            error_log("Erro ao buscar lookup na tabela {$tableName}: " . $e->getMessage());
+            throw new \Exception("Falha na consulta ao banco de dados para lookup: {$tableName}.");
+        }
+    }
+
+    /**
      * Busca CBOs, formatando para exibição (Código - Título).
      */
     public function findCbos(): array

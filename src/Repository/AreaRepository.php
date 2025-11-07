@@ -1,32 +1,31 @@
 <?php
-// Arquivo: src/Repository/AreaRepository.php (Atualizado com Auditoria)
+// Arquivo: src/Repository/AreaRepository.php (Atualizado com Auditoria e Paginação)
 
 namespace App\Repository;
 
 use App\Core\Database;
-use App\Service\AuditService;  // <-- PASSO 1: Incluir
-use App\Service\AuthService;   // <-- PASSO 1: Incluir (Boa prática)
+use App\Service\AuditService;
+use App\Service\AuthService;
 use PDO;
 use Exception;
 
 class AreaRepository
 {
     private PDO $pdo;
-    private AuditService $auditService; // <-- PASSO 2: Adicionar propriedade
-    private AuthService $authService;   // <-- PASSO 2: Adicionar propriedade
+    private AuditService $auditService;
+    private AuthService $authService;
 
     public function __construct()
     {
         $this->pdo = Database::getConnection();
-        // ======================================================
-        // PASSO 2: Inicializar os serviços
-        // ======================================================
         $this->auditService = new AuditService();
         $this->authService = new AuthService();
     }
 
-    // ... (métodos find, findAll, getHierarchyLookup não mudam) ...
-    
+    // ======================================================
+    // MÉTODOS DE BUSCA E LISTAGEM
+    // ======================================================
+
     public function find(int $id)
     {
         $stmt = $this->pdo->prepare("SELECT * FROM areas_atuacao WHERE areaId = ?");
@@ -39,7 +38,86 @@ class AreaRepository
         $stmt = $this->pdo->query("SELECT * FROM areas_atuacao ORDER BY areaNome ASC");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+    
+    /**
+     * NOVO MÉTODO. Retorna todas as áreas de forma simples (id, nome) para SELECTs.
+     */
+    public function findAllSimple(): array
+    {
+        try {
+            $stmt = $this->pdo->query("SELECT areaId AS id, areaNome AS nome FROM areas_atuacao ORDER BY areaNome ASC");
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\PDOException $e) {
+            error_log("Erro ao buscar todas as áreas: " . $e->getMessage());
+            return [];
+        }
+    }
 
+    /**
+     * NOVO MÉTODO. Busca dados das áreas de atuação de forma paginada.
+     * @param array $params Parâmetros de busca (term, page, limit, order_by, sort_dir)
+     * @return array Contendo ['data', 'total', 'totalPages', 'currentPage']
+     */
+    public function findAllPaginated(array $params = []): array
+    {
+        $itemsPerPage = (int)($params['limit'] ?? 10);
+        $currentPage = (int)($params['page'] ?? 1);
+        $term = $params['term'] ?? '';
+        
+        $sortCol = in_array($params['order_by'] ?? 'areaNome', ['areaNome', 'areaId', 'areaDescricao', 'areaPaiNome']) ? $params['order_by'] : 'areaNome';
+        $sortDir = in_array(strtoupper($params['sort_dir'] ?? 'ASC'), ['ASC', 'DESC']) ? $params['sort_dir'] : 'ASC';
+
+        $termParam = "%{$term}%";
+        $bindings = [$termParam];
+
+        // 1. Query para Contagem Total
+        $countSql = "SELECT COUNT(a.areaId) FROM areas_atuacao a WHERE a.areaNome LIKE ?";
+
+        try {
+            $countStmt = $this->pdo->prepare($countSql);
+            $countStmt->execute($bindings);
+            $totalRecords = (int)$countStmt->fetchColumn();
+
+            $totalPages = $totalRecords > 0 ? ceil($totalRecords / $itemsPerPage) : 1;
+            $currentPage = max(1, min($currentPage, $totalPages));
+            $offset = ($currentPage - 1) * $itemsPerPage;
+            
+            // 2. Query Principal
+            // Adiciona a join para buscar o nome da Área Pai
+            $sql = "
+                SELECT 
+                    a.areaId, a.areaNome, a.areaDescricao, a.areaPaiId,
+                    pa.areaNome AS areaPaiNome
+                FROM areas_atuacao a
+                LEFT JOIN areas_atuacao pa ON pa.areaId = a.areaPaiId
+                WHERE a.areaNome LIKE ?
+                ORDER BY {$sortCol} {$sortDir} 
+                LIMIT ? OFFSET ?
+            ";
+
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->bindParam(1, $termParam);
+            $stmt->bindParam(2, $itemsPerPage, PDO::PARAM_INT);
+            $stmt->bindParam(3, $offset, PDO::PARAM_INT);
+            $stmt->execute();
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            return [
+                'data' => $data,
+                'total' => $totalRecords,
+                'totalPages' => $totalPages,
+                'currentPage' => $currentPage
+            ];
+
+        } catch (\PDOException $e) {
+            error_log("Erro em AreaRepository::findAllPaginated: " . $e->getMessage());
+            return ['data' => [], 'total' => 0, 'totalPages' => 1, 'currentPage' => 1];
+        }
+    }
+    
+    /**
+     * Obtém o lookup hierárquico formatado (ex: 'Pai > Filho') para SELECTs em outros formulários.
+     */
     public function getHierarchyLookup(): array
     {
         $areas = $this->findAll();
@@ -111,9 +189,7 @@ class AreaRepository
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = $id;
                 
-                // ======================================================
                 // PASSO 3: REGISTRAR O LOG DE UPDATE
-                // ======================================================
                 $this->auditService->log('UPDATE', $tableName, $savedId, $data);
                 
             } else {
@@ -121,9 +197,7 @@ class AreaRepository
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = (int)$this->pdo->lastInsertId();
                 
-                // ======================================================
                 // PASSO 3: REGISTRAR O LOG DE CREATE
-                // ======================================================
                 $this->auditService->log('CREATE', $tableName, $savedId, $data);
             }
             
@@ -169,9 +243,7 @@ class AreaRepository
             $success = $stmt->rowCount() > 0;
             
             if ($success) {
-                // ======================================================
                 // PASSO 3: REGISTRAR O LOG DE DELETE
-                // ======================================================
                 $this->auditService->log('DELETE', $tableName, $id, ['deletedId' => $id]);
             }
             
