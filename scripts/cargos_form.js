@@ -37,23 +37,25 @@ $(document).ready(function() {
         return `${entityName}sGridBody`;
     };
 
-    // Helper: limpa todos os filhos de um elemento
+    // Helper: limpa todos os filhos de um elemento (AGORA CONSISTENTE COM JQUERY)
     const clearElementChildren = (el) => {
-        while (el && el.firstChild) {
-            el.removeChild(el.firstChild);
+        if (el) {
+            $(el).empty();
         }
     };
 
-    // Helper: cria uma linha de 'nenhum registro' de forma segura
+    // Helper: cria uma linha de 'nenhum registro' de forma segura (AGORA CONSISTENTE COM JQUERY)
     const createEmptyRow = (gridBody, colspan, text) => {
-        clearElementChildren(gridBody);
-        const tr = document.createElement('tr');
-        const td = document.createElement('td');
-        td.setAttribute('colspan', String(colspan));
-        td.className = 'text-muted';
-        td.textContent = text;
-        tr.appendChild(td);
-        gridBody.appendChild(tr);
+        if (!gridBody) return;
+        $(gridBody).empty(); 
+        const tr = `
+            <tr>
+                <td colspan="${String(colspan)}" class="text-muted">
+                    ${text}
+                </td>
+            </tr>
+        `;
+        $(gridBody).append(tr);
     };
     
     /**
@@ -95,8 +97,10 @@ $(document).ready(function() {
             btnEdit.type = 'button';
             btnEdit.className = `btn btn-sm btn-info text-white btn-edit-${entityName} me-1`;
             btnEdit.setAttribute('data-id', String(itemId));
+            // Nota: O nome da entidade no modal deve ser em CamelCase
+            const modalEntityName = entityName.charAt(0).toUpperCase() + entityName.slice(1);
             btnEdit.setAttribute('data-bs-toggle', 'modal');
-            btnEdit.setAttribute('data-bs-target', `#modalEdicao${entityName.charAt(0).toUpperCase() + entityName.slice(1)}`);
+            btnEdit.setAttribute('data-bs-target', `#modalEdicao${modalEntityName}`);
             btnEdit.title = 'Visualizar';
             const iconEye = document.createElement('i'); iconEye.className = 'fas fa-eye';
             btnEdit.appendChild(iconEye);
@@ -236,6 +240,12 @@ $(document).ready(function() {
     // FUNÇÃO GERAL PARA RENDERS SIMPLES
     const renderSimpleGrid = (entityName, hasEditButton = false, cols = 2) => {
         try {
+            // RecursoGrupo não utiliza mais esta função, mas é mantido para outras entidades.
+            if (entityName === 'recursoGrupo') {
+                renderRecursosGruposGrid();
+                return;
+            }
+
             const gridBodyId = resolveGridBodyId(entityName);
             const gridBody = document.getElementById(gridBodyId);
 
@@ -253,16 +263,16 @@ $(document).ready(function() {
             }
 
             dataArray.forEach(item => {
-                // CLÁUSULA DE GUARDA ADICIONADA: Ignora itens com dados incompletos ou nulos.
+                // CLÁUSULA DE GUARDA: Ignora itens com dados incompletos ou nulos.
                 if (item.id === null || item.id === undefined || item.nome === null || item.nome === undefined) {
                      console.error(`Item inválido encontrado em ${entityName}, pulando.`, item);
-                     return; // Pula este item e evita erro silencioso
+                     return; 
                 }
                 
                 addSimpleGridRow(gridBodyId, item.id, item.nome, `${entityName}Id`, hasEditButton, entityName);
             });
             
-            // VERIFICAÇÃO ADICIONAL: Se havia dados mas nada foi renderizado (após a limpeza e iteração)
+            // VERIFICAÇÃO ADICIONAL
             if (dataArray.length > 0 && gridBody.children.length === 0) {
                  console.error(`ERRO LÓGICO: Havia ${dataArray.length} itens para ${entityName}, mas nenhum foi renderizado.`);
                  createEmptyRow(gridBody, cols, `ERRO LÓGICO. Verifique console para ${entityName}.`);
@@ -282,11 +292,68 @@ $(document).ready(function() {
         }
     };
     
-    // MAPEAMENTO DAS FUNÇÕES SIMPLES
+    // MAPEAMENTO DAS FUNÇÕES SIMPLES (Funções que usam o generic renderer)
     const renderCaracteristicasGrid = () => renderSimpleGrid('caracteristica', true);
-    const renderRecursosGruposGrid = () => renderSimpleGrid('recursoGrupo', true);
     const renderAreasAtuacaoGrid = () => renderSimpleGrid('area', false);
 
+    // FUNÇÃO AUTÔNOMA E OTIMIZADA PARA RECURSOS GRUPOS (Usa jQuery para construção HTML)
+    const renderRecursosGruposGrid = () => {
+        try {
+            const entityName = 'recursoGrupo';
+            const gridBody = document.getElementById('recursosGruposGridBody');
+            const dataArray = getEntityMap(entityName);
+            
+            if (!gridBody) return; 
+
+            clearElementChildren(gridBody); // Novo método de limpeza com jQuery
+
+            if (dataArray.length === 0) {
+              createEmptyRow(gridBody, 2, `Nenhum Grupo de Recurso associado.`);
+                 return;
+            }
+            
+            const rows = dataArray.map(item => {
+                if (!item.id || !item.nome) return '';
+
+                const itemId = String(item.id);
+                const itemName = item.nome;
+                
+                // Constrói a linha usando template string e HTML
+                return `
+                    <tr data-id="${itemId}">
+                        <td>
+                            <input type="hidden" name="recursoGrupoId[]" value="${itemId}">
+                            ${itemName}
+                        </td>
+                        <td class="text-center grid-action-cell">
+                            <div class="d-flex justify-content-center">
+                                <button type="button" class="btn btn-sm btn-info text-white btn-edit-recursoGrupo me-1" 
+                                    data-id="${itemId}" data-bs-toggle="modal" data-bs-target="#modalEdicaoRecursoGrupo" title="Visualizar">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-danger btn-remove-entity" 
+                                    data-id="${itemId}" data-entity="${entityName}" title="Remover">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Usa jQuery para anexar todas as linhas de uma vez
+            $(gridBody).append(rows);
+
+            attachEditListeners(entityName); 
+        } catch (e) {
+            console.error(`ERRO CRÍTICO [${entityName}]:`, e);
+            const el = document.getElementById('recursosGruposGridBody');
+            if (el) {
+                createEmptyRow(el, 2, 'ERRO CRÍTICO DE RENDERIZAÇÃO JS.');
+                el.querySelector('td').classList.add('text-danger','fw-bold');
+            }
+        }
+    };
     
     const renderRiscosGrid = () => {
         try {
@@ -795,7 +862,7 @@ $(document).ready(function() {
     renderCaracteristicasGrid();
     renderRiscosGrid();
     renderCursosGrid();
-    renderRecursosGruposGrid();
+    renderRecursosGruposGrid(); 
     renderAreasAtuacaoGrid();
     renderSinonimosGrid(); 
     
