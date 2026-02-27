@@ -641,18 +641,21 @@ $(document).ready(function() {
     
     const getSelectedOptionsData = (selectId) => {
         const selectedValues = $(`#${selectId}`).val();
-        if (!selectedValues) return [];
+        if (!selectedValues || selectedValues.length === 0) return [];
         
         const data = [];
         const selectElement = document.getElementById(selectId);
         const values = Array.isArray(selectedValues) ? selectedValues : [selectedValues];
         
         values.forEach(value => {
+            // CORREÇÃO: Ignora o placeholder vazio e evita IDs quebrados (NaN)
+            if (!value || isNaN(parseInt(value))) return; 
+
             const option = selectElement.querySelector(`option[value="${value}"]`);
             if (option) {
                 data.push({
                     id: parseInt(value),
-                    nome: option.getAttribute('data-nome'),
+                    nome: option.getAttribute('data-nome') || option.text, // Fallback de segurança
                     tipo: option.getAttribute('data-tipo')
                 });
             }
@@ -750,6 +753,10 @@ $(document).ready(function() {
         if (!btn) return;
         btn.onclick = function() {
             const selectedItems = getSelectedOptionsData('cursoSelect');
+            if (selectedItems.length === 0) {
+                alert('Por favor, selecione um Curso válido na lista.');
+                return;
+            }
             const isObrigatorio = document.getElementById('cursoObrigatorioInput').checked;
             const obs = document.getElementById('cursoObsInput').value.trim();
             const cursosAssociados = getEntityMap('curso');

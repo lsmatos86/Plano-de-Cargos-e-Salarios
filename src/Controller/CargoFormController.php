@@ -259,7 +259,12 @@ class CargoFormController
                 $sql_risco = "INSERT INTO riscos_cargo (cargoId, riscoId, riscoDescricao) VALUES (?, ?, ?)";
                 $stmt_risco = $this->pdo->prepare($sql_risco);
                 for ($i = 0; $i < count($riscosInput['riscoId']); $i++) {
-                    $stmt_risco->execute([$novoCargoId, (int)$riscosInput['riscoId'][$i], $riscosInput['riscoDescricao'][$i] ?? '']);
+                    $riscoId = (int)($riscosInput['riscoId'][$i] ?? 0);
+                    
+                    // CORREÇÃO: Ignora linhas em branco que vieram do formulário
+                    if ($riscoId <= 0) continue; 
+
+                    $stmt_risco->execute([$novoCargoId, $riscoId, $riscosInput['riscoDescricao'][$i] ?? '']);
                 }
             }
 
@@ -274,9 +279,14 @@ class CargoFormController
                 $sql_curso = "INSERT INTO cursos_cargo (cargoId, cursoId, cursoCargoObrigatorio, cursoCargoObs) VALUES (?, ?, ?, ?)";
                 $stmt_curso = $this->pdo->prepare($sql_curso);
                 for ($i = 0; $i < count($cursosInput['cursoId']); $i++) {
+                    $cursoId = (int)($cursosInput['cursoId'][$i] ?? 0);
+                    
+                    // CORREÇÃO: Ignora linhas em branco
+                    if ($cursoId <= 0) continue; 
+
                     $obrigatorio = (int)($cursosInput['cursoCargoObrigatorio'][$i] ?? 0);
                     $obs = $cursosInput['cursoCargoObs'][$i] ?? '';
-                    $stmt_curso->execute([$novoCargoId, (int)$cursosInput['cursoId'][$i], $obrigatorio, $obs]);
+                    $stmt_curso->execute([$novoCargoId, $cursoId, $obrigatorio, $obs]);
                 }
             }
             
@@ -301,14 +311,16 @@ class CargoFormController
     {
         $this->pdo->prepare("DELETE FROM {$tableName} WHERE {$fkColumn} = ?")->execute([$fkId]);
         if (!empty($values)) {
+            // CORREÇÃO: Remove valores vazios, duplicados ou zero do array antes do INSERT
+            $values = array_unique(array_filter($values, function($val) {
+                return !empty(trim((string)$val));
+            }));
+
             $insert_sql = "INSERT INTO {$tableName} ({$fkColumn}, {$valueColumn}) VALUES (?, ?)";
             $stmt_rel = $this->pdo->prepare($insert_sql);
             foreach ($values as $valor) {
-                // Remove espaços em branco se for string (para sinônimos)
                 $valor = is_string($valor) ? trim($valor) : $valor; 
-                if (!empty($valor)) {
-                    $stmt_rel->execute([$fkId, $valor]);
-                }
+                $stmt_rel->execute([$fkId, $valor]);
             }
         }
     }
