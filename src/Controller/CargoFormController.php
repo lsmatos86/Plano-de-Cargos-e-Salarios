@@ -198,6 +198,7 @@ class CargoFormController
     {
         $cargoIdSubmissao = (int)($postData['cargoId'] ?? 0);
         $isUpdating = $cargoIdSubmissao > 0;
+        $isRevisado = isset($postData['is_revisado']) && $postData['is_revisado'] == '1' ? 1 : 0;
 
         // 3.1 Captura dos Dados Principais
         $data = [
@@ -213,6 +214,8 @@ class CargoFormController
             'faixaId' => empty($postData['faixaId']) ? null : (int)$postData['faixaId'],
             'nivelHierarquicoId' => empty($postData['nivelHierarquicoId']) ? null : (int)$postData['nivelHierarquicoId'],
             'cargoSupervisorId' => empty($postData['cargoSupervisorId']) ? null : (int)$postData['cargoSupervisorId'],
+            'is_revisado' => $isRevisado,
+            'data_revisao' => $isRevisado ? date('Y-m-d H:i:s') : null,
         ];
 
         // Validação

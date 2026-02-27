@@ -930,4 +930,67 @@ $(document).ready(function() {
     });
 
     console.log("cargos_form.js (VERSÃO FINAL) carregado e pronto.");
+
+    // --- LÓGICA DE BLOQUEIO E REVISÃO DE CARGOS ---
+    
+    const checkStatusRevisao = () => {
+        const isRevisado = $('#is_revisado').is(':checked');
+        const cargoId = $('input[name="cargoId"]').val();
+
+        // Só bloqueia se for um cargo que já existe (ID > 0) e está marcado como revisado
+        if (isRevisado && parseInt(cargoId) > 0) {
+            bloquearFormulario();
+        }
+    };
+
+    const bloquearFormulario = () => {
+        // Desabilita todos os inputs, selects, textareas e botões dentro do form, EXCETO o botão de desbloquear e o checkbox
+        $('#cargoForm').find('input, select, textarea, button')
+            .not('#btnDesbloquearEdicao')
+            .not('#is_revisado')
+            .prop('disabled', true);
+        
+        // Desabilita as interações do Select2
+        $('.searchable-select').prop('disabled', true);
+        
+        // Esconde botões de adicionar nas grids
+        $('[data-bs-target^="#modalAssociacao"]').hide();
+        $('#btnAddSinonimo').hide();
+        
+        // Bloqueia as ações das grids (excluir/editar)
+        $('.btn-remove-entity, .btn-edit-habilidade, .btn-edit-caracteristica, .btn-edit-recursoGrupo, .btn-edit-curso, .btn-edit-risco').prop('disabled', true);
+    };
+
+    const desbloquearFormulario = () => {
+        // Reabilita tudo
+        $('#cargoForm').find('input, select, textarea, button').prop('disabled', false);
+        $('.searchable-select').prop('disabled', false);
+        $('[data-bs-target^="#modalAssociacao"]').show();
+        $('#btnAddSinonimo').show();
+        $('#is_revisado').prop('checked', false); // Tira o check para exigir que o admin marque de novo se quiser salvar
+        $('#btnDesbloquearEdicao').hide();
+        
+        // Mostra um aviso
+        alert('Edição desbloqueada. Lembre-se de salvar as alterações no final da página.');
+    };
+
+    // Ação do botão de Desbloquear (Exigindo Senha)
+    $('#btnDesbloquearEdicao').on('click', function() {
+        // Substitua 'senha123' pela senha master desejada ou integre com uma chamada AJAX ao AuthController
+        const senhaMaster = 'admin123'; 
+        const senhaDigitada = prompt('Este cargo já foi revisado e bloqueado.\n\nDigite a senha do Administrador Geral para liberar a edição:');
+        
+        if (senhaDigitada === null) {
+            return; // Cancelou o prompt
+        }
+        
+        if (senhaDigitada === senhaMaster) {
+            desbloquearFormulario();
+        } else {
+            alert('Senha incorreta! Acesso negado.');
+        }
+    });
+
+    // Chama a verificação logo que a página carrega
+    checkStatusRevisao();
 });

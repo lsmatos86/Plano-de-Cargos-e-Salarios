@@ -140,6 +140,31 @@ require_once $root_path . 'includes/header.php';
             <input type="hidden" name="originalId" value="<?php echo htmlspecialchars($originalId); ?>">
         <?php endif; ?>
 
+    <?php 
+        $revisado = (int)($cargo['is_revisado'] ?? 0);
+        $dataRevisao = !empty($cargo['data_revisao']) ? date('d/m/Y H:i', strtotime($cargo['data_revisao'])) : '';
+        ?>
+        <div class="card mb-4 border-<?php echo $revisado ? 'success' : 'warning'; ?>" id="cardRevisao">
+            <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-center py-3 bg-light">
+                <div class="form-check form-switch mb-2 mb-md-0 fs-5">
+                    <input class="form-check-input cursor-pointer" type="checkbox" id="is_revisado" name="is_revisado" value="1" <?php echo $revisado ? 'checked' : ''; ?>>
+                    <label class="form-check-label fw-bold text-<?php echo $revisado ? 'success' : 'dark'; ?>" for="is_revisado">
+                        <i class="fas fa-check-double"></i> Cargo Revisado e Aprovado
+                    </label>
+                </div>
+                
+                <div class="d-flex align-items-center">
+                    <?php if ($revisado && $dataRevisao): ?>
+                        <span class="badge bg-success fs-6 me-3">
+                            <i class="fas fa-calendar-check"></i> Revisado em: <?php echo $dataRevisao; ?>
+                        </span>
+                        <button type="button" class="btn btn-sm btn-danger" id="btnDesbloquearEdicao">
+                            <i class="fas fa-unlock"></i> Desbloquear Edição
+                        </button>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
 
         <ul class="nav nav-tabs" id="cargoTabs" role="tablist">
             <li class="nav-item" role="presentation">
