@@ -258,19 +258,25 @@ require_once $root_path . 'includes/header.php';
                     </div>
 
                     <div class="col-md-6 mb-3">
-                        <label for="cargoSupervisorId" class="form-label">Reporta-se a (Supervisor)</label>
-                        <select class="form-select searchable-select" id="cargoSupervisorId" name="cargoSupervisorId">
-                            <option value="">--- Nível Superior / Nenhum ---</option>
-                            <?php foreach ($cargosSupervisor as $id => $nome): 
-                                // Impede que um cargo seja supervisor de si mesmo
-                                if ($isEditing && (int)($originalId) === (int)$id): continue; endif; 
+                        <label for="cargoSupervisorId" class="form-label">Reporta-se a (Supervisor/Líder)</label>
+                        <select class="form-select searchable-select" id="cargoSupervisorId" name="cargoSupervisorId[]" multiple="multiple" data-placeholder="--- Nenhum ou Múltiplos ---">
+                            <?php 
+                            // Pega os IDs dos supervisores já salvos neste cargo
+                            $supervisoresAtuais = isset($supervisores) ? array_column($supervisores, 'id') : [];
+                            
+                            foreach ($cargosSupervisor as $id => $nome): 
+                                // Impede que o cargo seja chefe dele mesmo
+                                if ($isEditing && (int)($originalId) === (int)$id) continue; 
+                                
+                                // Verifica se o ID do loop está no array de salvos no banco
+                                $selected = in_array($id, $supervisoresAtuais) ? 'selected' : '';
                             ?>
-                                <option value="<?php echo $id; ?>" <?php echo (int)($cargo['cargoSupervisorId'] ?? 0) === (int)$id ? 'selected' : ''; ?>>
+                                <option value="<?php echo $id; ?>" <?php echo $selected; ?>>
                                     <?php echo htmlspecialchars($nome); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                        <div class="form-text">Define a linha de comando para o Organograma.</div>
+                        <div class="form-text">Você pode selecionar mais de um supervisor para atuações em áreas/equipes diferentes.</div>
                     </div>
                 </div>
 

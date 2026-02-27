@@ -4,10 +4,10 @@
 namespace App\Repository;
 
 use App\Core\Database;
-use App\Service\AuditService;  // 1. IMPORTAR
-use App\Service\AuthService;   // 2. IMPORTAR
+use App\Service\AuditService;
+use App\Service\AuthService;
 use PDO;
-use Exception; // Importa a classe Exception global
+use Exception;
 
 /**
  * Lida com todas as operações de banco de dados para a entidade Cargo.
@@ -15,30 +15,19 @@ use Exception; // Importa a classe Exception global
 class CargoRepository
 {
     private PDO $pdo;
-    private AuditService $auditService; // 3. ADICIONAR PROPRIEDADE
-    private AuthService $authService;   // 4. ADICIONAR PROPRIEDADE
+    private AuditService $auditService;
+    private AuthService $authService;
 
     public function __construct()
     {
-        // Pega a conexão PDO da nossa classe de Database
         $this->pdo = Database::getConnection();
-        
-        // 5. INICIALIZAR OS SERVIÇOS
         $this->auditService = new AuditService();
         $this->authService = new AuthService();
     }
 
-    /**
-     * NOVO MÉTODO (Adicionado no Passo 26)
-     * Busca os IDs e Nomes de todos os cargos para o relatório consolidado.
-     * (Usado por relatorios/cargo_total.php)
-     *
-     * @return array
-     */
     public function findAllIdsAndNames(): array
     {
         try {
-            // Busca apenas IDs e Nomes para a iteração (mais leve)
             $stmt = $this->pdo->query("SELECT cargoId, cargoNome FROM cargos ORDER BY cargoNome ASC");
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
@@ -47,25 +36,18 @@ class CargoRepository
         }
     }
 
-    /**
-     * Salva (cria ou atualiza) um cargo e todas as suas relações N:M.
-     * (Criado no Passo 11 - Usado por cargos_form.php)
-     *
-     * @param array $postData Os dados vindo diretamente do $_POST.
-     * @return int O ID do cargo salvo.
-     * @throws Exception Se a validação falhar ou o salvamento falhar.
-     */
     public function save(array $postData): int
     {
         $cargoIdSubmissao = (int)($postData['cargoId'] ?? 0);
         $isUpdating = $cargoIdSubmissao > 0;
 
-        // --- 6. VERIFICAÇÃO DE PERMISSÃO (AuthService) ---
         $permissionNeeded = $isUpdating ? 'cargos:edit' : 'cargos:create';
-        // Lança uma exceção se o usuário não tiver permissão
         $this->authService->checkAndFail($permissionNeeded); 
 
-        // 1. Captura dos Dados Principais
+        // Captura da checagem de Revisão
+        $isRevisado = isset($postData['is_revisado']) && $postData['is_revisado'] == '1' ? 1 : 0;
+
+        // 1. Captura dos Dados Principais (Removido cargoSupervisorId daqui)
         $data = [
             'cargoNome' => trim($postData['cargoNome'] ?? ''),
             'cargoDescricao' => trim($postData['cargoDescricao'] ?? null),
@@ -78,7 +60,8 @@ class CargoRepository
             'cargoResponsabilidades' => trim($postData['cargoResponsabilidades'] ?? null),
             'faixaId' => empty($postData['faixaId']) ? null : (int)$postData['faixaId'],
             'nivelHierarquicoId' => empty($postData['nivelHierarquicoId']) ? null : (int)$postData['nivelHierarquicoId'],
-            'cargoSupervisorId' => empty($postData['cargoSupervisorId']) ? null : (int)$postData['cargoSupervisorId'],
+            'is_revisado' => $isRevisado,
+            'data_revisao' => $isRevisado ? date('Y-m-d H:i:s') : null,
         ];
 
         // 2. Validação
@@ -86,12 +69,13 @@ class CargoRepository
             throw new Exception("Os campos Nome do Cargo, CBO e Escolaridade são obrigatórios.");
         }
 
-        // 3. Captura dos Dados de Relacionamento
+        // 3. Captura dos Dados de Relacionamento (INCLUI MÚLTIPLOS SUPERVISORES)
         $relacionamentosSimples = [
             'cargos_area' => ['coluna' => 'areaId', 'valores' => (array)($postData['areaId'] ?? [])],
             'habilidades_cargo' => ['coluna' => 'habilidadeId', 'valores' => (array)($postData['habilidadeId'] ?? [])],
             'caracteristicas_cargo' => ['coluna' => 'caracteristicaId', 'valores' => (array)($postData['caracteristicaId'] ?? [])],
             'recursos_grupos_cargo' => ['coluna' => 'recursoGrupoId', 'valores' => (array)($postData['recursoGrupoId'] ?? [])],
+            'cargos_supervisores' => ['coluna' => 'supervisorId', 'valores' => (array)($postData['cargoSupervisorId'] ?? [])],
         ];
 
         $riscosInput = [
@@ -110,7 +94,7 @@ class CargoRepository
         // 4. Inicia a Transação
         $this->pdo->beginTransaction();
         try {
-            // 5. Salva o Cargo Principal (UPDATE ou CREATE)
+            // 5. Salva o Cargo Principal
             $fields = array_keys($data);
             $bindings = array_values($data);
 
@@ -122,9 +106,7 @@ class CargoRepository
                 $stmt->execute($bindings);
                 $novoCargoId = $cargoIdSubmissao;
 
-                // --- 7. LOG DE AUDITORIA (UPDATE) ---
                 $this->auditService->log('UPDATE', 'cargos', $novoCargoId, $postData);
-
             } else {
                 $sql_fields = implode(', ', $fields);
                 $placeholders = implode(', ', array_fill(0, count($fields), '?'));
@@ -133,11 +115,10 @@ class CargoRepository
                 $stmt->execute($bindings);
                 $novoCargoId = $this->pdo->lastInsertId();
                 
-                // --- 8. LOG DE AUDITORIA (CREATE) ---
                 $this->auditService->log('CREATE', 'cargos', $novoCargoId, $postData);
             }
 
-            // 6. Salva Relacionamentos N:M Simples
+            // 6. Salva Relacionamentos N:M Simples (Agora salva múltiplos chefes na cargos_supervisores)
             foreach ($relacionamentosSimples as $tableName => $rel) {
                 $column = $rel['coluna'];
                 $valores = $rel['valores'];
@@ -146,12 +127,14 @@ class CargoRepository
                     $insert_sql = "INSERT INTO {$tableName} (cargoId, {$column}) VALUES (?, ?)";
                     $stmt_rel = $this->pdo->prepare($insert_sql);
                     foreach ($valores as $valorId) {
-                        $stmt_rel->execute([$novoCargoId, $valorId]);
+                        if ((int)$valorId > 0) {
+                            $stmt_rel->execute([$novoCargoId, (int)$valorId]);
+                        }
                     }
                 }
             }
 
-            // 7. Salva Riscos (Complexo)
+            // 7. Salva Riscos 
             $this->pdo->prepare("DELETE FROM riscos_cargo WHERE cargoId = ?")->execute([$novoCargoId]);
             if (!empty($riscosInput['riscoId'])) {
                 $sql_risco = "INSERT INTO riscos_cargo (cargoId, riscoId, riscoDescricao) VALUES (?, ?, ?)";
@@ -161,7 +144,7 @@ class CargoRepository
                 }
             }
 
-            // 8. Salva Cursos (Complexo)
+            // 8. Salva Cursos 
             $this->pdo->prepare("DELETE FROM cursos_cargo WHERE cargoId = ?")->execute([$novoCargoId]);
             if (!empty($cursosInput['cursoId'])) {
                 $sql_curso = "INSERT INTO cursos_cargo (cargoId, cursoId, cursoCargoObrigatorio, cursoCargoObs) VALUES (?, ?, ?, ?)";
@@ -183,28 +166,16 @@ class CargoRepository
                 }
             }
 
-            // 10. Commita a Transação
             $this->pdo->commit();
             return $novoCargoId;
 
         } catch (Exception $e) {
             $this->pdo->rollBack();
-            
-            // REPARO DE SEGURANÇA: Loga o erro detalhado e propaga uma exceção com mensagem genérica.
             error_log('Falha fatal ao salvar Cargo: ' . $e->getMessage());
-            
-            // Propaga a exceção para a View (Controller) tratar, mas com uma mensagem segura.
             throw new Exception("Erro fatal ao salvar o Cargo no banco. Tente novamente ou contate o suporte.");
         }
     }
 
-    /**
-     * Busca todos os dados de um cargo e suas relações para popular o formulário.
-     * (Criado no Passo 10 - Usado por cargos_form.php)
-     *
-     * @param int $cargoId O ID do cargo a ser buscado.
-     * @return array|null Um array com ['cargo' => [], 'sinonimos' => [], ...] ou null se não encontrado.
-     */
     public function findFormData(int $cargoId): ?array
     {
         $data = [
@@ -215,94 +186,72 @@ class CargoRepository
             'habilidades' => [],
             'caracteristicas' => [],
             'cursos' => [],
-            'recursos_grupos' => []
+            'recursos_grupos' => [],
+            'supervisores' => [] // ADICIONADO: Array para os múltiplos chefes
         ];
 
         try {
-            // 1. Busca Cargo Principal
             $stmt = $this->pdo->prepare("SELECT * FROM cargos WHERE cargoId = ?");
             $stmt->execute([$cargoId]);
-            $cargo = $stmt->fetch(PDO::FETCH_ASSOC); // Modificado para FETCH_ASSOC
+            $cargo = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if (!$cargo) {
-                return null; // Cargo não existe
-            }
+            if (!$cargo) return null;
             $data['cargo'] = $cargo;
 
-            // 2. SINÔNIMOS
-            // Corrigido: cargoSinonimoNome AS nome (para consistência com o JS)
             $stmt = $this->pdo->prepare("SELECT cargoSinonimoId AS id, cargoSinonimoNome AS nome FROM cargo_sinonimos WHERE cargoId = ?");
             $stmt->execute([$cargoId]);
             $data['sinonimos'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // 3. RISCOS (COMPLEX N:M)
             $stmt = $this->pdo->prepare("SELECT rc.riscoId AS id, r.riscoNome AS nome, rc.riscoDescricao AS descricao FROM riscos_cargo rc JOIN riscos r ON r.riscoId = rc.riscoId WHERE rc.cargoId = ?");
             $stmt->execute([$cargoId]);
             $data['riscos'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // 4. ÁREAS DE ATUAÇÃO (SIMPLE N:M)
             $stmt = $this->pdo->prepare("SELECT ca.areaId AS id, a.areaNome AS nome FROM cargos_area ca JOIN areas_atuacao a ON a.areaId = ca.areaId WHERE ca.cargoId = ?");
             $stmt->execute([$cargoId]);
             $data['areas'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // 5. HABILIDADES (SIMPLE N:M)
             $stmt = $this->pdo->prepare("SELECT hc.habilidadeId AS id, h.habilidadeNome AS nome, h.habilidadeTipo AS tipo FROM habilidades_cargo hc JOIN habilidades h ON h.habilidadeId = hc.habilidadeId WHERE hc.cargoId = ?");
             $stmt->execute([$cargoId]);
             $data['habilidades'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // 6. CARACTERÍSTICAS (SIMPLE N:M)
             $stmt = $this->pdo->prepare("SELECT cc.caracteristicaId AS id, c.caracteristicaNome AS nome FROM caracteristicas_cargo cc JOIN caracteristicas c ON c.caracteristicaId = cc.caracteristicaId WHERE cc.cargoId = ?");
             $stmt->execute([$cargoId]);
             $data['caracteristicas'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // 7. CURSOS (COMPLEX N:M)
             $stmt = $this->pdo->prepare("SELECT curc.cursoId AS id, cur.cursoNome AS nome, curc.cursoCargoObrigatorio AS obrigatorio, curc.cursoCargoObs AS obs FROM cursos_cargo curc JOIN cursos cur ON cur.cursoId = curc.cursoId WHERE curc.cargoId = ?");
             $stmt->execute([$cargoId]);
-            
             $data['cursos'] = array_map(function ($curso) {
                 $curso['obrigatorio'] = (bool)$curso['obrigatorio'];
                 return $curso;
             }, $stmt->fetchAll(PDO::FETCH_ASSOC));
 
-            // 8. GRUPOS DE RECURSOS (SIMPLE N:M)
             $stmt = $this->pdo->prepare("SELECT rgc.recursoGrupoId AS id, rg.recursoGrupoNome AS nome FROM recursos_grupos_cargo rgc JOIN recursos_grupos rg ON rg.recursoGrupoId = rgc.recursoGrupoId WHERE rgc.cargoId = ?");
             $stmt->execute([$cargoId]);
             $data['recursos_grupos'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // BUSCA SUPERVISORES DA NOVA TABELA
+            $stmt = $this->pdo->prepare("SELECT cs.supervisorId AS id, c.cargoNome AS nome FROM cargos_supervisores cs JOIN cargos c ON c.cargoId = cs.supervisorId WHERE cs.cargoId = ?");
+            $stmt->execute([$cargoId]);
+            $data['supervisores'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             return $data;
 
         } catch (\PDOException $e) {
             error_log("Erro ao carregar dados do formulário para o Cargo ID {$cargoId}: " . $e->getMessage());
-            return null; // Retorna null em caso de erro de banco
+            return null;
         }
     }
 
-
-    /**
-     * Busca cargos de forma paginada, com filtro e ordenação.
-     * (Criado no Passo 7 - Usado por cargos.php)
-     *
-     * @param array $params Parâmetros de busca (term, page, limit, order_by, sort_dir)
-     * @return array Contendo ['data', 'total', 'totalPages', 'currentPage']
-     */
     public function findAllPaginated(array $params = []): array
     {
-        // 1. Configuração da Paginação e Filtros
         $itemsPerPage = (int)($params['limit'] ?? 10);
         $currentPage = (int)($params['page'] ?? 1);
         $currentPage = max(1, $currentPage); 
-        
         $term = $params['term'] ?? '';
         $sqlTerm = "%{$term}%";
-        
         $all_bindings = [];
 
-        // 2. Query para Contagem Total
-        $count_sql = "
-            SELECT COUNT(c.cargoId)
-            FROM cargos c
-            LEFT JOIN cbos b ON b.cboId = c.cboId
-        ";
+        $count_sql = "SELECT COUNT(c.cargoId) FROM cargos c LEFT JOIN cbos b ON b.cboId = c.cboId";
         $count_bindings = [];
 
         if (!empty($term)) {
@@ -321,21 +270,13 @@ class CargoRepository
             $totalRecords = 0;
         }
 
-        // 3. Ajuste de Página
         $totalPages = $totalRecords > 0 ? ceil($totalRecords / $itemsPerPage) : 1;
         if ($currentPage > $totalPages) {
             $currentPage = $totalPages;
         }
         $offset = ($currentPage - 1) * $itemsPerPage;
 
-        // 4. Query Principal
-        $sql = "
-            SELECT 
-                c.cargoId, c.cargoNome, c.cargoResumo, c.cargoDataAtualizacao,
-                b.cboTituloOficial
-            FROM cargos c
-            LEFT JOIN cbos b ON b.cboId = c.cboId
-        ";
+        $sql = "SELECT c.cargoId, c.cargoNome, c.cargoResumo, c.cargoDataAtualizacao, b.cboTituloOficial FROM cargos c LEFT JOIN cbos b ON b.cboId = c.cboId";
 
         if (!empty($term)) {
             $sql .= " WHERE c.cargoNome LIKE :term1 OR c.cargoResumo LIKE :term2 OR b.cboTituloOficial LIKE :term3";
@@ -344,24 +285,18 @@ class CargoRepository
             $all_bindings[':term3'] = $sqlTerm;
         }
 
-        // 5. Validação de Colunas de Ordenação
         $orderBy = $params['order_by'] ?? 'c.cargoId';
         $sortDir = $params['sort_dir'] ?? 'ASC';
-        
         $validColumns = ['c.cargoId', 'c.cargoNome', 'b.cboTituloOficial', 'c.cargoDataAtualizacao'];
         $orderBy = in_array($orderBy, $validColumns) ? $orderBy : 'c.cargoId';
         $sortDir = in_array(strtoupper($sortDir), ['ASC', 'DESC']) ? strtoupper($sortDir) : 'ASC';
 
-        $sql .= " ORDER BY {$orderBy} {$sortDir}";
-        $sql .= " LIMIT :limit OFFSET :offset";
-
+        $sql .= " ORDER BY {$orderBy} {$sortDir} LIMIT :limit OFFSET :offset";
         $all_bindings[':limit'] = $itemsPerPage;
         $all_bindings[':offset'] = $offset;
 
-        // 6. Executa a query principal
         try {
             $stmt = $this->pdo->prepare($sql);
-            
             $stmt->bindParam(':limit', $all_bindings[':limit'], PDO::PARAM_INT);
             $stmt->bindParam(':offset', $all_bindings[':offset'], PDO::PARAM_INT);
             if (!empty($term)) {
@@ -369,15 +304,13 @@ class CargoRepository
                 $stmt->bindParam(':term2', $all_bindings[':term2']);
                 $stmt->bindParam(':term3', $all_bindings[':term3']);
             }
-            
             $stmt->execute();
-            $registros = $stmt->fetchAll(PDO::FETCH_ASSOC); // Modificado para FETCH_ASSOC
+            $registros = $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
             error_log("Erro ao buscar cargos: " . $e->getMessage() . " SQL: " . $sql);
             $registros = [];
         }
 
-        // 7. Retorna o pacote completo
         return [
             'data' => $registros,
             'total' => $totalRecords,
@@ -386,20 +319,12 @@ class CargoRepository
         ];
     }
 
-
-    /**
-     * Remove todas as referências de um Cargo em suas tabelas de junção N:M.
-     * (Criado no Passo 5 - Usado por delete() e save())
-     *
-     * @param int $cargoId O ID do cargo.
-     * @return bool True se a limpeza for bem-sucedida.
-     */
     public function clearRelationships(int $cargoId): bool
     {
         $joinTables = [
             'habilidades_cargo', 'caracteristicas_cargo', 'riscos_cargo',
             'cargo_sinonimos', 'cursos_cargo', 'recursos_grupos_cargo',
-            'cargos_area'
+            'cargos_area', 'cargos_supervisores' // ADICIONADO AQUI
         ];
         $success = true;
 
@@ -415,127 +340,90 @@ class CargoRepository
         return $success;
     }
 
-    /**
-     * Exclui um cargo e todas as suas relações.
-     * (Criado no Passo 5 - Usado por cargos.php)
-     *
-     * @param int $id O ID do cargo a ser excluído.
-     * @return int O número de linhas afetadas (0 ou 1).
-     * @throws \Exception Se a limpeza das relações falhar.
-     */
     public function delete(int $id): int
     {
-        // --- 9. VERIFICAÇÃO DE PERMISSÃO (AuthService) ---
         $this->authService->checkAndFail('cargos:delete');
-        
         $this->pdo->beginTransaction();
         try {
-            // 1. Limpa todas as referências
             $cleaned = $this->clearRelationships($id);
-
             if (!$cleaned) {
                 throw new \Exception("Falha ao limpar relacionamentos N:M para o Cargo ID {$id}.");
             }
-
-            // 2. Exclui o cargo principal
             $stmt = $this->pdo->prepare("DELETE FROM cargos WHERE cargoId = ?");
             $stmt->execute([$id]);
             $rowCount = $stmt->rowCount();
-            
-            // --- 10. LOG DE AUDITORIA (DELETE) ---
             if ($rowCount > 0) {
                 $this->auditService->log('DELETE', 'cargos', $id, ['deletedCargoId' => $id]);
             }
-
             $this->pdo->commit();
             return $rowCount;
-
         } catch (\Exception $e) {
             $this->pdo->rollBack();
-            // Propaga a exceção para que o controller possa tratá-la
             throw $e;
         }
     }
 
-    /**
-     * Carrega todos os dados de um cargo para relatórios.
-     * (Criado no Passo 4 - Usado por gerador_pdf.php e cargo_individual.php)
-     *
-     * @param int $cargoId O ID do cargo.
-     * @return array|null Os dados completos do cargo ou null se não encontrado.
-     */
     public function findReportData(int $cargoId): ?array
     {
         if ($cargoId <= 0) return null;
-
         $data = [];
 
         try {
-            // 1. DADOS BÁSICOS
+            // 1. DADOS BÁSICOS (n.nivelDescricao Adicionado! Removido JOIN antigo do supervisor)
             $stmt = $this->pdo->prepare("
                 SELECT 
                     c.*, e.escolaridadeTitulo, b.cboCod, b.cboTituloOficial,
                     f.faixaNivel, f.faixaSalarioMinimo, f.faixaSalarioMaximo,
-                    n.nivelOrdem, t.tipoNome AS tipoHierarquiaNome,
-                    sup.cargoNome AS cargoSupervisorNome
+                    n.nivelOrdem, n.nivelDescricao, t.tipoNome AS tipoHierarquiaNome
                 FROM cargos c
                 JOIN escolaridades e ON e.escolaridadeId = c.escolaridadeId  
                 JOIN cbos b ON b.cboId = c.cboId                          
                 LEFT JOIN faixas_salariais f ON f.faixaId = c.faixaId
                 LEFT JOIN nivel_hierarquico n ON n.nivelId = c.nivelHierarquicoId 
                 LEFT JOIN tipo_hierarquia t ON t.tipoId = n.tipoId              
-                LEFT JOIN cargos sup ON sup.cargoId = c.cargoSupervisorId        
                 WHERE c.cargoId = ?
             ");
             $stmt->execute([$cargoId]);
-            $cargo = $stmt->fetch(PDO::FETCH_ASSOC); // Modificado para FETCH_ASSOC
+            $cargo = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$cargo) return null;
             $data['cargo'] = $cargo;
             
-            // 2. BUSCA DE RELACIONAMENTOS N:M
-            
-            // 2.1. HABILIDADES
             $stmt_hab = $this->pdo->prepare("SELECT h.habilidadeNome, h.habilidadeTipo, h.habilidadeDescricao FROM habilidades_cargo hc JOIN habilidades h ON h.habilidadeId = hc.habilidadeId WHERE hc.cargoId = ? ORDER BY h.habilidadeTipo DESC, h.habilidadeNome ASC");
             $stmt_hab->execute([$cargoId]);
-            $data['habilidades'] = $stmt_hab->fetchAll(PDO::FETCH_ASSOC); // Modificado
+            $data['habilidades'] = $stmt_hab->fetchAll(PDO::FETCH_ASSOC);
 
-            // 2.2. CARACTERÍSTICAS
             $stmt_car = $this->pdo->prepare("SELECT c.caracteristicaNome, c.caracteristicaDescricao FROM caracteristicas_cargo cc JOIN caracteristicas c ON c.caracteristicaId = cc.caracteristicaId WHERE cc.cargoId = ? ORDER BY c.caracteristicaNome ASC");
             $stmt_car->execute([$cargoId]);
-            $data['caracteristicas'] = $stmt_car->fetchAll(PDO::FETCH_ASSOC); // Modificado
+            $data['caracteristicas'] = $stmt_car->fetchAll(PDO::FETCH_ASSOC);
             
-            // 2.3. RISCOS
             $stmt_ris = $this->pdo->prepare("SELECT r.riscoNome, rc.riscoDescricao FROM riscos_cargo rc JOIN riscos r ON r.riscoId = rc.riscoId WHERE rc.cargoId = ? ORDER BY r.riscoNome ASC");
             $stmt_ris->execute([$cargoId]);
-            $data['riscos'] = $stmt_ris->fetchAll(PDO::FETCH_ASSOC); // Modificado
+            $data['riscos'] = $stmt_ris->fetchAll(PDO::FETCH_ASSOC);
             
-            // 2.4. CURSOS
-            // >>> REPARO CRÍTICO: Adiciona AS nome, AS obrigatorio, AS obs para evitar erro Undefined array key "obrigatorio"
             $stmt_cur = $this->pdo->prepare("SELECT cur.cursoNome AS nome, c_c.cursoCargoObrigatorio AS obrigatorio, c_c.cursoCargoObs AS obs FROM cursos_cargo c_c JOIN cursos cur ON cur.cursoId = c_c.cursoId WHERE c_c.cargoId = ? ORDER BY obrigatorio DESC, nome ASC");
             $stmt_cur->execute([$cargoId]);
-            
             $data['cursos'] = array_map(function ($curso) {
-                // Agora, a chave 'obrigatorio' existe
                 $curso['obrigatorio'] = (bool)$curso['obrigatorio'];
                 return $curso;
             }, $stmt_cur->fetchAll(PDO::FETCH_ASSOC));
-            // FIM REPARO CRÍTICO <<<
 
-            // 2.5. SINÔNIMOS
             $stmt_sin = $this->pdo->prepare("SELECT cargoSinonimoNome FROM cargo_sinonimos WHERE cargoId = ?"); 
             $stmt_sin->execute([$cargoId]);
             $data['sinonimos'] = $stmt_sin->fetchAll(PDO::FETCH_COLUMN);
             
-            // 2.6. GRUPOS DE RECURSOS
             $stmt_rec = $this->pdo->prepare("SELECT rg.recursoGrupoNome FROM recursos_grupos_cargo rcg JOIN recursos_grupos rg ON rg.recursoGrupoId = rcg.recursoGrupoId WHERE rcg.cargoId = ? ORDER BY rg.recursoGrupoNome ASC");
             $stmt_rec->execute([$cargoId]);
             $data['recursos_grupos'] = $stmt_rec->fetchAll(PDO::FETCH_COLUMN);
             
-            // 2.7. ÁREAS DE ATUAÇÃO
             $stmt_areas = $this->pdo->prepare("SELECT a.areaNome FROM cargos_area ca JOIN areas_atuacao a ON a.areaId = ca.areaId WHERE ca.cargoId = ? ORDER BY a.areaNome ASC");
             $stmt_areas->execute([$cargoId]);
             $data['areas_atuacao'] = $stmt_areas->fetchAll(PDO::FETCH_COLUMN);
+
+            // NOVO: BUSCA OS NOMES DOS SUPERVISORES PARA O RELATÓRIO PDF/TELA
+            $stmt_sup = $this->pdo->prepare("SELECT c.cargoNome FROM cargos_supervisores cs JOIN cargos c ON c.cargoId = cs.supervisorId WHERE cs.cargoId = ? ORDER BY c.cargoNome ASC");
+            $stmt_sup->execute([$cargoId]);
+            $data['supervisores'] = $stmt_sup->fetchAll(PDO::FETCH_COLUMN);
 
             return $data;
 
@@ -545,27 +433,14 @@ class CargoRepository
         }
     }
 
-    /**
-     * Busca os IDs do cargo anterior e próximo, com base no filtro e ordenação.
-     * (Usado por cargo_individual.php para navegação)
-     *
-     * @param int $currentId O ID do cargo atual
-     * @param string $orderBy A coluna de ordenação
-     * @param string $sortDir A direção (ASC/DESC)
-     * @param string $term O termo de busca (opcional)
-     * @return array ['prev_id' => int|null, 'next_id' => int|null]
-     */
     public function findAdjacentCargoIds(int $currentId, string $orderBy, string $sortDir, string $term = ''): array
     {
-        // 1. Validação de Colunas de Ordenação
         $validColumns = ['c.cargoId', 'c.cargoNome', 'b.cboTituloOficial', 'c.cargoDataAtualizacao'];
         $orderBy = in_array($orderBy, $validColumns) ? $orderBy : 'c.cargoId';
         $sortDir = in_array(strtoupper($sortDir), ['ASC', 'DESC']) ? strtoupper($sortDir) : 'ASC';
 
-        // 2. Parâmetros de Filtro
         $sqlTerm = "%{$term}%";
         $bindings = [];
-        
         $whereClause = "";
         if (!empty($term)) {
             $whereClause = " WHERE c.cargoNome LIKE :term1 OR c.cargoResumo LIKE :term2 OR b.cboTituloOficial LIKE :term3";
@@ -574,57 +449,31 @@ class CargoRepository
             $bindings[':term3'] = $sqlTerm;
         }
 
-        // 3. Query com Funções de Janela (LEAD/LAG)
-        $sql = "
-            WITH OrderedCargos AS (
-                SELECT 
-                    c.cargoId,
-                    LAG(c.cargoId) OVER (ORDER BY {$orderBy} {$sortDir}) AS prev_id,
-                    LEAD(c.cargoId) OVER (ORDER BY {$orderBy} {$sortDir}) AS next_id
-                FROM cargos c
-                LEFT JOIN cbos b ON b.cboId = c.cboId
-                {$whereClause}
-            )
-            SELECT prev_id, next_id
-            FROM OrderedCargos
-            WHERE cargoId = :currentId
-        ";
+        $sql = "WITH OrderedCargos AS (
+                SELECT c.cargoId, LAG(c.cargoId) OVER (ORDER BY {$orderBy} {$sortDir}) AS prev_id, LEAD(c.cargoId) OVER (ORDER BY {$orderBy} {$sortDir}) AS next_id
+                FROM cargos c LEFT JOIN cbos b ON b.cboId = c.cboId {$whereClause}
+            ) SELECT prev_id, next_id FROM OrderedCargos WHERE cargoId = :currentId";
 
         $bindings[':currentId'] = $currentId;
-
         try {
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute($bindings);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            
             return $result ?: ['prev_id' => null, 'next_id' => null];
-
         } catch (\PDOException $e) {
             error_log("Erro ao buscar IDs adjacentes: " . $e->getMessage());
             return ['prev_id' => null, 'next_id' => null];
         }
     }
 
-    /**
-     * Busca os IDs do primeiro e último cargo, com base no filtro e ordenação.
-     * (Usado por cargo_individual.php para navegação "Primeiro/Último")
-     *
-     * @param string $orderBy A coluna de ordenação
-     * @param string $sortDir A direção (ASC/DESC)
-     * @param string $term O termo de busca (opcional)
-     * @return array ['first_id' => int|null, 'last_id' => int|null]
-     */
     public function findFirstAndLastCargoIds(string $orderBy, string $sortDir, string $term = ''): array
     {
-        // 1. Validação de Colunas de Ordenação
         $validColumns = ['c.cargoId', 'c.cargoNome', 'b.cboTituloOficial', 'c.cargoDataAtualizacao'];
         $orderBy = in_array($orderBy, $validColumns) ? $orderBy : 'c.cargoId';
         $sortDir = in_array(strtoupper($sortDir), ['ASC', 'DESC']) ? strtoupper($sortDir) : 'ASC';
 
-        // 2. Parâmetros de Filtro
         $sqlTerm = "%{$term}%";
         $bindings = [];
-        
         $whereClause = "";
         if (!empty($term)) {
             $whereClause = " WHERE c.cargoNome LIKE :term1 OR c.cargoResumo LIKE :term2 OR b.cboTituloOficial LIKE :term3";
@@ -633,29 +482,16 @@ class CargoRepository
             $bindings[':term3'] = $sqlTerm;
         }
 
-        // 3. Query com Funções de Janela (FIRST_VALUE/LAST_VALUE)
-        $sql = "
-            WITH OrderedCargos AS (
-                SELECT 
-                    c.cargoId,
-                    FIRST_VALUE(c.cargoId) OVER (ORDER BY {$orderBy} {$sortDir} ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS first_id,
-                    LAST_VALUE(c.cargoId) OVER (ORDER BY {$orderBy} {$sortDir} ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS last_id
-                FROM cargos c
-                LEFT JOIN cbos b ON b.cboId = c.cboId
-                {$whereClause}
-            )
-            SELECT first_id, last_id
-            FROM OrderedCargos
-            LIMIT 1
-        ";
+        $sql = "WITH OrderedCargos AS (
+                SELECT c.cargoId, FIRST_VALUE(c.cargoId) OVER (ORDER BY {$orderBy} {$sortDir} ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS first_id, LAST_VALUE(c.cargoId) OVER (ORDER BY {$orderBy} {$sortDir} ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS last_id
+                FROM cargos c LEFT JOIN cbos b ON b.cboId = c.cboId {$whereClause}
+            ) SELECT first_id, last_id FROM OrderedCargos LIMIT 1";
 
         try {
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute($bindings);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            
             return $result ?: ['first_id' => null, 'last_id' => null];
-
         } catch (\PDOException $e) {
             error_log("Erro ao buscar first/last IDs: " . $e->getMessage());
             return ['first_id' => null, 'last_id' => null];
