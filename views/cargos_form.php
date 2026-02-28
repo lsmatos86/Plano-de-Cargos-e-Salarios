@@ -270,7 +270,7 @@ require_once $root_path . 'includes/header.php';
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="remuneracao-tab" data-bs-toggle="tab" data-bs-target="#remuneracao" type="button" role="tab" aria-controls="remuneracao" aria-selected="false">
-                    <i class="fas fa-money-bill-wave text-success"></i> Remuneração e Piso
+                    <i class="fas fa-money-bill-wave"></i> Remuneração e Piso
                 </button>
             </li>
             <li class="nav-item" role="presentation">
