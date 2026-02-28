@@ -121,18 +121,16 @@ require_once $root_path . 'includes/header.php';
                     $navParamsNext = http_build_query(array_merge($_GET, ['id' => $adjacentIds['next_id']]));
                     ?>
                     <a href="<?php echo empty($adjacentIds['prev_id']) ? '#' : 'cargos_form.php?' . $navParamsPrev; ?>" 
-                       class="btn btn-outline-primary btn-sm <?php echo empty($adjacentIds['prev_id']) ? 'disabled' : ''; ?>" 
-                       title="Ir para o Cargo Anterior" 
-                       onclick="return confirm('Lembre-se de SALVAR quaisquer alterações no cargo atual antes de avançar. Deseja mudar de cargo?');">
-                        <i class="fas fa-chevron-left"></i> Anterior
-                    </a>
-                    
-                    <a href="<?php echo empty($adjacentIds['next_id']) ? '#' : 'cargos_form.php?' . $navParamsNext; ?>" 
-                       class="btn btn-outline-primary btn-sm <?php echo empty($adjacentIds['next_id']) ? 'disabled' : ''; ?>" 
-                       title="Ir para o Próximo Cargo" 
-                       onclick="return confirm('Lembre-se de SALVAR quaisquer alterações no cargo atual antes de avançar. Deseja mudar de cargo?');">
-                        Próximo <i class="fas fa-chevron-right"></i>
-                    </a>
+           class="btn btn-outline-primary btn-sm btn-nav-smart <?php echo empty($adjacentIds['prev_id']) ? 'disabled' : ''; ?>" 
+           title="Ir para o Cargo Anterior">
+            <i class="fas fa-chevron-left"></i> Anterior
+        </a>
+        
+        <a href="<?php echo empty($adjacentIds['next_id']) ? '#' : 'cargos_form.php?' . $navParamsNext; ?>" 
+           class="btn btn-outline-primary btn-sm btn-nav-smart <?php echo empty($adjacentIds['next_id']) ? 'disabled' : ''; ?>" 
+           title="Ir para o Próximo Cargo">
+            Próximo <i class="fas fa-chevron-right"></i>
+        </a>
                 </div>
             <?php endif; ?>
 
@@ -821,7 +819,29 @@ require_once $root_path . 'includes/header.php';
         </div>
     </div>
 </div>
-
+<div class="modal fade" id="modalDesbloqueioSenha" tabindex="-1" aria-labelledby="modalDesbloqueioSenhaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="modalDesbloqueioSenhaLabel"><i class="fas fa-lock"></i> Desbloquear Edição</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-muted mb-3">Este cargo foi revisto e bloqueado. Digite a senha do Administrador para libertar a edição:</p>
+                <div class="mb-2">
+                    <input type="password" class="form-control text-center" id="senhaDesbloqueioInput" placeholder="Palavra-passe">
+                    <div id="erroSenhaDesbloqueio" class="text-danger small text-center mt-2 fw-bold" style="display: none;">Senha incorreta! Tente novamente.</div>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger btn-sm" id="btnConfirmarDesbloqueio">
+                    <i class="fas fa-unlock"></i> Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 <?php 
 // 8. INCLUSÃO DO FOOTER
 require_once $root_path . 'includes/footer.php';

@@ -276,7 +276,7 @@ class CargoRepository
         }
         $offset = ($currentPage - 1) * $itemsPerPage;
 
-        $sql = "SELECT c.cargoId, c.cargoNome, c.cargoResumo, c.cargoDataAtualizacao, b.cboTituloOficial FROM cargos c LEFT JOIN cbos b ON b.cboId = c.cboId";
+        $sql = "SELECT c.cargoId, c.cargoNome, c.cargoResumo, c.cargoDataAtualizacao, c.is_revisado, b.cboTituloOficial FROM cargos c LEFT JOIN cbos b ON b.cboId = c.cboId";
 
         if (!empty($term)) {
             $sql .= " WHERE c.cargoNome LIKE :term1 OR c.cargoResumo LIKE :term2 OR b.cboTituloOficial LIKE :term3";
