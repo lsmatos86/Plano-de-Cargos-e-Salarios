@@ -9,6 +9,71 @@ require_once '../vendor/autoload.php';
 require_once '../config.php';
 require_once '../includes/functions.php'; // Para getDbConnection e lookups
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_action']) && $_POST['ajax_action'] === 'unlock') {
+    header('Content-Type: application/json');
+    try {
+        $pdoAjax = \App\Core\Database::getConnection();
+        $email = trim($_POST['email'] ?? '');
+        $senha = trim($_POST['senha'] ?? '');
+        $userIdToCheck = null;
+
+        // 1. Identificar de quem é a senha que estamos a validar
+        if (empty($email)) {
+            // Se não preencheu e-mail, é o próprio utilizador logado a confirmar a sua senha
+            $userIdToCheck = $_SESSION['user_id'] ?? 0;
+        } else {
+            // Se preencheu e-mail, é uma validação de terceiros (Gestor a autorizar)
+            $stmt = $pdoAjax->prepare("SELECT usuarioId, senha, ativo FROM usuarios WHERE email = ?");
+            $stmt->execute([$email]);
+            $userCheck = $stmt->fetch(\PDO::FETCH_ASSOC);
+            
+            if ($userCheck && password_verify($senha, $userCheck['senha']) && $userCheck['ativo'] == 1) {
+                $userIdToCheck = $userCheck['usuarioId'];
+            } else {
+                echo json_encode(['success' => false, 'message' => 'E-mail ou senha do administrador incorretos.']);
+                exit;
+            }
+        }
+
+        // 2. Validar a permissão e a senha do utilizador identificado
+        if ($userIdToCheck > 0) {
+            // Se era o utilizador logado, temos de validar a senha dele agora
+            if (empty($email)) {
+                $stmt = $pdoAjax->prepare("SELECT senha FROM usuarios WHERE usuarioId = ? AND ativo = 1");
+                $stmt->execute([$userIdToCheck]);
+                $currentUser = $stmt->fetch(\PDO::FETCH_ASSOC);
+                if (!$currentUser || !password_verify($senha, $currentUser['senha'])) {
+                    echo json_encode(['success' => false, 'message' => 'A sua senha está incorreta.']);
+                    exit;
+                }
+            }
+
+            // Verificar se este utilizador (seja ele qual for) tem permissões de edição
+            $stmtPerm = $pdoAjax->prepare("
+                SELECT COUNT(*) FROM user_roles ur
+                JOIN role_permissions rp ON ur.roleId = rp.roleId
+                JOIN permissions p ON rp.permissionId = p.permissionId
+                WHERE ur.usuarioId = ? AND p.permissionName IN ('cargos:edit', 'cadastros:manage')
+            ");
+            $stmtPerm->execute([$userIdToCheck]);
+            $hasPerm = $stmtPerm->fetchColumn() > 0;
+            
+            if ($userIdToCheck == 1) $hasPerm = true; // O ID 1 (Admin Master) tem sempre permissão
+
+            if ($hasPerm) {
+                echo json_encode(['success' => true]);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Este utilizador não possui permissão de Administrador para desbloquear.']);
+            }
+        } else {
+             echo json_encode(['success' => false, 'message' => 'Sessão expirada. Faça login novamente.']);
+        }
+    } catch (\Exception $e) {
+        echo json_encode(['success' => false, 'message' => 'Erro interno de servidor.']);
+    }
+    exit;
+}
+
 // 2. IMPORTA O CONTROLLER E DEPENDÊNCIAS
 use App\Controller\CargoFormController; 
 use App\Service\AuthService;
@@ -35,7 +100,14 @@ try {
     // 5. EXTRAI AS VARIÁVEIS PARA A VIEW
     extract($data);
     $breadcrumb_items['Formulário'] = $page_title;
-
+    
+    $temPermissaoEdicao = false;
+    try {
+        $authService->checkAndFail('cargos:edit'); // Verifica a permissão base
+        $temPermissaoEdicao = true;
+    } catch (\Exception $e) {
+        $temPermissaoEdicao = false;
+    }
     // --- NOVA LÓGICA DE NAVEGAÇÃO INTERNA ---
     $adjacentIds = ['prev_id' => null, 'next_id' => null];
     if ($isEditing && $currentFormId > 0) {
@@ -197,6 +269,11 @@ require_once $root_path . 'includes/header.php';
                 </button>
             </li>
             <li class="nav-item" role="presentation">
+                <button class="nav-link" id="remuneracao-tab" data-bs-toggle="tab" data-bs-target="#remuneracao" type="button" role="tab" aria-controls="remuneracao" aria-selected="false">
+                    <i class="fas fa-money-bill-wave text-success"></i> Remuneração e Piso
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
                 <button class="nav-link" id="requisitos-tab" data-bs-toggle="tab" data-bs-target="#requisitos" type="button" role="tab" aria-controls="requisitos" aria-selected="false">
                     <i class="fas fa-list-alt"></i> Requisitos e Riscos
                 </button>
@@ -297,24 +374,6 @@ require_once $root_path . 'includes/header.php';
 
                 <hr>
 
-                <h4 class="mb-3"><i class="fas fa-wallet"></i> Faixa Salarial</h4>
-                 <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label for="faixaId" class="form-label">Faixa/Nível Salarial</label>
-                        <select class="form-select searchable-select" id="faixaId" name="faixaId">
-                            <option value="">--- Não Definido ---</option>
-                            <?php foreach ($faixasSalariais as $id => $nome): ?>
-                                <option value="<?php echo $id; ?>" <?php echo (int)($cargo['faixaId'] ?? 0) === (int)$id ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($nome); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <div class="form-text"><a href="faixas_salariais.php" target="_blank">Gerenciar Faixas Salariais</a></div>
-                    </div>
-                </div>
-                
-                <hr>
-
                 <h4 class="mb-3"><i class="fas fa-building"></i> Áreas de Atuação</h4>
                 <button type="button" class="btn btn-sm btn-outline-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAssociacaoAreasAtuacao">
                     <i class="fas fa-plus"></i> Adicionar Área
@@ -335,6 +394,52 @@ require_once $root_path . 'includes/header.php';
                 </div>
                 <div class="form-text mt-3"><a href="areas_atuacao.php" target="_blank">Gerenciar Estrutura de Áreas</a></div>
 
+            </div>
+            <div class="tab-pane fade" id="remuneracao" role="tabpanel" aria-labelledby="remuneracao-tab">
+                
+                <h4 class="mb-3"><i class="fas fa-wallet text-success"></i> Enquadramento na Matriz Salarial</h4>
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label for="faixaId" class="form-label">Faixa/Nível Salarial (Padrão)</label>
+                        <select class="form-select searchable-select" id="faixaId" name="faixaId">
+                            <option value="">--- Não Definido ---</option>
+                            <?php foreach ($faixasSalariais as $id => $nome): ?>
+                                <option value="<?php echo $id; ?>" <?php echo (int)($cargo['faixaId'] ?? 0) === (int)$id ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($nome); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div class="form-text">Define a progressão de carreira comum para este cargo.</div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <h4 class="mb-3"><i class="fas fa-balance-scale text-primary"></i> Piso Salarial Legal / Acordo Sindical</h4>
+                <div class="alert alert-light border">
+                    <div class="form-check form-switch fs-5 mb-3">
+                        <input class="form-check-input cursor-pointer" type="checkbox" id="tem_piso_salarial" name="tem_piso_salarial" value="1" <?php echo (!empty($cargo['tem_piso_salarial'])) ? 'checked' : ''; ?>>
+                        <label class="form-check-label fw-bold" for="tem_piso_salarial">Este cargo possui um Piso Salarial obrigatório?</label>
+                    </div>
+
+                    <div id="blocoPisoSalarial" style="<?php echo (!empty($cargo['tem_piso_salarial'])) ? 'display: block;' : 'display: none;'; ?>">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="piso_valor" class="form-label text-danger fw-bold">Valor do Piso Legal (R$)</label>
+                                <input type="number" step="0.01" class="form-control" id="piso_valor" name="piso_valor" value="<?php echo htmlspecialchars($cargo['piso_valor'] ?? ''); ?>" placeholder="Ex: 2150.00">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="piso_lei_numero" class="form-label">Nº da Lei / CCT</label>
+                                <input type="text" class="form-control" id="piso_lei_numero" name="piso_lei_numero" value="<?php echo htmlspecialchars($cargo['piso_lei_numero'] ?? ''); ?>" placeholder="Ex: CCT 2026/2027">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="piso_data_base" class="form-label">Data-Base (Mês do Reajuste)</label>
+                                <input type="date" class="form-control" id="piso_data_base" name="piso_data_base" value="<?php echo htmlspecialchars($cargo['piso_data_base'] ?? ''); ?>">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
             </div>
 
             <div class="tab-pane fade" id="requisitos" role="tabpanel" aria-labelledby="requisitos-tab">
@@ -819,24 +924,53 @@ require_once $root_path . 'includes/header.php';
         </div>
     </div>
 </div>
-<div class="modal fade" id="modalDesbloqueioSenha" tabindex="-1" aria-labelledby="modalDesbloqueioSenhaLabel" aria-hidden="true">
+<div class="modal fade" id="modalNavegacaoInteligente" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-warning">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Alterações Pendentes</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Fez alterações neste cargo que ainda não foram guardadas. Se avançar para outro registo agora, <strong>perderá todo o trabalho feito</strong> nesta página.
+                <br><br>Deseja realmente descartar as alterações e mudar de cargo?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Ficar na Página</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmarNavegacao">Descartar e Avançar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalDesbloqueioSenha" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-sm modal-dialog-centered">
-        <div class="modal-content">
+        <div class="modal-content border-danger">
             <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="modalDesbloqueioSenhaLabel"><i class="fas fa-lock"></i> Desbloquear Edição</h5>
+                <h5 class="modal-title"><i class="fas fa-lock"></i> Autorizar Edição</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p class="small text-muted mb-3">Este cargo foi revisto e bloqueado. Digite a senha do Administrador para libertar a edição:</p>
+                <?php if ($temPermissaoEdicao): ?>
+                    <p class="small text-muted mb-3">Tem permissões de gestão. Confirme a sua palavra-passe para libertar a edição:</p>
+                    <input type="hidden" id="emailDesbloqueioInput" value="">
+                <?php else: ?>
+                    <p class="small text-muted mb-3 text-danger fw-bold">Não tem permissões de gestão.</p>
+                    <p class="small text-muted mb-3">Solicite a um Administrador que insira as suas credenciais abaixo para autorizar:</p>
+                    <div class="mb-2">
+                        <input type="email" class="form-control text-center" id="emailDesbloqueioInput" placeholder="E-mail do Administrador">
+                    </div>
+                <?php endif; ?>
+                
                 <div class="mb-2">
                     <input type="password" class="form-control text-center" id="senhaDesbloqueioInput" placeholder="Palavra-passe">
-                    <div id="erroSenhaDesbloqueio" class="text-danger small text-center mt-2 fw-bold" style="display: none;">Senha incorreta! Tente novamente.</div>
+                    <div id="erroSenhaDesbloqueio" class="text-danger small text-center mt-2 fw-bold" style="display: none;"></div>
                 </div>
             </div>
             <div class="modal-footer justify-content-center">
                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
                 <button type="button" class="btn btn-danger btn-sm" id="btnConfirmarDesbloqueio">
-                    <i class="fas fa-unlock"></i> Confirmar
+                    <i class="fas fa-unlock"></i> Autorizar
                 </button>
             </div>
         </div>

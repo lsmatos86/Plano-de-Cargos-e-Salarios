@@ -176,7 +176,13 @@ ob_start();
             </button>
         </div>
     </div>
-
+<?php if (!empty($cargo['is_revisado'])): ?>
+        <div style="text-align: right; margin-bottom: -15px;">
+            <div style="display: inline-block; border: 2px solid #198754; color: #198754; padding: 4px 12px; border-radius: 4px; font-weight: bold; font-size: 12px; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">
+                <i class="fas fa-check-double"></i> Documento Revisado e Aprovado
+            </div>
+        </div>
+    <?php endif; ?>
     <?php
     // Define a variável de controlo e inclui o template
     $show_hierarquia = true;
@@ -184,6 +190,13 @@ ob_start();
     ?>
 
 </div> 
+<div style="margin-top: 40px; padding-top: 10px; border-top: 1px solid #ddd; text-align: center; color: #777; font-size: 9px; font-family: Arial, sans-serif;">
+    Documento oficial gerado pelo Sistema de Gestão de Cargos e Salários | Itacitrus<br>
+    
+    Criado em: <?php echo !empty($cargo['cargoDataCadastro']) ? date('d/m/Y H:i', strtotime($cargo['cargoDataCadastro'])) : 'N/D'; ?> 
+    &nbsp;|&nbsp; 
+    Última Revisão: <?php echo !empty($cargo['data_revisao']) ? date('d/m/Y H:i', strtotime($cargo['data_revisao'])) : 'Sem revisão registada'; ?>
+</div>
 </body>
 </html>
 <?php

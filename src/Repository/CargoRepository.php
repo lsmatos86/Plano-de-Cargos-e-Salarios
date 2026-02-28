@@ -62,6 +62,7 @@ class CargoRepository
             'nivelHierarquicoId' => empty($postData['nivelHierarquicoId']) ? null : (int)$postData['nivelHierarquicoId'],
             'is_revisado' => $isRevisado,
             'data_revisao' => $isRevisado ? date('Y-m-d H:i:s') : null,
+            
         ];
 
         // 2. Validação
@@ -276,7 +277,7 @@ class CargoRepository
         }
         $offset = ($currentPage - 1) * $itemsPerPage;
 
-        $sql = "SELECT c.cargoId, c.cargoNome, c.cargoResumo, c.cargoDataAtualizacao, c.is_revisado, b.cboTituloOficial FROM cargos c LEFT JOIN cbos b ON b.cboId = c.cboId";
+        $sql = "SELECT c.cargoId, c.cargoNome, c.cargoResumo, c.cargoDataCadastro, c.cargoDataAtualizacao, c.is_revisado, b.cboTituloOficial FROM cargos c LEFT JOIN cbos b ON b.cboId = c.cboId";
 
         if (!empty($term)) {
             $sql .= " WHERE c.cargoNome LIKE :term1 OR c.cargoResumo LIKE :term2 OR b.cboTituloOficial LIKE :term3";
