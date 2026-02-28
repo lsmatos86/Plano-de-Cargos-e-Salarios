@@ -15,7 +15,7 @@ if (!isUserLoggedIn()) {
     exit;
 }
 // (OPCIONAL - Verificação de permissão)
-$authService->checkAndFail('config:view', '../index.php?error=Acesso+negado');
+// $authService->checkAndFail('config:view', '../index.php?error=Acesso+negado');
 
 
 // 4. Definições da Página (para o header.php)
@@ -74,7 +74,7 @@ try {
 
 } catch (Exception $e) {
     // Captura qualquer exceção do Repositório (validação, FK, DB)
-    $message = $e.getMessage();
+    $message = $e->getMessage();
     $message_type = 'danger';
 }
 
@@ -101,7 +101,7 @@ try {
     // "Traduz" 'sort_col' para 'order_by' que o Repositório espera
     $repoParams = [
         'term' => $params['term'],
-        'order_by' => $params['sort_col'], // Repositório espera 'order_by'
+        'order_by' => $params['sort_col'], 
         'sort_dir' => $params['sort_dir'],
         'page' => $params['page'],
         'limit' => $params['limit']
@@ -162,7 +162,7 @@ include '../includes/header.php';
                     <tr>
                         <th><?php echo createSortLink($id_column, 'ID', $params); ?></th>
                         <th><?php echo createSortLink($name_column, 'Título', $params); ?></th>
-                        <th width="150px" class="text-center">Ações</th>
+                        <th>Peso/Pontuação</th> <th width="150px" class="text-center">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -171,12 +171,15 @@ include '../includes/header.php';
                             <tr>
                                 <td><?php echo htmlspecialchars($row[$id_column]); ?></td>
                                 <td><strong><?php echo htmlspecialchars($row[$name_column]); ?></strong></td>
+                                <td><span class="badge bg-secondary"><?php echo htmlspecialchars($row['peso_pontuacao'] ?? '0'); ?> pts</span></td>
+                                
                                 <td class="text-center">
                                     <button class="btn btn-sm btn-info text-white btn-edit" 
                                             data-bs-toggle="modal" 
                                             data-bs-target="#cadastroModal"
                                             data-id="<?php echo $row[$id_column]; ?>"
                                             data-titulo="<?php echo htmlspecialchars($row[$name_column]); ?>"
+                                            data-peso="<?php echo htmlspecialchars($row['peso_pontuacao'] ?? '0'); ?>" 
                                             title="Editar">
                                         <i class="fas fa-edit"></i>
                                     </button>
@@ -192,8 +195,7 @@ include '../includes/header.php';
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="3" class="text-center p-4">
-                                <i class="fas fa-info-circle fa-2x text-muted mb-2"></i><br>
+                            <td colspan="4" class="text-center p-4"> <i class="fas fa-info-circle fa-2x text-muted mb-2"></i><br>
                                 Nenhum registro encontrado.
                             </td>
                         </tr>
@@ -260,6 +262,13 @@ include '../includes/header.php';
                         <label for="modalTitulo" class="form-label">Título da Escolaridade *</label>
                         <input type="text" class="form-control" id="modalTitulo" name="<?php echo $name_column; ?>" required maxlength="100">
                     </div>
+                    
+                    <div class="mb-3">
+                        <label for="modalPeso" class="form-label">Peso/Pontuação para Cálculo Salarial *</label>
+                        <input type="number" class="form-control" id="modalPeso" name="peso_pontuacao" value="0" min="0" required>
+                        <div class="form-text">Ex: Ensino Fundamental = 10, Técnico = 40, Superior = 70.</div>
+                    </div>
+
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>

@@ -44,14 +44,14 @@ class EscolaridadeRepository
     /**
      * Salva (cria ou atualiza) uma Escolaridade.
      */
-    public function save(array $data): int
+   public function save(array $data): int
     {
         $tableName = 'escolaridades';
 
         // 1. Coleta de Dados
         $id = (int)($data['escolaridadeId'] ?? 0);
-        //
         $titulo = trim($data['escolaridadeTitulo'] ?? ''); 
+        $peso = (int)($data['peso_pontuacao'] ?? 0); // NOVO CAMPO ADICIONADO AQUI
         $isUpdating = $id > 0;
 
         // 2. Validação de Permissão e Dados
@@ -65,11 +65,13 @@ class EscolaridadeRepository
         // 3. SQL
         $params = [
             ':titulo' => $titulo,
+            ':peso' => $peso, // NOVO PARÂMETRO ADICIONADO AQUI
         ];
 
         try {
             if ($isUpdating) {
-                $sql = "UPDATE {$tableName} SET escolaridadeTitulo = :titulo WHERE escolaridadeId = :id";
+                // ATUALIZADO: Inclui peso_pontuacao no UPDATE
+                $sql = "UPDATE {$tableName} SET escolaridadeTitulo = :titulo, peso_pontuacao = :peso WHERE escolaridadeId = :id";
                 $params[':id'] = $id;
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = $id;
@@ -80,7 +82,8 @@ class EscolaridadeRepository
                 $this->auditService->log('UPDATE', $tableName, $savedId, $data);
                 
             } else {
-                $sql = "INSERT INTO {$tableName} (escolaridadeTitulo) VALUES (:titulo)";
+                // ATUALIZADO: Inclui peso_pontuacao no INSERT
+                $sql = "INSERT INTO {$tableName} (escolaridadeTitulo, peso_pontuacao) VALUES (:titulo, :peso)";
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = (int)$this->pdo->lastInsertId();
                 
