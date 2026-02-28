@@ -10,24 +10,22 @@ require_once '../config.php';
 require_once '../includes/functions.php'; // Para getDbConnection e lookups
 
 // 2. IMPORTA O CONTROLLER E DEPENDÊNCIAS
-use App\Controller\CargoFormController; // Assegure-se que este Controller exista em src/Controller/
+use App\Controller\CargoFormController; 
 use App\Service\AuthService;
 use App\Core\Database;
 
 // 3. DEFINIÇÕES DA PÁGINA (para o header e footer)
 $root_path = '../'; 
-$page_title = "Carregando..."; // Será sobrescrito pelo Controller
+$page_title = "Carregando..."; 
 $breadcrumb_items = [
     'Dashboard' => $root_path . 'index.php',
     'Gerenciamento de Cargos' => 'cargos.php',
     'Formulário' => null 
 ];
-// CORREÇÃO: Define o script que o footer.php deve carregar (depois do jQuery)
 $page_scripts = [$root_path . 'scripts/cargos_form.js']; 
 
 // 4. INSTANCIA O CONTROLLER E PROCESSA A REQUISIÇÃO
 try {
-    // Injeta as dependências (PDO e AuthService)
     $pdo = Database::getConnection(); 
     $authService = new AuthService(); 
     $controller = new CargoFormController($pdo, $authService);
@@ -36,16 +34,24 @@ try {
 
     // 5. EXTRAI AS VARIÁVEIS PARA A VIEW
     extract($data);
-    // Sobrescreve o $page_title e $breadcrumb_items com o título vindo do controller
     $breadcrumb_items['Formulário'] = $page_title;
 
+    // --- NOVA LÓGICA DE NAVEGAÇÃO INTERNA ---
+    $adjacentIds = ['prev_id' => null, 'next_id' => null];
+    if ($isEditing && $currentFormId > 0) {
+        $cargoRepoNav = new \App\Repository\CargoRepository();
+        $nav_sort_col = $_GET['sort_col'] ?? 'c.cargoId';
+        $nav_sort_dir = $_GET['sort_dir'] ?? 'ASC';
+        $nav_term = $_GET['term'] ?? '';
+        $adjacentIds = $cargoRepoNav->findAdjacentCargoIds($currentFormId, $nav_sort_col, $nav_sort_dir, $nav_term);
+    }
+    // -----------------------------------------
+
 } catch (Exception $e) {
-    // Se o Controller falhar (ex: Acesso Negado), trata aqui
     $page_title = 'Erro';
     $message = $e->getMessage();
     $message_type = 'danger';
     
-    // Define variáveis padrão para evitar erros no HTML
     $cargo = []; $cbos = []; $escolaridades = []; $habilidadesAgrupadas = [];
     $habilidades = []; $caracteristicas = []; $riscos = []; $cursos = [];
     $recursosGrupos = []; $faixasSalariais = []; $areasAtuacao = [];
@@ -53,13 +59,13 @@ try {
     $cargoHabilidades = []; $cargoCaracteristicas = []; $cargoRiscos = [];
     $cargoCursos = []; $cargoRecursosGrupos = []; $cargoSinonimos = [];
     $originalId = 0; $isEditing = false; $isDuplicating = false; $currentFormId = 0;
+    $adjacentIds = ['prev_id' => null, 'next_id' => null];
 }
 
 
 // 6. PREPARAÇÃO DOS DADOS JS (Global Scope)
 ?>
 <script>
-    // Função utilitária para garantir que IDs numéricos sejam inteiros
     const normalizeState = (data) => data.map(item => {
         if (item.id && !isNaN(item.id) && typeof item.id === 'string' && !String(item.id).startsWith('new-')) {
             item.id = parseInt(item.id);
@@ -67,7 +73,6 @@ try {
         return item;
     });
 
-    // Inicializa as variáveis globais diretamente com o estado do Controller
     window.habilidadesAssociadas = normalizeState(<?php echo json_encode($cargoHabilidades); ?>);
     window.caracteristicasAssociadas = normalizeState(<?php echo json_encode($cargoCaracteristicas); ?>);
     window.riscosAssociados = normalizeState(<?php echo json_encode($cargoRiscos); ?>);
@@ -78,8 +83,6 @@ try {
 </script>
 
 <?php 
-// 7. INCLUSÃO DO HEADER (Início do HTML)
-// O $page_title e $breadcrumb_items já estão definidos
 require_once $root_path . 'includes/header.php'; 
 ?>
 
@@ -91,7 +94,6 @@ require_once $root_path . 'includes/header.php';
     .grid-risco-desc textarea { width: 100%; resize: vertical; min-height: 40px; border: 1px solid #ced4da; padding: 5px; }
     .table-group-separator { background-color: #e9ecef; }
     .grid-container { max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; }
-    /* Estilos para Select2 no modal (necessário z-index alto) */
     .select2-container--bootstrap-5 .select2-dropdown { z-index: 1060; }
     .form-control-sm { min-height: calc(1.5em + 0.5rem + 2px); }
 </style>
@@ -101,27 +103,47 @@ require_once $root_path . 'includes/header.php';
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="mb-0">
             <?php 
-            // Verifica se está editando E se o nome do cargo existe
             if ($isEditing && !empty($cargo['cargoNome'])) {
-                // Exibe o nome do cargo e o status "Editando" com ícone
                 echo htmlspecialchars($cargo['cargoNome']);
                 echo ' <small class="text-muted fs-6" style="font-weight: 500;">(Editando) <i class="fas fa-pencil-alt fa-xs"></i></small>';
             } else {
-                // Caso contrário (Novo Cargo, Duplicar, Erro), exibe o título padrão
                 echo htmlspecialchars($page_title); 
             }
             ?>
         </h1>
         
-        <div>
-            <a href="cargos.php" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left"></i> Voltar para Cargos
+        <div class="d-flex gap-2 align-items-center">
+            
+            <?php if ($isEditing && $currentFormId > 0): ?>
+                <div class="btn-group shadow-sm me-2" role="group">
+                    <?php 
+                    $navParamsPrev = http_build_query(array_merge($_GET, ['id' => $adjacentIds['prev_id']]));
+                    $navParamsNext = http_build_query(array_merge($_GET, ['id' => $adjacentIds['next_id']]));
+                    ?>
+                    <a href="<?php echo empty($adjacentIds['prev_id']) ? '#' : 'cargos_form.php?' . $navParamsPrev; ?>" 
+                       class="btn btn-outline-primary btn-sm <?php echo empty($adjacentIds['prev_id']) ? 'disabled' : ''; ?>" 
+                       title="Ir para o Cargo Anterior" 
+                       onclick="return confirm('Lembre-se de SALVAR quaisquer alterações no cargo atual antes de avançar. Deseja mudar de cargo?');">
+                        <i class="fas fa-chevron-left"></i> Anterior
+                    </a>
+                    
+                    <a href="<?php echo empty($adjacentIds['next_id']) ? '#' : 'cargos_form.php?' . $navParamsNext; ?>" 
+                       class="btn btn-outline-primary btn-sm <?php echo empty($adjacentIds['next_id']) ? 'disabled' : ''; ?>" 
+                       title="Ir para o Próximo Cargo" 
+                       onclick="return confirm('Lembre-se de SALVAR quaisquer alterações no cargo atual antes de avançar. Deseja mudar de cargo?');">
+                        Próximo <i class="fas fa-chevron-right"></i>
+                    </a>
+                </div>
+            <?php endif; ?>
+
+            <a href="cargos.php" class="btn btn-outline-secondary btn-sm shadow-sm">
+                <i class="fas fa-arrow-left"></i> Voltar para Lista
             </a>
             <?php if ($isEditing && $originalId > 0): ?>
                  <a href="cargos_form.php?id=<?php echo $originalId; ?>&action=duplicate" 
-                    class="btn btn-warning btn-sm" 
+                    class="btn btn-warning btn-sm shadow-sm" 
                     title="Criar um novo registro com base neste.">
-                    <i class="fas fa-copy"></i> Duplicar Cadastro
+                    <i class="fas fa-copy"></i> Duplicar
                 </a>
             <?php endif; ?>
         </div>
@@ -140,7 +162,7 @@ require_once $root_path . 'includes/header.php';
             <input type="hidden" name="originalId" value="<?php echo htmlspecialchars($originalId); ?>">
         <?php endif; ?>
 
-    <?php 
+        <?php 
         $revisado = (int)($cargo['is_revisado'] ?? 0);
         $dataRevisao = !empty($cargo['data_revisao']) ? date('d/m/Y H:i', strtotime($cargo['data_revisao'])) : '';
         ?>
@@ -165,7 +187,6 @@ require_once $root_path . 'includes/header.php';
                 </div>
             </div>
         </div>
-
         <ul class="nav nav-tabs" id="cargoTabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="basicas-tab" data-bs-toggle="tab" data-bs-target="#basicas" type="button" role="tab" aria-controls="basicas" aria-selected="true">
@@ -261,14 +282,10 @@ require_once $root_path . 'includes/header.php';
                         <label for="cargoSupervisorId" class="form-label">Reporta-se a (Supervisor/Líder)</label>
                         <select class="form-select searchable-select" id="cargoSupervisorId" name="cargoSupervisorId[]" multiple="multiple" data-placeholder="--- Nenhum ou Múltiplos ---">
                             <?php 
-                            // Pega os IDs dos supervisores já salvos neste cargo
                             $supervisoresAtuais = isset($supervisores) ? array_column($supervisores, 'id') : [];
                             
                             foreach ($cargosSupervisor as $id => $nome): 
-                                // Impede que o cargo seja chefe dele mesmo
                                 if ($isEditing && (int)($originalId) === (int)$id) continue; 
-                                
-                                // Verifica se o ID do loop está no array de salvos no banco
                                 $selected = in_array($id, $supervisoresAtuais) ? 'selected' : '';
                             ?>
                                 <option value="<?php echo $id; ?>" <?php echo $selected; ?>>
@@ -276,7 +293,7 @@ require_once $root_path . 'includes/header.php';
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                        <div class="form-text">Você pode selecionar mais de um supervisor para atuações em áreas/equipes diferentes.</div>
+                        <div class="form-text">Você pode selecionar mais de um supervisor para atuações em áreas diferentes.</div>
                     </div>
                 </div>
 
@@ -485,7 +502,9 @@ require_once $root_path . 'includes/header.php';
         <?php endif; ?>
 
     </form>
-</div> <div class="modal fade" id="modalAssociacaoHabilidades" tabindex="-1" aria-labelledby="modalHabilidadesLabel" aria-hidden="true">
+</div> 
+
+<div class="modal fade" id="modalAssociacaoHabilidades" tabindex="-1" aria-labelledby="modalHabilidadesLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-success text-white">
@@ -677,7 +696,6 @@ require_once $root_path . 'includes/header.php';
     </div>
 </div>
 
-
 <div class="modal fade" id="modalEdicaoHabilidade" tabindex="-1" aria-labelledby="modalEdicaoHabilidadeLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -804,9 +822,7 @@ require_once $root_path . 'includes/header.php';
     </div>
 </div>
 
-
 <?php 
 // 8. INCLUSÃO DO FOOTER
-// O footer.php irá carregar o jQuery, Bootstrap JS, e DEPOIS o cargos_form.js (via $page_scripts)
 require_once $root_path . 'includes/footer.php';
 ?>
