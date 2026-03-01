@@ -47,7 +47,7 @@ class CargoRepository
         // Captura da checagem de Revisão
         $isRevisado = isset($postData['is_revisado']) && $postData['is_revisado'] == '1' ? 1 : 0;
 
-        // 1. Captura dos Dados Principais (Removido cargoSupervisorId daqui)
+        // 1. Captura dos Dados Principais (COM AS NOVAS COLUNAS DO PISO SALARIAL)
         $data = [
             'cargoNome' => trim($postData['cargoNome'] ?? ''),
             'cargoDescricao' => trim($postData['cargoDescricao'] ?? null),
@@ -63,6 +63,12 @@ class CargoRepository
             'is_revisado' => $isRevisado,
             'data_revisao' => $isRevisado ? date('Y-m-d H:i:s') : null,
             
+            // --- BLOCO FINANCEIRO ADICIONADO AQUI ---
+            'tem_piso_salarial' => isset($postData['tem_piso_salarial']) && $postData['tem_piso_salarial'] == '1' ? 1 : 0,
+            'piso_valor' => !empty($postData['piso_valor']) ? floatval(str_replace(',', '.', $postData['piso_valor'])) : null,
+            'piso_lei_numero' => !empty($postData['piso_lei_numero']) ? trim($postData['piso_lei_numero']) : null,
+            'piso_data_base' => !empty($postData['piso_data_base']) ? trim($postData['piso_data_base']) : null,
+            // ----------------------------------------
         ];
 
         // 2. Validação
@@ -188,7 +194,7 @@ class CargoRepository
             'caracteristicas' => [],
             'cursos' => [],
             'recursos_grupos' => [],
-            'supervisores' => [] // ADICIONADO: Array para os múltiplos chefes
+            'supervisores' => []
         ];
 
         try {
@@ -230,7 +236,6 @@ class CargoRepository
             $stmt->execute([$cargoId]);
             $data['recursos_grupos'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // BUSCA SUPERVISORES DA NOVA TABELA
             $stmt = $this->pdo->prepare("SELECT cs.supervisorId AS id, c.cargoNome AS nome FROM cargos_supervisores cs JOIN cargos c ON c.cargoId = cs.supervisorId WHERE cs.cargoId = ?");
             $stmt->execute([$cargoId]);
             $data['supervisores'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -325,7 +330,7 @@ class CargoRepository
         $joinTables = [
             'habilidades_cargo', 'caracteristicas_cargo', 'riscos_cargo',
             'cargo_sinonimos', 'cursos_cargo', 'recursos_grupos_cargo',
-            'cargos_area', 'cargos_supervisores' // ADICIONADO AQUI
+            'cargos_area', 'cargos_supervisores'
         ];
         $success = true;
 
@@ -370,7 +375,6 @@ class CargoRepository
         $data = [];
 
         try {
-            // 1. DADOS BÁSICOS (n.nivelDescricao Adicionado! Removido JOIN antigo do supervisor)
             $stmt = $this->pdo->prepare("
                 SELECT 
                     c.*, e.escolaridadeTitulo, b.cboCod, b.cboTituloOficial,
@@ -421,7 +425,6 @@ class CargoRepository
             $stmt_areas->execute([$cargoId]);
             $data['areas_atuacao'] = $stmt_areas->fetchAll(PDO::FETCH_COLUMN);
 
-            // NOVO: BUSCA OS NOMES DOS SUPERVISORES PARA O RELATÓRIO PDF/TELA
             $stmt_sup = $this->pdo->prepare("SELECT c.cargoNome FROM cargos_supervisores cs JOIN cargos c ON c.cargoId = cs.supervisorId WHERE cs.cargoId = ? ORDER BY c.cargoNome ASC");
             $stmt_sup->execute([$cargoId]);
             $data['supervisores'] = $stmt_sup->fetchAll(PDO::FETCH_COLUMN);

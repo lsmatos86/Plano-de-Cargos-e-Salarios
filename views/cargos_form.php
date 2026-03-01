@@ -290,7 +290,7 @@ require_once $root_path . 'includes/header.php';
             </li>
         </ul>
 
-        <div class="tab-content border border-top-0 p-3 mb-4" id="cargoTabsContent">
+ <div class="tab-content border border-top-0 p-3 mb-4" id="cargoTabsContent">
             
             <div class="tab-pane fade show active" id="basicas" role="tabpanel" aria-labelledby="basicas-tab">
                 <div class="row">
@@ -334,10 +334,7 @@ require_once $root_path . 'includes/header.php';
                         <input type="text" class="form-control" id="cargoExperiencia" name="cargoExperiencia" value="<?php echo htmlspecialchars($cargo['cargoExperiencia'] ?? ''); ?>">
                     </div>
                 </div>
-            </div>
-
-            <div class="tab-pane fade" id="hierarquia" role="tabpanel" aria-labelledby="hierarquia-tab">
-                
+            </div> <div class="tab-pane fade" id="hierarquia" role="tabpanel" aria-labelledby="hierarquia-tab">
                 <h4 class="mb-3"><i class="fas fa-level-up-alt"></i> Hierarquia de Comando</h4>
                 <div class="row">
                     <div class="col-md-6 mb-3">
@@ -358,7 +355,6 @@ require_once $root_path . 'includes/header.php';
                         <select class="form-select searchable-select" id="cargoSupervisorId" name="cargoSupervisorId[]" multiple="multiple" data-placeholder="--- Nenhum ou Múltiplos ---">
                             <?php 
                             $supervisoresAtuais = isset($supervisores) ? array_column($supervisores, 'id') : [];
-                            
                             foreach ($cargosSupervisor as $id => $nome): 
                                 if ($isEditing && (int)($originalId) === (int)$id) continue; 
                                 $selected = in_array($id, $supervisoresAtuais) ? 'selected' : '';
@@ -387,16 +383,12 @@ require_once $root_path . 'includes/header.php';
                                     <th class="grid-action-cell text-center">Ação</th>
                                 </tr>
                             </thead>
-                            <tbody id="areasAtuacaoGridBody">
-                                </tbody>
+                            <tbody id="areasAtuacaoGridBody"></tbody>
                         </table>
                     </div>
                 </div>
                 <div class="form-text mt-3"><a href="areas_atuacao.php" target="_blank">Gerenciar Estrutura de Áreas</a></div>
-
-            </div>
-            <div class="tab-pane fade" id="remuneracao" role="tabpanel" aria-labelledby="remuneracao-tab">
-                
+            </div> <div class="tab-pane fade" id="remuneracao" role="tabpanel" aria-labelledby="remuneracao-tab">
                 <h4 class="mb-3"><i class="fas fa-wallet text-success"></i> Enquadramento na Matriz Salarial</h4>
                 <div class="row mb-4">
                     <div class="col-md-6">
@@ -439,11 +431,7 @@ require_once $root_path . 'includes/header.php';
                         </div>
                     </div>
                 </div>
-                
-            </div>
-
-            <div class="tab-pane fade" id="requisitos" role="tabpanel" aria-labelledby="requisitos-tab">
-                
+            </div> <div class="tab-pane fade" id="requisitos" role="tabpanel" aria-labelledby="requisitos-tab">
                 <h4 class="mb-3"><i class="fas fa-lightbulb"></i> Habilidades</h4>
                 <button type="button" class="btn btn-sm btn-outline-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAssociacaoHabilidades">
                     <i class="fas fa-plus"></i> Adicionar Habilidade
@@ -457,8 +445,7 @@ require_once $root_path . 'includes/header.php';
                                     <th class="grid-action-cell text-center">Ação</th>
                                 </tr>
                             </thead>
-                            <tbody id="habilidadesGridBody">
-                                </tbody>
+                            <tbody id="habilidadesGridBody"></tbody>
                         </table>
                     </div>
                 </div>
@@ -476,8 +463,7 @@ require_once $root_path . 'includes/header.php';
                                     <th class="grid-action-cell text-center">Ação</th>
                                 </tr>
                             </thead>
-                            <tbody id="caracteristicasGridBody">
-                                </tbody>
+                            <tbody id="caracteristicasGridBody"></tbody>
                         </table>
                     </div>
                 </div>
@@ -496,8 +482,7 @@ require_once $root_path . 'includes/header.php';
                                     <th class="grid-action-cell text-center">Ação</th>
                                 </tr>
                             </thead>
-                            <tbody id="cursosGridBody">
-                                </tbody>
+                            <tbody id="cursosGridBody"></tbody>
                         </table>
                     </div>
                 </div>
@@ -515,8 +500,7 @@ require_once $root_path . 'includes/header.php';
                                     <th class="grid-action-cell text-center">Ação</th>
                                 </tr>
                             </thead>
-                            <tbody id="recursosGruposGridBody">
-                                </tbody>
+                            <tbody id="recursosGruposGridBody"></tbody>
                         </table>
                     </div>
                 </div>
@@ -535,15 +519,11 @@ require_once $root_path . 'includes/header.php';
                                     <th class="grid-action-cell text-center">Ação</th>
                                 </tr>
                             </thead>
-                            <tbody id="riscosGridBody">
-                                </tbody>
+                            <tbody id="riscosGridBody"></tbody>
                         </table>
                     </div>
                 </div>
-
-            </div>
-
-            <div class="tab-pane fade" id="sinonimos" role="tabpanel" aria-labelledby="sinonimos-tab">
+            </div> <div class="tab-pane fade" id="sinonimos" role="tabpanel" aria-labelledby="sinonimos-tab">
                 <h4 class="mb-3"><i class="fas fa-tags"></i> Sinônimos e Nomes Alternativos</h4>
                 <p class="text-muted">Inclua nomes alternativos usados para este cargo.</p>
 
@@ -567,15 +547,11 @@ require_once $root_path . 'includes/header.php';
                                     <th class="grid-action-cell text-center">Ação</th>
                                 </tr>
                             </thead>
-                            <tbody id="sinonimosGridBody">
-                                </tbody>
+                            <tbody id="sinonimosGridBody"></tbody>
                         </table>
                     </div>
                 </div>
-            </div>
-            
-            <div class="tab-pane fade" id="descricoes" role="tabpanel" aria-labelledby="descricoes-tab">
-                
+            </div> <div class="tab-pane fade" id="descricoes" role="tabpanel" aria-labelledby="descricoes-tab">
                 <h4 class="mb-3"><i class="fas fa-clipboard-list"></i> Responsabilidades Detalhadas</h4>
                 <div class="mb-3">
                     <textarea class="form-control" id="cargoResponsabilidades" name="cargoResponsabilidades" rows="5"><?php echo htmlspecialchars($cargo['cargoResponsabilidades'] ?? ''); ?></textarea>
@@ -590,11 +566,8 @@ require_once $root_path . 'includes/header.php';
                 <div class="mb-3">
                     <textarea class="form-control" id="cargoCondicoes" name="cargoCondicoes" rows="5"><?php echo htmlspecialchars($cargo['cargoCondicoes'] ?? ''); ?></textarea>
                 </div>
-                
-            </div>
-            
+            </div> 
         </div>
-        
         <button type="submit" class="btn btn-lg btn-success w-100 mt-3">
             <i class="fas fa-check-circle"></i> SALVAR CARGO
         </button>

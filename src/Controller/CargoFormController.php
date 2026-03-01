@@ -200,7 +200,7 @@ class CargoFormController
         $isUpdating = $cargoIdSubmissao > 0;
         $isRevisado = isset($postData['is_revisado']) && $postData['is_revisado'] == '1' ? 1 : 0;
 
-        // 3.1 Captura dos Dados Principais
+        // 3.1 Captura dos Dados Principais (COM OS NOVOS CAMPOS FINANCEIROS)
         $data = [
             'cargoNome' => trim($postData['cargoNome'] ?? ''), 
             'cargoDescricao' => trim($postData['cargoDescricao'] ?? null),
@@ -216,6 +216,13 @@ class CargoFormController
             'cargoSupervisorId' => empty($postData['cargoSupervisorId']) ? null : (int)$postData['cargoSupervisorId'],
             'is_revisado' => $isRevisado,
             'data_revisao' => $isRevisado ? date('Y-m-d H:i:s') : null,
+            
+            // --- BLOCO FINANCEIRO ADICIONADO AQUI ---
+            'tem_piso_salarial' => isset($postData['tem_piso_salarial']) && $postData['tem_piso_salarial'] == '1' ? 1 : 0,
+            'piso_valor' => !empty($postData['piso_valor']) ? floatval(str_replace(',', '.', $postData['piso_valor'])) : null,
+            'piso_lei_numero' => !empty($postData['piso_lei_numero']) ? trim($postData['piso_lei_numero']) : null,
+            'piso_data_base' => !empty($postData['piso_data_base']) ? trim($postData['piso_data_base']) : null,
+            // ----------------------------------------
         ];
 
         // Validação
