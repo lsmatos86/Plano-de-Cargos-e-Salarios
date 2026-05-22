@@ -1,5 +1,5 @@
 <?php
-// Arquivo: src/Repository/AreaRepository.php (Atualizado com Auditoria e Paginação)
+// Arquivo: src/Repository/AreaRepository.php (Atualizado com Auditoria, Paginação e Correção de Hierarquia)
 
 namespace App\Repository;
 
@@ -40,7 +40,7 @@ class AreaRepository
     }
     
     /**
-     * NOVO MÉTODO. Retorna todas as áreas de forma simples (id, nome) para SELECTs.
+     * Retorna todas as áreas de forma simples (id, nome) para SELECTs.
      */
     public function findAllSimple(): array
     {
@@ -54,7 +54,7 @@ class AreaRepository
     }
 
     /**
-     * NOVO MÉTODO. Busca dados das áreas de atuação de forma paginada.
+     * Busca dados das áreas de atuação de forma paginada.
      * @param array $params Parâmetros de busca (term, page, limit, order_by, sort_dir)
      * @return array Contendo ['data', 'total', 'totalPages', 'currentPage']
      */
@@ -83,7 +83,11 @@ class AreaRepository
             $offset = ($currentPage - 1) * $itemsPerPage;
             
             // 2. Query Principal
-            // Adiciona a join para buscar o nome da Área Pai
+            // Força o ORDER BY a funcionar corretamente mesmo quando o nome da área pai for nulo
+            $orderSql = ($sortCol === 'areaPaiNome') 
+                ? "COALESCE(pa.areaNome, '') {$sortDir}, a.areaNome ASC" 
+                : "a.{$sortCol} {$sortDir}";
+
             $sql = "
                 SELECT 
                     a.areaId, a.areaNome, a.areaDescricao, a.areaPaiId,
@@ -91,7 +95,7 @@ class AreaRepository
                 FROM areas_atuacao a
                 LEFT JOIN areas_atuacao pa ON pa.areaId = a.areaPaiId
                 WHERE a.areaNome LIKE ?
-                ORDER BY {$sortCol} {$sortDir} 
+                ORDER BY {$orderSql}
                 LIMIT ? OFFSET ?
             ";
 
@@ -139,7 +143,13 @@ class AreaRepository
     {
         $path = $area['areaNome'];
         $current = $area;
+        $visited = []; // Proteção contra loop infinito em dados corrompidos
+        
         while ($current['areaPaiId'] !== null && isset($map[$current['areaPaiId']])) {
+            if (in_array($current['areaPaiId'], $visited)) {
+                break; // Quebra o loop se detetar circularidade antiga
+            }
+            $visited[] = $current['areaPaiId'];
             $parent = $map[$current['areaPaiId']];
             $path = $parent['areaNome'] . ' > ' . $path;
             $current = $parent;
@@ -148,18 +158,47 @@ class AreaRepository
     }
 
     /**
+     * Verifica recursivamente se um potencial pai é descendente do ID atual (evita loop circular).
+     */
+    private function isDescendant(int $currentId, ?int $potentialParentId): bool
+    {
+        if ($potentialParentId === null) {
+            return false;
+        }
+
+        $stmt = $this->pdo->prepare("SELECT areaPaiId FROM areas_atuacao WHERE areaId = ?");
+        $stmt->execute([$potentialParentId]);
+        $parent = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$parent) {
+            return false;
+        }
+
+        if ((int)$parent['areaPaiId'] === $currentId) {
+            return true;
+        }
+
+        return $this->isDescendant($currentId, $parent['areaPaiId'] ? (int)$parent['areaPaiId'] : null);
+    }
+
+    /**
      * Salva (cria ou atualiza) uma Área de Atuação.
      */
     public function save(array $data): int
     {
-        // Define o nome da tabela para a auditoria
         $tableName = 'areas_atuacao';
 
-        // 1. Coleta de Dados
+        // 1. Coleta e sanitização de Dados
         $id = (int)($data['areaId'] ?? 0);
         $nome = trim($data['areaNome'] ?? '');
-        $descricao = trim($data['areaDescricao'] ?? null);
-        $areaPaiId = empty($data['areaPaiId']) ? null : (int)$data['areaPaiId'];
+        $descricao = trim($data['areaDescricao'] ?? '');
+        $descricao = $descricao === '' ? null : $descricao;
+        
+        // Garante que se vier vazio, zero ou string "null", vira NULL no banco
+        $areaPaiId = (empty($data['areaPaiId']) || $data['areaPaiId'] === 'null' || (int)$data['areaPaiId'] === 0) 
+            ? null 
+            : (int)$data['areaPaiId'];
+            
         $isUpdating = $id > 0;
 
         // 2. Validação de Permissão e Dados
@@ -170,12 +209,18 @@ class AreaRepository
             throw new Exception("O nome da área é obrigatório.");
         }
         
-        // Proteção contra auto-referência
-        if ($isUpdating && $id === $areaPaiId) {
-             throw new Exception("Uma área não pode ser pai dela mesma.");
+        if ($isUpdating) {
+            // Proteção contra auto-referência direta
+            if ($id === $areaPaiId) {
+                 throw new Exception("Uma área não pode ser pai dela mesma.");
+            }
+            // Proteção contra referência circular complexa (Pai se tornar filho do próprio filho)
+            if ($areaPaiId !== null && $this->isDescendant($id, $areaPaiId)) {
+                throw new Exception("Referência circular: a área pai selecionada já é uma sub-área desta área.");
+            }
         }
 
-        // 3. SQL
+        // 3. SQL e Parâmetros explicitamente limpos
         $params = [
             ':nome' => $nome,
             ':descricao' => $descricao,
@@ -189,7 +234,6 @@ class AreaRepository
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = $id;
                 
-                // PASSO 3: REGISTRAR O LOG DE UPDATE
                 $this->auditService->log('UPDATE', $tableName, $savedId, $data);
                 
             } else {
@@ -197,7 +241,6 @@ class AreaRepository
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = (int)$this->pdo->lastInsertId();
                 
-                // PASSO 3: REGISTRAR O LOG DE CREATE
                 $this->auditService->log('CREATE', $tableName, $savedId, $data);
             }
             
@@ -207,7 +250,7 @@ class AreaRepository
             if (str_contains($e->getMessage(), 'Duplicate entry')) {
                  throw new Exception("A área '$nome' já existe.");
             }
-            throw $e; // Propaga outros erros
+            throw $e;
         }
     }
 
@@ -216,7 +259,6 @@ class AreaRepository
      */
     public function delete(int $id): bool
     {
-        // Define o nome da tabela para a auditoria
         $tableName = 'areas_atuacao';
         
         $this->authService->checkAndFail('estruturas:delete');
@@ -243,18 +285,16 @@ class AreaRepository
             $success = $stmt->rowCount() > 0;
             
             if ($success) {
-                // PASSO 3: REGISTRAR O LOG DE DELETE
                 $this->auditService->log('DELETE', $tableName, $id, ['deletedId' => $id]);
             }
             
             return $success;
 
         } catch (Exception $e) {
-            // Se for erro de FK (mesmo que tenhamos verificado, por segurança)
             if (str_contains($e->getMessage(), 'foreign key constraint')) {
                  throw new Exception("Esta área não pode ser excluída pois está em uso em outra parte do sistema.");
             }
-            throw $e; // Propaga outros erros
+            throw $e;
         }
     }
 }

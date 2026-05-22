@@ -1,5 +1,5 @@
 // Arquivo: scripts/cargos_form.js
-// Versão Definitiva com Formatação Original Mantida + Bug Fixes + Modal + Navegação Inteligente
+// Versão Definitiva com Formatação Original Mantida + Bug Fixes + Correção Crítica do Reporta-se A (Supervisores) + Modal + Navegação Inteligente
 
 $(document).ready(function() {
     
@@ -13,7 +13,8 @@ $(document).ready(function() {
         curso:        { global: 'cursosAssociados',          tbody: 'cursosGridBody' },
         recursoGrupo: { global: 'recursosGruposAssociados',  tbody: 'recursosGruposGridBody' },
         area:         { global: 'areasAssociadas',           tbody: 'areasAtuacaoGridBody' },
-        sinonimo:     { global: 'sinonimosAssociados',       tbody: 'sinonimosGridBody' }
+        sinonimo:     { global: 'sinonimosAssociados',       tbody: 'sinonimosGridBody' },
+        supervisor:   { global: 'supervisoresAssociados',     tbody: 'supervisoresGridBody' }
     };
 
     // Função auxiliar para buscar o array de estado global de forma segura
@@ -110,7 +111,7 @@ $(document).ready(function() {
         return tr;
     };
     
-    // --- 3. FUNÇÕES DE RENDERIZAÇÃO DE GRADES (RESTAURADAS COM SUCESSO) ---
+    // --- 3. FUNÇÕES DE RENDERIZAÇÃO DE GRADES ---
 
     const normalizeTipo = (tipo) => {
         if (typeof tipo !== 'string') return 'Outros Tipos'; 
@@ -230,7 +231,9 @@ $(document).ready(function() {
             const dataArray = getEntityMap(entityName);
 
             if (dataArray.length === 0) {
-              createEmptyRow(gridBody, cols, `Nenhuma ${entityName.charAt(0).toUpperCase() + entityName.slice(1)} associada.`);
+                 if (entityName !== 'supervisor') {
+                     createEmptyRow(gridBody, cols, `Nenhuma ${entityName.charAt(0).toUpperCase() + entityName.slice(1)} associada.`);
+                 }
                  return;
             }
 
@@ -547,7 +550,6 @@ $(document).ready(function() {
         const values = Array.isArray(selectedValues) ? selectedValues : [selectedValues];
         
         values.forEach(value => {
-            // CORREÇÃO CRÍTICA: Ignora placeholders vazios e evita IDs corrompidos
             if (!value || isNaN(parseInt(value))) return; 
             
             const option = selectElement.querySelector(`option[value="${value}"]`);
@@ -578,7 +580,7 @@ $(document).ready(function() {
             }
         });
 
-        if (addedCount > 0) renderFunction();
+        if (addedCount > 0 && typeof renderFunction === 'function') renderFunction();
     };
     
     $('#btnAssociarHabilidade').on('click', function() {
@@ -717,6 +719,17 @@ $(document).ready(function() {
     var firstTab = document.querySelector('#basicas-tab');
     if (firstTab) new bootstrap.Tab(firstTab).show();
     
+    // Sincroniza a alteração manual do Select2 múltiplo de Supervisores com o estado JavaScript global
+    $('#cargoSupervisorId').on('change', function() {
+        const supervisorsMap = getEntityMap('supervisor');
+        supervisorsMap.length = 0; // Limpa o estado anterior
+        
+        const selectedOptions = getSelectedOptionsData('cargoSupervisorId');
+        selectedOptions.forEach(opt => {
+            supervisorsMap.push({ id: opt.id, nome: opt.nome });
+        });
+    });
+
     renderHabilidadesGrid();
     renderCaracteristicasGrid();
     renderRiscosGrid();
@@ -774,6 +787,9 @@ $(document).ready(function() {
         getEntityMap('recursoGrupo').forEach(rg => createHiddenInput('recursoGrupoId[]', rg.id));
         getEntityMap('sinonimo').forEach(s => createHiddenInput('sinonimoNome[]', s.nome));
 
+        // CRÍTICO: Injeta os múltiplos supervisores vindos do estado para a submissão correta do repositório
+        getEntityMap('supervisor').forEach(sup => createHiddenInput('cargoSupervisorId[]', sup.id));
+
         getEntityMap('curso').forEach(c => {
             createHiddenInput('cursoId[]', c.id);
             createHiddenInput('cursoCargoObrigatorio[]', c.obrigatorio ? 1 : 0);
@@ -789,7 +805,7 @@ $(document).ready(function() {
         return true;
     });
 
-    /// =========================================================
+    // =========================================================
     // 9. LÓGICA DE BLOQUEIO E REVISÃO (AJAX COM BASE DE DADOS)
     // =========================================================
     const bloquearFormulario = () => {
@@ -848,7 +864,7 @@ $(document).ready(function() {
         $('#erroSenhaDesbloqueio').hide();
 
         $.ajax({
-            url: 'cargos_form.php', // Envia para o próprio ficheiro que criámos no topo
+            url: 'cargos_form.php',
             method: 'POST',
             data: {
                 ajax_action: 'unlock',
@@ -910,6 +926,7 @@ $(document).ready(function() {
             window.location.href = urlDestinoNavegacao; // Faz a navegação forçada
         }
     });
+    
     // =========================================================
     // 11. LÓGICA DO PISO SALARIAL (Mostrar/Esconder)
     // =========================================================
@@ -918,7 +935,6 @@ $(document).ready(function() {
             $('#blocoPisoSalarial').slideDown('fast');
         } else {
             $('#blocoPisoSalarial').slideUp('fast');
-            // Opcional: Limpa os campos se desmarcar
             $('#piso_valor').val('');
             $('#piso_lei_numero').val('');
             $('#piso_data_base').val('');
