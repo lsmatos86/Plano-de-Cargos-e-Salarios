@@ -14,8 +14,8 @@ if (!isUserLoggedIn()) {
     header('Location: ../login.php');
     exit;
 }
-// (OPCIONAL - Verificação de permissão)
-$authService->checkAndFail('areas:manage', '../index.php?error=Acesso+negado');
+// Ajustado para checar a permissão correta exigida pela estrutura de áreas
+$authService->checkAndFail('estruturas:create', '../index.php?error=Acesso+negado');
 
 
 // 4. Definições da Página (para o header.php)
@@ -23,7 +23,7 @@ $page_title = 'Gestão de Áreas de Atuação';
 $root_path = '../'; 
 $breadcrumb_items = [
     'Dashboard' => '../index.php',
-    'Gestão de Áreas' => null // Página ativa
+    'Gestão de Áreas' => null // Página activa
 ];
 // NOVO: Informa ao footer.php qual script JS carregar
 $page_scripts = ['../scripts/areas_atuacao.js'];
@@ -272,8 +272,8 @@ include '../includes/header.php';
                         <select class="form-select" id="modalPaiId" name="<?php echo $parent_id_column; ?>">
                             <option value="">-- Nenhuma (Área Raiz) --</option>
                             <?php foreach ($todasAreas as $area): ?>
-                                <option value="<?php echo $area['areaId']; ?>">
-                                    <?php echo htmlspecialchars($area['areaNome']); ?>
+                                <option value="<?php echo $area['id']; ?>">
+                                    <?php echo htmlspecialchars($area['nome']); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
