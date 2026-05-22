@@ -1,26 +1,23 @@
 <?php
-// Arquivo: src/Repository/CboRepository.php (Atualizado com Auditoria)
+// Arquivo: src/Repository/CboRepository.php (Atualizado com Auditoria e Correção SQL de Busca)
 
 namespace App\Repository;
 
 use App\Core\Database;
-use App\Service\AuditService;  // <-- PASSO 1: Incluir
-use App\Service\AuthService;   // <-- PASSO 1: Incluir
+use App\Service\AuditService;  
+use App\Service\AuthService;   
 use PDO;
 use Exception;
 
 class CboRepository
 {
     private PDO $pdo;
-    private AuditService $auditService; // <-- PASSO 2: Adicionar propriedade
-    private AuthService $authService;   // <-- PASSO 2: Adicionar propriedade
+    private AuditService $auditService; 
+    private AuthService $authService;   
 
     public function __construct()
     {
         $this->pdo = Database::getConnection();
-        // ======================================================
-        // PASSO 2: Inicializar os serviços
-        // ======================================================
         $this->auditService = new AuditService();
         $this->authService = new AuthService();
     }
@@ -30,7 +27,6 @@ class CboRepository
      */
     public function find(int $id)
     {
-        // Apenas quem pode gerenciar pode buscar os dados
         $this->authService->checkAndFail('cadastros:manage');
         
         $stmt = $this->pdo->prepare("SELECT c.*, f.familiaCboNome FROM cbos c LEFT JOIN familia_cbo f ON f.familiaCboId = c.familiaCboId WHERE c.cboId = ?");
@@ -49,14 +45,13 @@ class CboRepository
         $isUpdating = $id > 0;
 
         // 1. Validação de Permissão
-        $permissionNeeded = $isUpdating ? 'cadastros:manage' : 'cadastros:manage';
-        $this->authService->checkAndFail($permissionNeeded);
+        $this->authService->checkAndFail('cadastros:manage');
 
         // 2. Coleta de Dados
         $params = [
             ':cboCod' => $data['cboCod'] ?? '',
             ':cboTituloOficial' => $data['cboTituloOficial'] ?? '',
-            ':familiaCboId' => $data['familiaCboId'] ?? null
+            ':familiaCboId' => !empty($data['familiaCboId']) ? (int)$data['familiaCboId'] : null
         ];
 
         if (empty($params[':cboCod']) || empty($params[':cboTituloOficial']) || empty($params[':familiaCboId'])) {
@@ -71,9 +66,6 @@ class CboRepository
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = $id;
                 
-                // ======================================================
-                // PASSO 3: REGISTRAR O LOG DE UPDATE
-                // ======================================================
                 $this->auditService->log('UPDATE', $tableName, $savedId, $data);
                 
             } else {
@@ -81,16 +73,13 @@ class CboRepository
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = (int)$this->pdo->lastInsertId();
                 
-                // ======================================================
-                // PASSO 3: REGISTRAR O LOG DE CREATE
-                // ======================================================
                 $this->auditService->log('CREATE', $tableName, $savedId, $data);
             }
             
             return $savedId;
 
         } catch (\PDOException $e) {
-            if ($e->errorInfo[1] == 1062) { // Duplicate entry
+            if (isset($e->errorInfo[1]) && $e->errorInfo[1] == 1062) { 
                 throw new Exception("O código CBO '{$params[':cboCod']}' já está cadastrado.");
             }
             throw $e;
@@ -113,17 +102,13 @@ class CboRepository
             $success = $stmt->rowCount() > 0;
             
             if ($success) {
-                // ======================================================
-                // PASSO 3: REGISTRAR O LOG DE DELETE
-                // ======================================================
                 $this->auditService->log('DELETE', $tableName, $id, ['deletedId' => $id]);
             }
             
             return $success;
             
         } catch (\PDOException $e) {
-            if ($e->errorInfo[1] == 1451) { // Foreign key constraint
-                // (tabela 'cargos' usa 'cboId')
+            if (isset($e->errorInfo[1]) && $e->errorInfo[1] == 1451) { 
                 throw new Exception("Este CBO não pode ser excluído pois está sendo utilizado em um ou mais Cargos.");
             }
             throw $e;
@@ -131,7 +116,7 @@ class CboRepository
     }
 
     /**
-     * Busca CBOs de forma paginada, com filtro.
+     * Busca CBOs de forma paginada, com filtro mapeado corretamente.
      */
     public function findAllPaginated(array $params = []): array
     {
@@ -149,25 +134,34 @@ class CboRepository
             $bindings[':term'] = $sqlTerm;
         }
         
-        // Count total
+        // 1. Count total seguro
         $countSql = "SELECT COUNT(c.cboId) FROM cbos c LEFT JOIN familia_cbo f ON f.familiaCboId = c.familiaCboId" . $where;
         $countStmt = $this->pdo->prepare($countSql);
         $countStmt->execute($bindings);
         $totalRecords = (int)$countStmt->fetchColumn();
         $totalPages = $totalRecords > 0 ? ceil($totalRecords / $itemsPerPage) : 1;
 
-        // Data query
+        // 2. Query de dados principal
         $dataSql = "SELECT c.*, f.familiaCboNome FROM cbos c LEFT JOIN familia_cbo f ON f.familiaCboId = c.familiaCboId" . $where;
         
-        // Order by
-        $sort_col = $params['sort_col'] ?? 'cboTituloOficial';
+        // 3. Tratamento explícito de colunas para afastar o erro de ambiguidade (Mapeamento dos aliases da View)
+        $sort_col = $params['order_by'] ?? 'c.cboTituloOficial';
         $sort_dir = $params['sort_dir'] ?? 'ASC';
-        $validColumns = ['cboId', 'cboCod', 'cboTituloOficial', 'familiaCboNome'];
-        $orderBy = in_array($sort_col, $validColumns) ? $sort_col : 'cboTituloOficial';
-        $sortDir = in_array(strtoupper($sort_dir), ['ASC', 'DESC']) ? strtoupper($sort_dir) : 'ASC';
-        $dataSql .= " ORDER BY $orderBy $sortDir";
         
+        $validColumns = [
+            'c.cboId'            => 'c.cboId',
+            'c.cboCod'           => 'c.cboCod',
+            'c.cboTituloOficial' => 'c.cboTituloOficial',
+            'f.familiaCboNome'   => 'f.familiaCboNome'
+        ];
+        
+        // Se a coluna passada não constar na lista permitida, aplica o padrão blindado contra ambiguidade
+        $orderBy = $validColumns[$sort_col] ?? 'c.cboTituloOficial';
+        $sortDir = in_array(strtoupper($sort_dir), ['ASC', 'DESC']) ? strtoupper($sort_dir) : 'ASC';
+        
+        $dataSql .= " ORDER BY {$orderBy} {$sortDir}";
         $dataSql .= " LIMIT :limit OFFSET :offset";
+        
         $bindings[':limit'] = $itemsPerPage;
         $bindings[':offset'] = $offset;
 

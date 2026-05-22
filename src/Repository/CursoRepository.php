@@ -8,164 +8,183 @@ use App\Service\AuditService;
 use App\Service\AuthService;
 use PDO;
 use Exception;
-use PDOException; 
 
 class CursoRepository
 {
     private PDO $pdo;
-    private AuthService $authService;
     private AuditService $auditService;
+    private AuthService $authService;
 
     public function __construct()
     {
         $this->pdo = Database::getConnection();
-        $this->authService = new AuthService();
         $this->auditService = new AuditService();
+        $this->authService = new AuthService();
     }
 
-    /**
-     * Busca um curso pelo ID.
-     */
     public function find(int $id)
     {
-        // ==================================================================
-        // CORREÇÃO APLICADA AQUI:
-        // ==================================================================
-        $this->authService->checkAndFail('cursos:manage', '../index.php?error=Acesso+negado');
-        
         $stmt = $this->pdo->prepare("SELECT * FROM cursos WHERE cursoId = ?");
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
+    public function findAll(): array
+    {
+        $stmt = $this->pdo->query("SELECT * FROM cursos ORDER BY cursoNome ASC");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     /**
-     * Busca todos os cursos de forma paginada.
+     * Retorna lookups simples (id => nome) para SELECTs.
+     */
+    public function findAllLookup(): array
+    {
+        $stmt = $this->pdo->query("SELECT cursoId, cursoNome FROM cursos ORDER BY cursoNome ASC");
+        return $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    }
+
+    /**
+     * Busca dados dos cursos de forma paginada incluindo a nova coluna de periodicidade.
      */
     public function findAllPaginated(array $params = []): array
     {
-        // A listagem (leitura) não deve exigir permissão de 'manage'
-        
         $itemsPerPage = (int)($params['limit'] ?? 10);
         $currentPage = (int)($params['page'] ?? 1);
         $term = $params['term'] ?? '';
         
-        $valid_cols = ['cursoId', 'cursoNome'];
-        $sort_col = in_array($params['sort_col'] ?? 'cursoNome', $valid_cols) ? $params['sort_col'] : 'cursoNome';
-        $sort_dir = in_array(strtoupper($params['sort_dir'] ?? 'ASC'), ['ASC', 'DESC']) ? strtoupper($params['sort_dir']) : 'ASC';
+        $sortCol = in_array($params['order_by'] ?? 'cursoNome', ['cursoId', 'cursoNome', 'cursoPeriodicidade']) ? $params['order_by'] : 'cursoNome';
+        $sortDir = in_array(strtoupper($params['sort_dir'] ?? 'ASC'), ['ASC', 'DESC']) ? $params['sort_dir'] : 'ASC';
 
-        $offset = ($currentPage - 1) * $itemsPerPage;
-        
-        $where = '';
-        $bindings = [];
-        if (!empty($term)) {
-            $where = " WHERE cursoNome LIKE ?";
-            $bindings[] = "%{$term}%";
-        }
+        $termParam = "%{$term}%";
 
-        $count_sql = "SELECT COUNT(*) FROM cursos" . $where;
-        $count_stmt = $this->pdo->prepare($count_sql);
-        $count_stmt->execute($bindings);
-        $totalRecords = (int)$count_stmt->fetchColumn();
+        try {
+            $countSql = "SELECT COUNT(*) FROM cursos WHERE cursoNome LIKE ?";
+            $countStmt = $this->pdo->prepare($countSql);
+            $countStmt->execute([$termParam]);
+            $totalRecords = (int)$countStmt->fetchColumn();
 
-        $totalPages = $totalRecords > 0 ? ceil($totalRecords / $itemsPerPage) : 1;
-        
-        if ($currentPage > $totalPages) {
-            $currentPage = $totalPages;
+            $totalPages = $totalRecords > 0 ? ceil($totalRecords / $itemsPerPage) : 1;
+            $currentPage = max(1, min($currentPage, $totalPages));
             $offset = ($currentPage - 1) * $itemsPerPage;
+
+            $sql = "
+                SELECT cursoId, cursoNome, cursoDescricao, cursoPeriodicidade
+                FROM cursos
+                WHERE cursoNome LIKE ?
+                ORDER BY {$sortCol} {$sortDir}
+                LIMIT ? OFFSET ?
+            ";
+
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->bindParam(1, $termParam);
+            $stmt->bindParam(2, $itemsPerPage, PDO::PARAM_INT);
+            $stmt->bindParam(3, $offset, PDO::PARAM_INT);
+            $stmt->execute();
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            return [
+                'data' => $data,
+                'total' => $totalRecords,
+                'totalPages' => $totalPages,
+                'currentPage' => $currentPage
+            ];
+
+        } catch (\PDOException $e) {
+            error_log("Erro em CursoRepository::findAllPaginated: " . $e->getMessage());
+            return ['data' => [], 'total' => 0, 'totalPages' => 1, 'currentPage' => 1];
         }
-
-        $sql = "SELECT * FROM cursos" . $where . " ORDER BY $sort_col $sort_dir LIMIT $itemsPerPage OFFSET $offset";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($bindings);
-        $registros = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        return [
-            'data' => $registros,
-            'total' => $totalRecords,
-            'totalPages' => $totalPages,
-            'currentPage' => $currentPage
-        ];
     }
 
     /**
-     * Salva (cria ou atualiza) um curso.
+     * Salva (cria ou atualiza) um curso incluindo a periodicidade padrão em meses.
      */
-    public function save(array $data)
+    public function save(array $data): int
     {
-        // ==================================================================
-        // CORREÇÃO APLICADA AQUI:
-        // ==================================================================
-        $this->authService->checkAndFail('cursos:manage');
+        $tableName = 'cursos';
 
-        $id = (int)($data['cursoId'] ?? $data['id'] ?? 0); 
-        $nome = trim($data['cursoNome'] ?? $data['nome'] ?? '');
+        $id = (int)($data['cursoId'] ?? 0);
+        $nome = trim($data['cursoNome'] ?? '');
+        $descricao = trim($data['cursoDescricao'] ?? '');
+        $descricao = $descricao === '' ? null : $descricao;
         
+        // Nova coluna: Periodicidade em meses (Ex: 12 para anual, 24 para bienal, null se não houver obrigação preventiva)
+        $periodicidade = (empty($data['cursoPeriodicidade']) || (int)$data['cursoPeriodicidade'] <= 0) 
+            ? null 
+            : (int)$data['cursoPeriodicidade'];
+
+        $isUpdating = $id > 0;
+
+        $permissionNeeded = $isUpdating ? 'cadastros:manage' : 'cadastros:manage';
+        $this->authService->checkAndFail($permissionNeeded);
+
         if (empty($nome)) {
             throw new Exception("O nome do curso é obrigatório.");
         }
 
+        $params = [
+            ':nome' => $nome,
+            ':descricao' => $descricao,
+            ':periodicidade' => $periodicidade
+        ];
+
         try {
-            if ($id > 0) {
-                // Update
-                $sql = "UPDATE cursos SET cursoNome = ? WHERE cursoId = ?";
-                $stmt = $this->pdo->prepare($sql);
-                $stmt->execute([$nome, $id]);
+            if ($isUpdating) {
+                $sql = "UPDATE {$tableName} SET cursoNome = :nome, cursoDescricao = :descricao, cursoPeriodicidade = :periodicidade WHERE cursoId = :id";
+                $params[':id'] = $id;
+                $this->pdo->prepare($sql)->execute($params);
+                $savedId = $id;
                 
-                $this->auditService->log('UPDATE', 'cursos', $id, $data);
+                $this->auditService->log('UPDATE', $tableName, $savedId, $data);
             } else {
-                // Create
-                $sql = "INSERT INTO cursos (cursoNome) VALUES (?)";
-                $stmt = $this->pdo->prepare($sql);
-                $stmt->execute([$nome]);
-                $id = (int)$this->pdo->lastInsertId();
+                $sql = "INSERT INTO {$tableName} (cursoNome, cursoDescricao, cursoPeriodicidade) VALUES (:nome, :descricao, :periodicidade)";
+                $this->pdo->prepare($sql)->execute($params);
+                $savedId = (int)$this->pdo->lastInsertId();
                 
-                $this->auditService->log('CREATE', 'cursos', $id, $data);
+                $this->auditService->log('CREATE', $tableName, $savedId, $data);
             }
-            return $id;
-        } catch (PDOException $e) {
+            
+            return $savedId;
+
+        } catch (Exception $e) {
             if (str_contains($e->getMessage(), 'Duplicate entry')) {
-                 throw new Exception("O curso '{$nome}' já está cadastrado.");
+                throw new Exception("O curso '$nome' já está cadastrado.");
             }
-            throw new Exception("Erro ao salvar o curso: " . $e->getMessage());
+            throw $e;
         }
     }
 
     /**
-     * Exclui um curso.
+     * Exclui um curso se não houver vínculos ativos com cargos.
      */
     public function delete(int $id): bool
     {
-        // ==================================================================
-        // CORREÇÃO APLICADA AQUI:
-        // ==================================================================
-        $this->authService->checkAndFail('cursos:manage');
-
-        if ($id <= 0) {
-            throw new Exception("ID inválido para exclusão.");
-        }
+        $tableName = 'cursos';
+        $this->authService->checkAndFail('cadastros:manage');
 
         try {
-            // Verifica se o curso está sendo usado
+            // Verifica se o curso está associado a algum cargo antes de remover
             $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM cursos_cargo WHERE cursoId = ?");
             $stmtCheck->execute([$id]);
             if ($stmtCheck->fetchColumn() > 0) {
                 throw new Exception("Este curso não pode ser excluído pois está associado a um ou mais cargos.");
             }
 
-            $stmt = $this->pdo->prepare("DELETE FROM cursos WHERE cursoId = ?");
+            $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE cursoId = ?");
             $stmt->execute([$id]);
-            
             $success = $stmt->rowCount() > 0;
+            
             if ($success) {
-                $this->auditService->log('DELETE', 'cursos', $id, ['deletedId' => $id]);
+                $this->auditService->log('DELETE', $tableName, $id, ['deletedId' => $id]);
             }
+            
             return $success;
 
-        } catch (PDOException $e) {
+        } catch (Exception $e) {
             if (str_contains($e->getMessage(), 'foreign key constraint')) {
-                 throw new Exception("Este curso não pode ser excluído pois está em uso.");
+                throw new Exception("Este curso não pode ser excluído pois está em uso no sistema.");
             }
-            throw new Exception("Erro ao excluir o curso: " . $e->getMessage());
+            throw $e;
         }
     }
 }

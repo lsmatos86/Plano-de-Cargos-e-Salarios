@@ -113,7 +113,10 @@ class CargoRepository
                 $stmt->execute($bindings);
                 $novoCargoId = $cargoIdSubmissao;
 
-                $this->auditService->log('UPDATE', 'cargos', $novoCargoId, $postData);
+                // SISTEMA DE LOG: Captura a justificativa enviada e anexa ao Log de Auditoria
+                $auditPayload = $postData;
+                $auditPayload['audit_motivo_justificativa'] = trim($postData['motivo_alteracao'] ?? 'Nenhuma justificativa textual fornecida.');
+                $this->auditService->log('UPDATE', 'cargos', $novoCargoId, $auditPayload);
             } else {
                 $sql_fields = implode(', ', $fields);
                 $placeholders = implode(', ', array_fill(0, count($fields), '?'));

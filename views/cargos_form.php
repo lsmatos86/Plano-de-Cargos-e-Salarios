@@ -152,6 +152,7 @@ try {
     window.recursosGruposAssociados = normalizeState(<?php echo json_encode($cargoRecursosGrupos); ?>);
     window.areasAssociadas = normalizeState(<?php echo json_encode($cargoAreas); ?>);
     window.sinonimosAssociados = normalizeState(<?php echo json_encode($cargoSinonimos); ?>);
+    window.supervisoresAssociados = normalizeState(<?php echo json_encode($supervisores ?? []); ?>);
 </script>
 
 <?php 
@@ -525,7 +526,7 @@ require_once $root_path . 'includes/header.php';
                 </div>
             </div> <div class="tab-pane fade" id="sinonimos" role="tabpanel" aria-labelledby="sinonimos-tab">
                 <h4 class="mb-3"><i class="fas fa-tags"></i> Sinônimos e Nomes Alternativos</h4>
-                <p class="text-muted">Inclua nomes alternativos usados para este cargo.</p>
+                <p class="text-muted">Inclua nomes alternativos usados for este cargo.</p>
 
                 <div class="row mb-3">
                     <div class="col-md-9">
@@ -568,6 +569,19 @@ require_once $root_path . 'includes/header.php';
                 </div>
             </div> 
         </div>
+
+        <?php if ($isEditing): ?>
+        <div class="card mb-4 border-info shadow-sm">
+            <div class="card-header bg-info text-white py-2 fw-bold">
+                <i class="fas fa-history"></i> Justificativa da Alteração (Log de Relatório)
+            </div>
+            <div class="card-body bg-light py-3">
+                <label for="motivo_alteracao" class="form-label small text-muted mb-1 fw-bold">Informe detalhadamente o motivo destas alterações para fins de relatório:</label>
+                <textarea class="form-control" id="motivo_alteracao" name="motivo_alteracao" rows="2" placeholder="Ex: Atualização do CBO para enquadramento correto da equipe; Revisão das responsabilidades após convenção coletiva." required></textarea>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <button type="submit" class="btn btn-lg btn-success w-100 mt-3">
             <i class="fas fa-check-circle"></i> SALVAR CARGO
         </button>
