@@ -1,5 +1,5 @@
 <?php
-// Arquivo: src/Repository/CboRepository.php (Atualizado com Auditoria e Correção SQL de Busca)
+// Arquivo: src/Repository/CboRepository.php (Atualizado com Correção Definitiva de Parâmetros PDO)
 
 namespace App\Repository;
 
@@ -116,7 +116,7 @@ class CboRepository
     }
 
     /**
-     * Busca CBOs de forma paginada, com filtro mapeado corretamente.
+     * Busca CBOs de forma paginada, blindado contra erros de contagem de parâmetros (HY093).
      */
     public function findAllPaginated(array $params = []): array
     {
@@ -129,9 +129,12 @@ class CboRepository
         $where = "";
         $bindings = [];
 
+        // Identificadores exclusivos com numeração para evitar o conflito do PDO
         if (!empty($term)) {
-            $where = " WHERE c.cboCod LIKE :term OR c.cboTituloOficial LIKE :term OR f.familiaCboNome LIKE :term";
-            $bindings[':term'] = $sqlTerm;
+            $where = " WHERE c.cboCod LIKE :term1 OR c.cboTituloOficial LIKE :term2 OR f.familiaCboNome LIKE :term3";
+            $bindings[':term1'] = $sqlTerm;
+            $bindings[':term2'] = $sqlTerm;
+            $bindings[':term3'] = $sqlTerm;
         }
         
         // 1. Count total seguro
@@ -144,7 +147,7 @@ class CboRepository
         // 2. Query de dados principal
         $dataSql = "SELECT c.*, f.familiaCboNome FROM cbos c LEFT JOIN familia_cbo f ON f.familiaCboId = c.familiaCboId" . $where;
         
-        // 3. Tratamento explícito de colunas para afastar o erro de ambiguidade (Mapeamento dos aliases da View)
+        // 3. Tratamento explícito de colunas para afastar o erro de ambiguidade
         $sort_col = $params['order_by'] ?? 'c.cboTituloOficial';
         $sort_dir = $params['sort_dir'] ?? 'ASC';
         
@@ -155,7 +158,6 @@ class CboRepository
             'f.familiaCboNome'   => 'f.familiaCboNome'
         ];
         
-        // Se a coluna passada não constar na lista permitida, aplica o padrão blindado contra ambiguidade
         $orderBy = $validColumns[$sort_col] ?? 'c.cboTituloOficial';
         $sortDir = in_array(strtoupper($sort_dir), ['ASC', 'DESC']) ? strtoupper($sort_dir) : 'ASC';
         
@@ -168,7 +170,7 @@ class CboRepository
         $stmt = $this->pdo->prepare($dataSql);
         
         foreach ($bindings as $key => &$val) {
-            if ($key == ':limit' || $key == ':offset') {
+            if ($key === ':limit' || $key === ':offset') {
                 $stmt->bindParam($key, $val, PDO::PARAM_INT);
             } else {
                 $stmt->bindParam($key, $val);

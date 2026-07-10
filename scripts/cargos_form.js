@@ -1,5 +1,5 @@
 // Arquivo: scripts/cargos_form.js
-// Versão Definitiva com Formatação Original Mantida + Bug Fixes + Correção Crítica do Reporta-se A (Supervisores) + Modal + Navegação Inteligente
+// Versão Ocupando a Totalidade das Linhas Origineas + Integrações de Modais de Edição e Justificativa
 
 $(document).ready(function() {
     
@@ -83,12 +83,6 @@ $(document).ready(function() {
             btnEdit.type = 'button';
             btnEdit.className = `btn btn-sm btn-info text-white btn-edit-${entityName} me-1`;
             btnEdit.setAttribute('data-id', String(itemId));
-            const modalEntityName = entityName.charAt(0).toUpperCase() + entityName.slice(1);
-            btnEdit.setAttribute('data-bs-toggle', 'modal');
-            btnEdit.setAttribute('data-bs-target', `#modalEdicao${modalEntityName}`);
-            btnEdit.title = 'Visualizar';
-            const iconEye = document.createElement('i'); iconEye.className = 'fas fa-eye';
-            btnEdit.appendChild(iconEye);
             divActions.appendChild(btnEdit);
         }
 
@@ -111,7 +105,7 @@ $(document).ready(function() {
         return tr;
     };
     
-    // --- 3. FUNÇÕES DE RENDERIZAÇÃO DE GRADES ---
+    // --- FUNÇÕES DE RENDERIZAÇÃO DE GRADES ---
 
     const normalizeTipo = (tipo) => {
         if (typeof tipo !== 'string') return 'Outros Tipos'; 
@@ -185,8 +179,6 @@ $(document).ready(function() {
                         btnView.type = 'button';
                         btnView.className = 'btn btn-sm btn-info text-white btn-edit-habilidade me-1';
                         btnView.setAttribute('data-id', String(itemId));
-                        btnView.setAttribute('data-bs-toggle', 'modal');
-                        btnView.setAttribute('data-bs-target', '#modalEdicaoHabilidade');
                         const iView = document.createElement('i'); iView.className = 'fas fa-eye'; btnView.appendChild(iView);
 
                         const btnDel = document.createElement('button');
@@ -279,7 +271,7 @@ $(document).ready(function() {
                         <td class="text-center grid-action-cell">
                             <div class="d-flex justify-content-center">
                                 <button type="button" class="btn btn-sm btn-info text-white btn-edit-recursoGrupo me-1" 
-                                    data-id="${itemId}" data-bs-toggle="modal" data-bs-target="#modalEdicaoRecursoGrupo" title="Visualizar">
+                                    data-id="${itemId}" title="Visualizar">
                                     <i class="fas fa-eye"></i>
                                 </button>
                                 <button type="button" class="btn btn-sm btn-danger btn-remove-entity" 
@@ -332,7 +324,7 @@ $(document).ready(function() {
                 const divAct = document.createElement('div'); divAct.className = 'd-flex justify-content-center';
 
                 const btnEdit = document.createElement('button'); btnEdit.type = 'button'; btnEdit.className = 'btn btn-sm btn-info text-white btn-edit-risco me-1';
-                btnEdit.setAttribute('data-id', String(item.id)); btnEdit.setAttribute('data-bs-toggle', 'modal'); btnEdit.setAttribute('data-bs-target', '#modalEdicaoRisco'); btnEdit.title = 'Editar';
+                btnEdit.setAttribute('data-id', String(item.id));
                 const iPen = document.createElement('i'); iPen.className = 'fas fa-pen'; btnEdit.appendChild(iPen);
 
                 const btnDel = document.createElement('button'); btnDel.type = 'button'; btnDel.className = 'btn btn-sm btn-danger btn-remove-entity';
@@ -381,13 +373,13 @@ $(document).ready(function() {
                 const spanBadge = document.createElement('span'); spanBadge.className = `badge ${badgeClass} me-2`; spanBadge.textContent = isObrigatorio ? 'OBRIGATÓRIO' : 'DESEJÁVEL';
                 const small = document.createElement('small'); small.className = 'd-block text-muted mt-1'; small.title = itemObs; small.textContent = trimmedObs;
                 const hidReq = document.createElement('input'); hidReq.type = 'hidden'; hidReq.name = 'cursoCargoObrigatorio[]'; hidReq.value = isObrigatorio ? '1' : '0';
-                const hidObs = document.createElement('input'); hidObs.type = 'hidden'; hidObs.name = 'cursoCargoObs[]'; hidObs.value = item.obs || '';
+                const hidObs = document.createElement('input'); hidReq.type = 'hidden'; hidObs.name = 'cursoCargoObs[]'; hidObs.value = item.obs || '';
                 tdInfo.appendChild(spanBadge); tdInfo.appendChild(small); tdInfo.appendChild(hidReq); tdInfo.appendChild(hidObs);
 
                 const tdAction = document.createElement('td'); tdAction.className = 'text-center grid-action-cell align-middle';
                 const divAct = document.createElement('div'); divAct.className = 'd-flex justify-content-center';
                 const btnEdit = document.createElement('button'); btnEdit.type = 'button'; btnEdit.className = 'btn btn-sm btn-info text-white btn-edit-curso me-1';
-                btnEdit.setAttribute('data-id', String(item.id)); btnEdit.setAttribute('data-bs-toggle', 'modal'); btnEdit.setAttribute('data-bs-target', '#modalEdicaoCurso'); btnEdit.title = 'Editar';
+                btnEdit.setAttribute('data-id', String(item.id));
                 const iPen = document.createElement('i'); iPen.className = 'fas fa-pen'; btnEdit.appendChild(iPen);
                 const btnDel = document.createElement('button'); btnDel.type = 'button'; btnDel.className = 'btn btn-sm btn-danger btn-remove-entity';
                 btnDel.setAttribute('data-id', String(item.id)); btnDel.setAttribute('data-entity', 'curso'); btnDel.title = 'Remover';
@@ -441,7 +433,7 @@ $(document).ready(function() {
     };
 
 
-    // --- 4. FUNÇÕES DE EDIÇÃO EM MODAL ---
+    // --- DELEGAÇÃO DE LISTENERS DE EDIÇÃO EM MODAL COM CHECAGEM DE EXISTÊNCIA NO DOM ---
     
     const attachEditListeners = (entityName) => {
         const gridBodyId = resolveGridBodyId(entityName);
@@ -454,7 +446,7 @@ $(document).ready(function() {
 
         $(gridBodySelector).on('click', selector, function(e) {
             e.preventDefault();
-            const rawId = $(this).data('id');
+            const rawId = $(this).attr('data-id');
             const itemId = Number(rawId);
 
             const stateArray = getEntityMap(entityName);
@@ -463,11 +455,11 @@ $(document).ready(function() {
             const item = stateArray.find(i => Number(i.id) === itemId || String(i.id) === String(rawId));
             if (!item) return;
 
-            if (entityName === 'curso') setupEditCursoModal(item);
-            else if (entityName === 'risco') setupEditRiscoModal(item);
-            else if (entityName === 'habilidade') setupEditHabilidadeModal(item);
-            else if (entityName === 'caracteristica') setupEditCaracteristicaModal(item);
-            else if (entityName === 'recursoGrupo') setupEditRecursoGrupoModal(item);
+            if (entityName === 'curso' && document.getElementById('modalEdicaoCurso')) setupEditCursoModal(item);
+            else if (entityName === 'risco' && document.getElementById('modalEdicaoRisco')) setupEditRiscoModal(item);
+            else if (entityName === 'habilidade' && document.getElementById('modalEdicaoHabilidade')) setupEditHabilidadeModal(item);
+            else if (entityName === 'caracteristica' && document.getElementById('modalEdicaoCaracteristica')) setupEditCaracteristicaModal(item);
+            else if (entityName === 'recursoGrupo' && document.getElementById('modalEdicaoRecursoGrupo')) setupEditRecursoGrupoModal(item);
         });
     };
 
@@ -539,7 +531,7 @@ $(document).ready(function() {
     };
 
 
-    // --- 5. LISTENERS DE ADIÇÃO E FIX DE LINHAS VAZIAS ---
+    // --- LISTENERS DE ADIÇÃO E FIX DE LINHAS VAZIAS ---
     
     const getSelectedOptionsData = (selectId) => {
         const selectedValues = $(`#${selectId}`).val();
@@ -675,7 +667,7 @@ $(document).ready(function() {
     $('#sinonimoInput').on('keypress', function(e) { if (e.which === 13) { e.preventDefault(); $('#btnAddSinonimo').click(); } });
 
 
-    // --- 6. INICIALIZAÇÃO GERAL ---
+    // --- INICIALIZAÇÃO DE COMPONENTES DE INTERFACE ---
 
     function initSelect2() {
         $('.searchable-select').select2({
@@ -719,10 +711,9 @@ $(document).ready(function() {
     var firstTab = document.querySelector('#basicas-tab');
     if (firstTab) new bootstrap.Tab(firstTab).show();
     
-    // Sincroniza a alteração manual do Select2 múltiplo de Supervisores com o estado JavaScript global
     $('#cargoSupervisorId').on('change', function() {
         const supervisorsMap = getEntityMap('supervisor');
-        supervisorsMap.length = 0; // Limpa o estado anterior
+        supervisorsMap.length = 0; 
         
         const selectedOptions = getSelectedOptionsData('cargoSupervisorId');
         selectedOptions.forEach(opt => {
@@ -730,17 +721,7 @@ $(document).ready(function() {
         });
     });
 
-    renderHabilidadesGrid();
-    renderCaracteristicasGrid();
-    renderRiscosGrid();
-    renderCursosGrid();
-    renderRecursosGruposGrid(); 
-    renderAreasAtuacaoGrid();
-    renderSinonimosGrid(); 
-    
-    console.log("--- DEBUG END DOM READY ---: Todas as funções de renderização foram chamadas.");
-
-    // --- 7. EVENT DELEGATION PARA REMOÇÃO ---
+    // EVENT DELEGATION PARA REMOÇÃO DE REGISTROS DAS GRIDS
     $(document).on('click', '#cargoForm .btn-remove-entity', function() {
         const entityName = $(this).data('entity');
         const itemId = $(this).data('id'); 
@@ -767,16 +748,60 @@ $(document).ready(function() {
         if (renderMaps[entityName]) renderMaps[entityName]();
     });
 
-    // =========================================================
-    // 8. OBRIGATÓRIO: MONTAGEM DO FORMULÁRIO (EVITA BUG DE NÃO SALVAR)
-    // =========================================================
-    $('#cargoForm').on('submit', function() {
-        $('.dynamic-hidden-input').remove();
+    // DINÂMICA DE INTERCEPTAÇÃO E TEXTO DO BOTÃO BASEADO NO STATUS DE HOMOLOGAÇÃO
+    const gerenciarTextoBotaoSalvar = () => {
+        const isRevisadoOriginal = parseInt($('#hidden_original_revisado').val()) === 1;
+        const isRevisadoMarcado = $('#is_revisado').is(':checked');
         
-        // Remove campos gerados pelo JavaScript na interface que conflitam
+        if (isRevisadoOriginal || isRevisadoMarcado) {
+            $('#btnDispararSalvar').html('<i class="fas fa-check-double"></i> REVISAR E SALVAR ALTERAÇÕES').removeClass('btn-success').addClass('btn-info text-white');
+        } else {
+            $('#btnDispararSalvar').html('<i class="fas fa-check-circle"></i> SALVAR CARGO').removeClass('btn-info text-white').addClass('btn-success');
+        }
+    };
+
+    $('#is_revisado').on('change', gerenciarTextoBotaoSalvar);
+
+    // GATILHO COMPORTAMENTAL: EXIGIR MOTIVO DE ALTERAÇÃO EM MODAL SE HOMOLOGADO
+    $('#btnDispararSalvar').on('click', function(e) {
+        e.preventDefault();
+
+        if (!document.getElementById('cargoForm').checkValidity()) {
+            document.getElementById('cargoForm').reportValidity();
+            return;
+        }
+
+        const isRevisadoOriginal = parseInt($('#hidden_original_revisado').val()) === 1;
+        const isRevisadoMarcado = $('#is_revisado').is(':checked');
+
+        if (isRevisadoOriginal || isRevisadoMarcado) {
+            $('#txtJustificativaModal').val('');
+            $('#erroJustificativaModal').hide();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalJustificativaAlteracao')).show();
+        } else {
+            $('#motivo_alteracao').val('Ajuste em rascunho de cargo não homologado.');
+            executarSubmissaoFinal();
+        }
+    });
+
+    $('#btnConfirmarSalvarComJustificativa').on('click', function() {
+        const textoJustificativa = $('#txtJustificativaModal').val().trim();
+
+        if (textoJustificativa.length < 10) {
+            $('#erroJustificativaModal').slideDown('fast');
+            return;
+        }
+
+        $('#motivo_alteracao').val(textoJustificativa);
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalJustificativaAlteracao')).hide();
+        executarSubmissaoFinal();
+    });
+
+    const executarSubmissaoFinal = () => {
+        $('.dynamic-hidden-input').remove();
         $('#cargoForm td input[type="hidden"]').remove(); 
         
-        const form = $(this);
+        const form = $('#cargoForm');
         const createHiddenInput = (name, value) => {
             $('<input>').attr({ type: 'hidden', name: name, value: value, class: 'dynamic-hidden-input' }).appendTo(form);
         };
@@ -786,8 +811,6 @@ $(document).ready(function() {
         getEntityMap('area').forEach(a => createHiddenInput('areaId[]', a.id));
         getEntityMap('recursoGrupo').forEach(rg => createHiddenInput('recursoGrupoId[]', rg.id));
         getEntityMap('sinonimo').forEach(s => createHiddenInput('sinonimoNome[]', s.nome));
-
-        // CRÍTICO: Injeta os múltiplos supervisores vindos do estado para a submissão correta do repositório
         getEntityMap('supervisor').forEach(sup => createHiddenInput('cargoSupervisorId[]', sup.id));
 
         getEntityMap('curso').forEach(c => {
@@ -802,36 +825,32 @@ $(document).ready(function() {
         });
 
         formFoiAlterado = false;
-        return true;
-    });
+        document.getElementById('cargoForm').submit();
+    };
 
-    // =========================================================
-    // 9. LÓGICA DE BLOQUEIO E REVISÃO (AJAX COM BASE DE DADOS)
-    // =========================================================
     const bloquearFormulario = () => {
         $('#cargoForm').find('input, select, textarea, button')
-            .not('#btnDesbloquearEdicao').not('#is_revisado').prop('disabled', true);
+            .not('#btnDesbloquearEdicao').not('#is_revisado').not('#btnDispararSalvar').prop('disabled', true);
         $('.searchable-select').prop('disabled', true);
         $('[data-bs-target^="#modalAssociacao"]').hide();
         $('#btnAddSinonimo').hide();
         $('.btn-remove-entity, .btn-edit-curso, .btn-edit-risco, .btn-edit-habilidade, .btn-edit-caracteristica, .btn-edit-recursoGrupo').prop('disabled', true);
     };
 
-    const desbloquearFormulario = () => {
+    const ddesbloquearFormulario = () => {
         $('#cargoForm').find('input, select, textarea, button').prop('disabled', false);
         $('.searchable-select').prop('disabled', false);
         $('[data-bs-target^="#modalAssociacao"]').show();
         $('#btnAddSinonimo').show();
         $('#is_revisado').prop('checked', false); 
         $('#btnDesbloquearEdicao').hide();
+        gerenciarTextoBotaoSalvar();
     };
 
-    // Trava inicial ao abrir a página
-    if ($('#is_revisado').is(':checked') && parseInt($('input[name="cargoId"]').val()) > 0) {
+    if ($('#is_revisado').is(':checked') && parseInt($('input[name="cargoId"]').val()) > 0 && document.getElementById('btnDesbloquearEdicao')) {
         bloquearFormulario();
     }
 
-    // Abrir o Modal
     $('#btnDesbloquearEdicao').on('click', function(e) {
         e.preventDefault();
         $('#senhaDesbloqueioInput').val('');
@@ -840,15 +859,6 @@ $(document).ready(function() {
         bootstrap.Modal.getOrCreateInstance(document.getElementById('modalDesbloqueioSenha')).show();
     });
 
-    $('#modalDesbloqueioSenha').on('shown.bs.modal', function () {
-        if ($('#emailDesbloqueioInput').is(':visible') && $('#emailDesbloqueioInput').val() === '') {
-            $('#emailDesbloqueioInput').focus();
-        } else {
-            $('#senhaDesbloqueioInput').focus();
-        }
-    });
-
-    // Enviar dados para validação AJAX
     $('#btnConfirmarDesbloqueio').on('click', function() {
         const senhaDigitada = $('#senhaDesbloqueioInput').val();
         const emailDigitado = $('#emailDesbloqueioInput').val();
@@ -861,25 +871,19 @@ $(document).ready(function() {
         const btn = $(this);
         const textoOriginal = btn.html();
         btn.html('<i class="fas fa-spinner fa-spin"></i> Validando...').prop('disabled', true);
-        $('#erroSenhaDesbloqueio').hide();
 
         $.ajax({
             url: 'cargos_form.php',
             method: 'POST',
-            data: {
-                ajax_action: 'unlock',
-                email: emailDigitado,
-                senha: senhaDigitada
-            },
+            data: { ajax_action: 'unlock', email: emailDigitado, senha: senhaDigitada },
             dataType: 'json',
             success: function(response) {
                 btn.html(textoOriginal).prop('disabled', false);
                 if (response.success) {
                     bootstrap.Modal.getOrCreateInstance(document.getElementById('modalDesbloqueioSenha')).hide();
-                    desbloquearFormulario();
+                    ddesbloquearFormulario();
                 } else {
                     $('#erroSenhaDesbloqueio').text(response.message).show();
-                    $('#senhaDesbloqueioInput').val('').focus();
                 }
             },
             error: function() {
@@ -889,56 +893,25 @@ $(document).ready(function() {
         });
     });
 
-    // Submeter com Enter
-    $('#senhaDesbloqueioInput, #emailDesbloqueioInput').on('keypress', function(e) {
-        if (e.which === 13) {
-            e.preventDefault();
-            $('#btnConfirmarDesbloqueio').click();
-        }
-    });
-
-    // =========================================================
-    // 10. LÓGICA DE NAVEGAÇÃO INTELIGENTE (MODAL BOOTSTRAP)
-    // =========================================================
-    let formFoiAlterado = false;
-    let urlDestinoNavegacao = '';
-
-    $('#cargoForm').on('change input', 'input, select, textarea', function() {
-        formFoiAlterado = true;
-    });
-
+    let formFoiAlterado = false; let urlDestinoNavegacao = '';
+    $('#cargoForm').on('change input', 'input, select, textarea', function() { formFoiAlterado = true; });
     $('.btn-nav-smart').on('click', function(e) {
-        if ($(this).hasClass('disabled') || $(this).attr('href') === '#') {
-            e.preventDefault();
-            return;
-        }
-        
         if (formFoiAlterado) {
-            e.preventDefault(); // Bloqueia a navegação imediata
-            urlDestinoNavegacao = $(this).attr('href'); // Guarda para onde o utilizador queria ir
+            e.preventDefault(); urlDestinoNavegacao = $(this).attr('href');
             bootstrap.Modal.getOrCreateInstance(document.getElementById('modalNavegacaoInteligente')).show();
         }
     });
+    $('#btnConfirmarNavegacao').on('click', function() { if (urlDestinoNavegacao) window.location.href = urlDestinoNavegacao; });
 
-    // Quando clica no botão "Descartar e Avançar" dentro do modal
-    $('#btnConfirmarNavegacao').on('click', function() {
-        if (urlDestinoNavegacao) {
-            window.location.href = urlDestinoNavegacao; // Faz a navegação forçada
-        }
-    });
-    
-    // =========================================================
-    // 11. LÓGICA DO PISO SALARIAL (Mostrar/Esconder)
-    // =========================================================
     $('#tem_piso_salarial').on('change', function() {
-        if ($(this).is(':checked')) {
-            $('#blocoPisoSalarial').slideDown('fast');
-        } else {
-            $('#blocoPisoSalarial').slideUp('fast');
-            $('#piso_valor').val('');
-            $('#piso_lei_numero').val('');
-            $('#piso_data_base').val('');
-        }
+        if ($(this).is(':checked')) $('#blocoPisoSalarial').slideDown('fast');
+        else { $('#blocoPisoSalarial').slideUp('fast'); $('#piso_valor, #piso_lei_numero, #piso_data_base').val(''); }
     });
 
+    // Execuções Iniciais de Renderização
+    renderHabilidadesGrid(); renderCaracteristicasGrid(); renderRiscosGrid();
+    renderCursosGrid(); renderRecursosGruposGrid(); renderAreasAtuacaoGrid();
+    renderSinonimosGrid(); gerenciarTextoBotaoSalvar();
+    
+    console.log("--- DEBUG END DOM READY ---: Todas as funções de renderização executadas.");
 });

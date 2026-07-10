@@ -1,13 +1,12 @@
 <?php
-// Arquivo: views/cargos_form.php (VIEW: Ponto de Entrada)
+// Arquivo: views/cargos_form.php (VIEW: Arquivo Completo e Unificado Sem Cortes)
 
-// 1. INCLUDES GLOBAIS E INICIALIZAÇÃO
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once '../vendor/autoload.php';
 require_once '../config.php';
-require_once '../includes/functions.php'; // Para getDbConnection e lookups
+require_once '../includes/functions.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_action']) && $_POST['ajax_action'] === 'unlock') {
     header('Content-Type: application/json');
@@ -17,12 +16,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_action']) && $_P
         $senha = trim($_POST['senha'] ?? '');
         $userIdToCheck = null;
 
-        // 1. Identificar de quem é a senha que estamos a validar
         if (empty($email)) {
-            // Se não preencheu e-mail, é o próprio utilizador logado a confirmar a sua senha
             $userIdToCheck = $_SESSION['user_id'] ?? 0;
         } else {
-            // Se preencheu e-mail, é uma validação de terceiros (Gestor a autorizar)
             $stmt = $pdoAjax->prepare("SELECT usuarioId, senha, ativo FROM usuarios WHERE email = ?");
             $stmt->execute([$email]);
             $userCheck = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -35,9 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_action']) && $_P
             }
         }
 
-        // 2. Validar a permissão e a senha do utilizador identificado
         if ($userIdToCheck > 0) {
-            // Se era o utilizador logado, temos de validar a senha dele agora
             if (empty($email)) {
                 $stmt = $pdoAjax->prepare("SELECT senha FROM usuarios WHERE usuarioId = ? AND ativo = 1");
                 $stmt->execute([$userIdToCheck]);
@@ -48,7 +42,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_action']) && $_P
                 }
             }
 
-            // Verificar se este utilizador (seja ele qual for) tem permissões de edição
             $stmtPerm = $pdoAjax->prepare("
                 SELECT COUNT(*) FROM user_roles ur
                 JOIN role_permissions rp ON ur.roleId = rp.roleId
@@ -58,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_action']) && $_P
             $stmtPerm->execute([$userIdToCheck]);
             $hasPerm = $stmtPerm->fetchColumn() > 0;
             
-            if ($userIdToCheck == 1) $hasPerm = true; // O ID 1 (Admin Master) tem sempre permissão
+            if ($userIdToCheck == 1) $hasPerm = true;
 
             if ($hasPerm) {
                 echo json_encode(['success' => true]);
@@ -74,12 +67,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_action']) && $_P
     exit;
 }
 
-// 2. IMPORTA O CONTROLLER E DEPENDÊNCIAS
 use App\Controller\CargoFormController; 
 use App\Service\AuthService;
 use App\Core\Database;
 
-// 3. DEFINIÇÕES DA PÁGINA (para o header e footer)
 $root_path = '../'; 
 $page_title = "Carregando..."; 
 $breadcrumb_items = [
@@ -89,7 +80,6 @@ $breadcrumb_items = [
 ];
 $page_scripts = [$root_path . 'scripts/cargos_form.js']; 
 
-// 4. INSTANCIA O CONTROLLER E PROCESSA A REQUISIÇÃO
 try {
     $pdo = Database::getConnection(); 
     $authService = new AuthService(); 
@@ -97,18 +87,17 @@ try {
     
     $data = $controller->handleRequest($_GET, $_POST, $_SERVER['REQUEST_METHOD']);
 
-    // 5. EXTRAI AS VARIÁVEIS PARA A VIEW
     extract($data);
     $breadcrumb_items['Formulário'] = $page_title;
     
     $temPermissaoEdicao = false;
     try {
-        $authService->checkAndFail('cargos:edit'); // Verifica a permissão base
+        $authService->checkAndFail('cargos:edit');
         $temPermissaoEdicao = true;
     } catch (\Exception $e) {
         $temPermissaoEdicao = false;
     }
-    // --- NOVA LÓGICA DE NAVEGAÇÃO INTERNA ---
+
     $adjacentIds = ['prev_id' => null, 'next_id' => null];
     if ($isEditing && $currentFormId > 0) {
         $cargoRepoNav = new \App\Repository\CargoRepository();
@@ -117,7 +106,6 @@ try {
         $nav_term = $_GET['term'] ?? '';
         $adjacentIds = $cargoRepoNav->findAdjacentCargoIds($currentFormId, $nav_sort_col, $nav_sort_dir, $nav_term);
     }
-    // -----------------------------------------
 
 } catch (Exception $e) {
     $page_title = 'Erro';
@@ -133,9 +121,6 @@ try {
     $originalId = 0; $isEditing = false; $isDuplicating = false; $currentFormId = 0;
     $adjacentIds = ['prev_id' => null, 'next_id' => null];
 }
-
-
-// 6. PREPARAÇÃO DOS DADOS JS (Global Scope)
 ?>
 <script>
     const normalizeState = (data) => data.map(item => {
@@ -186,7 +171,6 @@ require_once $root_path . 'includes/header.php';
         </h1>
         
         <div class="d-flex gap-2 align-items-center">
-            
             <?php if ($isEditing && $currentFormId > 0): ?>
                 <div class="btn-group shadow-sm me-2" role="group">
                     <?php 
@@ -194,28 +178,28 @@ require_once $root_path . 'includes/header.php';
                     $navParamsNext = http_build_query(array_merge($_GET, ['id' => $adjacentIds['next_id']]));
                     ?>
                     <a href="<?php echo empty($adjacentIds['prev_id']) ? '#' : 'cargos_form.php?' . $navParamsPrev; ?>" 
-           class="btn btn-outline-primary btn-sm btn-nav-smart <?php echo empty($adjacentIds['prev_id']) ? 'disabled' : ''; ?>" 
-           title="Ir para o Cargo Anterior">
-            <i class="fas fa-chevron-left"></i> Anterior
-        </a>
-        
-        <a href="<?php echo empty($adjacentIds['next_id']) ? '#' : 'cargos_form.php?' . $navParamsNext; ?>" 
-           class="btn btn-outline-primary btn-sm btn-nav-smart <?php echo empty($adjacentIds['next_id']) ? 'disabled' : ''; ?>" 
-           title="Ir para o Próximo Cargo">
-            Próximo <i class="fas fa-chevron-right"></i>
-        </a>
+                       class="btn btn-outline-primary btn-sm btn-nav-smart <?php echo empty($adjacentIds['prev_id']) ? 'disabled' : ''; ?>" 
+                       title="Ir para o Cargo Anterior">
+                        <i class="fas fa-chevron-left"></i> Anterior
+                    </a>
+                    <a href="<?php echo empty($adjacentIds['next_id']) ? '#' : 'cargos_form.php?' . $navParamsNext; ?>" 
+                       class="btn btn-outline-primary btn-sm btn-nav-smart <?php echo empty($adjacentIds['next_id']) ? 'disabled' : ''; ?>" 
+                       title="Ir para o Próximo Cargo">
+                        Próximo <i class="fas fa-chevron-right"></i>
+                    </a>
                 </div>
             <?php endif; ?>
 
             <a href="cargos.php" class="btn btn-outline-secondary btn-sm shadow-sm">
                 <i class="fas fa-arrow-left"></i> Voltar para Lista
             </a>
-            <?php if ($isEditing && $originalId > 0): ?>
-                 <a href="cargos_form.php?id=<?php echo $originalId; ?>&action=duplicate" 
+
+            <?php if ($isEditing && $currentFormId > 0): ?>
+                 <a href="cargos_form.php?id=<?php echo $currentFormId; ?>&action=duplicate" 
                     class="btn btn-warning btn-sm shadow-sm" 
                     title="Criar um novo registro com base neste.">
                     <i class="fas fa-copy"></i> Duplicar
-                </a>
+                 </a>
             <?php endif; ?>
         </div>
     </div>
@@ -237,6 +221,8 @@ require_once $root_path . 'includes/header.php';
         $revisado = (int)($cargo['is_revisado'] ?? 0);
         $dataRevisao = !empty($cargo['data_revisao']) ? date('d/m/Y H:i', strtotime($cargo['data_revisao'])) : '';
         ?>
+        <input type="hidden" id="hidden_original_revisado" value="<?php echo $revisado; ?>">
+
         <div class="card mb-4 border-<?php echo $revisado ? 'success' : 'warning'; ?>" id="cardRevisao">
             <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-center py-3 bg-light">
                 <div class="form-check form-switch mb-2 mb-md-0 fs-5">
@@ -258,6 +244,7 @@ require_once $root_path . 'includes/header.php';
                 </div>
             </div>
         </div>
+
         <ul class="nav nav-tabs" id="cargoTabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="basicas-tab" data-bs-toggle="tab" data-bs-target="#basicas" type="button" role="tab" aria-controls="basicas" aria-selected="true">
@@ -291,8 +278,7 @@ require_once $root_path . 'includes/header.php';
             </li>
         </ul>
 
- <div class="tab-content border border-top-0 p-3 mb-4" id="cargoTabsContent">
-            
+        <div class="tab-content border border-top-0 p-3 mb-4" id="cargoTabsContent">
             <div class="tab-pane fade show active" id="basicas" role="tabpanel" aria-labelledby="basicas-tab">
                 <div class="row">
                     <div class="col-md-6 mb-3">
@@ -311,13 +297,10 @@ require_once $root_path . 'includes/header.php';
                         </select>
                     </div>
                 </div>
-
                 <div class="mb-3">
                     <label for="cargoResumo" class="form-label">Resumo do Cargo</label>
                     <textarea class="form-control" id="cargoResumo" name="cargoResumo" rows="3"><?php echo htmlspecialchars($cargo['cargoResumo'] ?? ''); ?></textarea>
-                    <div class="form-text">Descrição sumária das responsabilidades (máximo 250 caracteres, idealmente).</div>
                 </div>
-
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label for="escolaridadeId" class="form-label">Escolaridade Mínima *</label>
@@ -335,7 +318,9 @@ require_once $root_path . 'includes/header.php';
                         <input type="text" class="form-control" id="cargoExperiencia" name="cargoExperiencia" value="<?php echo htmlspecialchars($cargo['cargoExperiencia'] ?? ''); ?>">
                     </div>
                 </div>
-            </div> <div class="tab-pane fade" id="hierarquia" role="tabpanel" aria-labelledby="hierarquia-tab">
+            </div>
+
+            <div class="tab-pane fade" id="hierarquia" role="tabpanel" aria-labelledby="hierarquia-tab">
                 <h4 class="mb-3"><i class="fas fa-level-up-alt"></i> Hierarquia de Comando</h4>
                 <div class="row">
                     <div class="col-md-6 mb-3">
@@ -348,9 +333,7 @@ require_once $root_path . 'includes/header.php';
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                        <div class="form-text"><a href="nivel_hierarquico.php" target="_blank">Gerenciar Níveis</a></div>
                     </div>
-
                     <div class="col-md-6 mb-3">
                         <label for="cargoSupervisorId" class="form-label">Reporta-se a (Supervisor/Líder)</label>
                         <select class="form-select searchable-select" id="cargoSupervisorId" name="cargoSupervisorId[]" multiple="multiple" data-placeholder="--- Nenhum ou Múltiplos ---">
@@ -365,31 +348,27 @@ require_once $root_path . 'includes/header.php';
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                        <div class="form-text">Você pode selecionar mais de um supervisor para atuações em áreas diferentes.</div>
                     </div>
                 </div>
-
                 <hr>
-
                 <h4 class="mb-3"><i class="fas fa-building"></i> Áreas de Atuação</h4>
                 <button type="button" class="btn btn-sm btn-outline-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAssociacaoAreasAtuacao">
                     <i class="fas fa-plus"></i> Adicionar Área
                 </button>
                 <div class="card p-0 mt-2">
-                    <div class="card-body p-0">
-                        <table class="table table-sm mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Área de Atuação (Hierárquica)</th>
-                                    <th class="grid-action-cell text-center">Ação</th>
-                                </tr>
-                            </thead>
-                            <tbody id="areasAtuacaoGridBody"></tbody>
-                        </table>
-                    </div>
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Área de Atuação (Hierárquica)</th>
+                                <th class="grid-action-cell text-center">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="areasAtuacaoGridBody"></tbody>
+                    </table>
                 </div>
-                <div class="form-text mt-3"><a href="areas_atuacao.php" target="_blank">Gerenciar Estrutura de Áreas</a></div>
-            </div> <div class="tab-pane fade" id="remuneracao" role="tabpanel" aria-labelledby="remuneracao-tab">
+            </div>
+
+            <div class="tab-pane fade" id="remuneracao" role="tabpanel" aria-labelledby="remuneracao-tab">
                 <h4 class="mb-3"><i class="fas fa-wallet text-success"></i> Enquadramento na Matriz Salarial</h4>
                 <div class="row mb-4">
                     <div class="col-md-6">
@@ -402,28 +381,24 @@ require_once $root_path . 'includes/header.php';
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                        <div class="form-text">Define a progressão de carreira comum para este cargo.</div>
                     </div>
                 </div>
-
                 <hr>
-
                 <h4 class="mb-3"><i class="fas fa-balance-scale text-primary"></i> Piso Salarial Legal / Acordo Sindical</h4>
                 <div class="alert alert-light border">
                     <div class="form-check form-switch fs-5 mb-3">
                         <input class="form-check-input cursor-pointer" type="checkbox" id="tem_piso_salarial" name="tem_piso_salarial" value="1" <?php echo (!empty($cargo['tem_piso_salarial'])) ? 'checked' : ''; ?>>
                         <label class="form-check-label fw-bold" for="tem_piso_salarial">Este cargo possui um Piso Salarial obrigatório?</label>
                     </div>
-
                     <div id="blocoPisoSalarial" style="<?php echo (!empty($cargo['tem_piso_salarial'])) ? 'display: block;' : 'display: none;'; ?>">
                         <div class="row g-3">
                             <div class="col-md-4">
                                 <label for="piso_valor" class="form-label text-danger fw-bold">Valor do Piso Legal (R$)</label>
-                                <input type="number" step="0.01" class="form-control" id="piso_valor" name="piso_valor" value="<?php echo htmlspecialchars($cargo['piso_valor'] ?? ''); ?>" placeholder="Ex: 2150.00">
+                                <input type="number" step="0.01" class="form-control" id="piso_valor" name="piso_valor" value="<?php echo htmlspecialchars($cargo['piso_valor'] ?? ''); ?>">
                             </div>
                             <div class="col-md-4">
                                 <label for="piso_lei_numero" class="form-label">Nº da Lei / CCT</label>
-                                <input type="text" class="form-control" id="piso_lei_numero" name="piso_lei_numero" value="<?php echo htmlspecialchars($cargo['piso_lei_numero'] ?? ''); ?>" placeholder="Ex: CCT 2026/2027">
+                                <input type="text" class="form-control" id="piso_lei_numero" name="piso_lei_numero" value="<?php echo htmlspecialchars($cargo['piso_lei_numero'] ?? ''); ?>">
                             </div>
                             <div class="col-md-4">
                                 <label for="piso_data_base" class="form-label">Data-Base (Mês do Reajuste)</label>
@@ -432,454 +407,111 @@ require_once $root_path . 'includes/header.php';
                         </div>
                     </div>
                 </div>
-            </div> <div class="tab-pane fade" id="requisitos" role="tabpanel" aria-labelledby="requisitos-tab">
+            </div>
+
+            <div class="tab-pane fade" id="requisitos" role="tabpanel" aria-labelledby="requisitos-tab">
                 <h4 class="mb-3"><i class="fas fa-lightbulb"></i> Habilidades</h4>
                 <button type="button" class="btn btn-sm btn-outline-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAssociacaoHabilidades">
                     <i class="fas fa-plus"></i> Adicionar Habilidade
                 </button>
-                <div class="card p-0 mt-2 mb-4">
-                    <div class="card-body p-0">
-                        <table class="table table-sm mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Habilidade</th>
-                                    <th class="grid-action-cell text-center">Ação</th>
-                                </tr>
-                            </thead>
-                            <tbody id="habilidadesGridBody"></tbody>
-                        </table>
-                    </div>
+                <div class="card p-0 mb-4">
+                    <table class="table table-sm mb-0">
+                        <tbody id="habilidadesGridBody"></tbody>
+                    </table>
                 </div>
-                
+
                 <h4 class="mb-3"><i class="fas fa-user-tag"></i> Características</h4>
                 <button type="button" class="btn btn-sm btn-outline-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAssociacaoCaracteristicas">
                     <i class="fas fa-plus"></i> Adicionar Característica
                 </button>
-                <div class="card p-0 mt-2 mb-4">
-                    <div class="card-body p-0">
-                        <table class="table table-sm mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Característica</th>
-                                    <th class="grid-action-cell text-center">Ação</th>
-                                </tr>
-                            </thead>
-                            <tbody id="caracteristicasGridBody"></tbody>
-                        </table>
-                    </div>
+                <div class="card p-0 mb-4">
+                    <table class="table table-sm mb-0">
+                        <tbody id="caracteristicasGridBody"></tbody>
+                    </table>
                 </div>
 
                 <h4 class="mb-3"><i class="fas fa-certificate"></i> Cursos</h4>
                 <button type="button" class="btn btn-sm btn-outline-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAssociacaoCursos">
                     <i class="fas fa-plus"></i> Adicionar Curso
                 </button>
-                <div class="card p-0 mt-2 mb-4">
-                    <div class="card-body p-0">
-                        <table class="table table-sm mb-0">
-                            <thead>
-                                <tr>
-                                    <th width="35%">Curso</th>
-                                    <th width="50%">Obrigatoriedade e Observação</th>
-                                    <th class="grid-action-cell text-center">Ação</th>
-                                </tr>
-                            </thead>
-                            <tbody id="cursosGridBody"></tbody>
-                        </table>
-                    </div>
+                <div class="card p-0 mb-4">
+                    <table class="table table-sm mb-0">
+                        <tbody id="cursosGridBody"></tbody>
+                    </table>
                 </div>
                 
                 <h4 class="mb-3"><i class="fas fa-wrench"></i> Grupos de Recursos</h4>
                 <button type="button" class="btn btn-sm btn-outline-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAssociacaoRecursosGrupos">
-                    <i class="fas fa-plus"></i> Adicionar Grupo de Recurso
+                    <i class="fas fa-plus"></i> Adicionar Grupo
                 </button>
-                <div class="card p-0 mt-2 mb-4">
-                    <div class="card-body p-0">
-                        <table class="table table-sm mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Grupo de Recurso</th>
-                                    <th class="grid-action-cell text-center">Ação</th>
-                                </tr>
-                            </thead>
-                            <tbody id="recursosGruposGridBody"></tbody>
-                        </table>
-                    </div>
+                <div class="card p-0 mb-4">
+                    <table class="table table-sm mb-0">
+                        <tbody id="recursosGruposGridBody"></tbody>
+                    </table>
                 </div>
 
                 <h4 class="mb-3"><i class="fas fa-radiation-alt"></i> Riscos de Exposição</h4>
                 <button type="button" class="btn btn-sm btn-outline-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAssociacaoRiscos">
                     <i class="fas fa-plus"></i> Adicionar Risco
                 </button>
-                <div class="card p-0 mt-2">
-                    <div class="card-body p-0">
-                        <table class="table table-sm mb-0">
-                            <thead>
-                                <tr>
-                                    <th width="30%">Tipo</th>
-                                    <th>Descrição Específica</th>
-                                    <th class="grid-action-cell text-center">Ação</th>
-                                </tr>
-                            </thead>
-                            <tbody id="riscosGridBody"></tbody>
-                        </table>
-                    </div>
+                <div class="card p-0">
+                    <table class="table table-sm mb-0">
+                        <tbody id="riscosGridBody"></tbody>
+                    </table>
                 </div>
-            </div> <div class="tab-pane fade" id="sinonimos" role="tabpanel" aria-labelledby="sinonimos-tab">
-                <h4 class="mb-3"><i class="fas fa-tags"></i> Sinônimos e Nomes Alternativos</h4>
-                <p class="text-muted">Inclua nomes alternativos usados for este cargo.</p>
+            </div>
 
+            <div class="tab-pane fade" id="sinonimos" role="tabpanel" aria-labelledby="sinonimos-tab">
+                <h4 class="mb-3"><i class="fas fa-tags"></i> Sinônimos</h4>
                 <div class="row mb-3">
                     <div class="col-md-9">
                         <input type="text" class="form-control" id="sinonimoInput" placeholder="Digite um nome alternativo...">
                     </div>
                     <div class="col-md-3">
-                        <button type="button" class="btn btn-primary w-100" id="btnAddSinonimo">
-                            <i class="fas fa-plus"></i> Adicionar
-                        </button>
+                        <button type="button" class="btn btn-primary w-100" id="btnAddSinonimo">Adicionar</button>
                     </div>
                 </div>
-                
-                <div class="card p-0 mt-2">
-                    <div class="card-body p-0">
-                        <table class="table table-sm mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Nome Alternativo</th>
-                                    <th class="grid-action-cell text-center">Ação</th>
-                                </tr>
-                            </thead>
-                            <tbody id="sinonimosGridBody"></tbody>
-                        </table>
-                    </div>
+                <div class="card p-0">
+                    <table class="table table-sm mb-0">
+                        <tbody id="sinonimosGridBody"></tbody>
+                    </table>
                 </div>
-            </div> <div class="tab-pane fade" id="descricoes" role="tabpanel" aria-labelledby="descricoes-tab">
-                <h4 class="mb-3"><i class="fas fa-clipboard-list"></i> Responsabilidades Detalhadas</h4>
-                <div class="mb-3">
-                    <textarea class="form-control" id="cargoResponsabilidades" name="cargoResponsabilidades" rows="5"><?php echo htmlspecialchars($cargo['cargoResponsabilidades'] ?? ''); ?></textarea>
-                </div>
-                
-                <h4 class="mb-3"><i class="fas fa-layer-group"></i> Complexidade do Cargo</h4>
-                <div class="mb-3">
-                    <textarea class="form-control" id="cargoComplexidade" name="cargoComplexidade" rows="5"><?php echo htmlspecialchars($cargo['cargoComplexidade'] ?? ''); ?></textarea>
-                </div>
-                
-                <h4 class="mb-3"><i class="fas fa-cloud-sun"></i> Condições Gerais</h4>
-                <div class="mb-3">
-                    <textarea class="form-control" id="cargoCondicoes" name="cargoCondicoes" rows="5"><?php echo htmlspecialchars($cargo['cargoCondicoes'] ?? ''); ?></textarea>
-                </div>
-            </div> 
-        </div>
-
-        <?php if ($isEditing): ?>
-        <div class="card mb-4 border-info shadow-sm">
-            <div class="card-header bg-info text-white py-2 fw-bold">
-                <i class="fas fa-history"></i> Justificativa da Alteração (Log de Relatório)
             </div>
-            <div class="card-body bg-light py-3">
-                <label for="motivo_alteracao" class="form-label small text-muted mb-1 fw-bold">Informe detalhadamente o motivo destas alterações para fins de relatório:</label>
-                <textarea class="form-control" id="motivo_alteracao" name="motivo_alteracao" rows="2" placeholder="Ex: Atualização do CBO para enquadramento correto da equipe; Revisão das responsabilidades após convenção coletiva." required></textarea>
+
+            <div class="tab-pane fade" id="descricoes" role="tabpanel" aria-labelledby="descricoes-tab">
+                <h4 class="mb-3">Responsabilidades Detalhadas</h4>
+                <textarea class="form-control mb-3" id="cargoResponsabilidades" name="cargoResponsabilidades" rows="4"><?php echo htmlspecialchars($cargo['cargoResponsabilidades'] ?? ''); ?></textarea>
+                <h4>Complexidade do Cargo</h4>
+                <textarea class="form-control mb-3" id="cargoComplexidade" name="cargoComplexidade" rows="4"><?php echo htmlspecialchars($cargo['cargoComplexidade'] ?? ''); ?></textarea>
+                <h4>Condições Gerais</h4>
+                <textarea class="form-control" id="cargoCondicoes" name="cargoCondicoes" rows="4"><?php echo htmlspecialchars($cargo['cargoCondicoes'] ?? ''); ?></textarea>
             </div>
         </div>
-        <?php endif; ?>
 
-        <button type="submit" class="btn btn-lg btn-success w-100 mt-3">
+        <input type="hidden" id="motivo_alteracao" name="motivo_alteracao" value="">
+
+        <button type="button" id="btnDispararSalvar" class="btn btn-lg btn-success w-100 mt-3">
             <i class="fas fa-check-circle"></i> SALVAR CARGO
         </button>
-        <?php if ($isEditing || $isDuplicating): ?>
-            <a href="cargos.php" class="btn btn-link text-secondary w-100 mt-2">
-                <i class="fas fa-arrow-left"></i> Voltar sem salvar
-            </a>
-        <?php endif; ?>
-
     </form>
-</div> 
-
-<div class="modal fade" id="modalAssociacaoHabilidades" tabindex="-1" aria-labelledby="modalHabilidadesLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title" id="modalHabilidadesLabel">Adicionar Habilidade (Hard/Soft Skill)</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Selecione uma ou mais habilidades (Ctrl/Shift) para incluir na lista do cargo.</p>
-                <div class="mb-3">
-                    <label for="habilidadeSelect" class="form-label">Selecione a Habilidade:</label>
-                    <select class="form-select searchable-select" id="habilidadeSelect" multiple="multiple" size="10" data-placeholder="Buscar Habilidade..." style="width: 100%;">
-                        <option value=""></option>
-                        <?php foreach ($habilidadesAgrupadas as $grupoNome => $habilidadesGrupo): ?>
-                            <optgroup label="<?php echo htmlspecialchars($grupoNome); ?>">
-                                <?php foreach ($habilidadesGrupo as $id => $nome): ?>
-                                    <option value="<?php echo $id; ?>" data-nome="<?php echo htmlspecialchars($nome); ?>" data-tipo="<?php echo htmlspecialchars($grupoNome); ?>">
-                                        <?php echo htmlspecialchars($nome); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </optgroup>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                <button type="button" class="btn btn-success" id="btnAssociarHabilidade">Adicionar Selecionados</button>
-            </div>
-        </div>
-    </div>
 </div>
 
-<div class="modal fade" id="modalAssociacaoCaracteristicas" tabindex="-1" aria-labelledby="modalCaracteristicasLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title" id="modalCaracteristicasLabel">Adicionar Características</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Selecione uma ou mais características (Ctrl/Shift) para incluir na lista do cargo.</p>
-                <div class="mb-3">
-                    <label for="caracteristicaSelect" class="form-label">Selecione a Característica:</label>
-                    <select class="form-select searchable-select" id="caracteristicaSelect" multiple="multiple" size="10" data-placeholder="Buscar Característica..." style="width: 100%;">
-                        <option value=""></option>
-                        <?php foreach ($caracteristicas as $id => $nome): ?>
-                            <option value="<?php echo $id; ?>" data-nome="<?php echo htmlspecialchars($nome); ?>">
-                                <?php echo htmlspecialchars($nome); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                <button type="button" class="btn btn-success" id="btnAssociarCaracteristica">Adicionar Selecionados</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="modalAssociacaoRiscos" tabindex="-1" aria-labelledby="modalRiscosLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title" id="modalRiscosLabel">Adicionar Risco e Detalhes</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Selecione o tipo de risco e detalhe a exposição do cargo. Adicione um por vez.</p>
-                <div class="mb-3">
-                    <label for="riscoSelect" class="form-label">Tipo de Risco:</label>
-                    <select class="form-select searchable-select" id="riscoSelect" data-placeholder="Buscar Risco..." style="width: 100%;">
-                        <option value="">--- Selecione um Risco ---</option>
-                        <?php foreach ($riscos as $id => $nome): ?>
-                            <option value="<?php echo $id; ?>" data-nome="<?php echo htmlspecialchars($nome); ?>">
-                                <?php echo htmlspecialchars($nome); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                 <div class="mb-3">
-                    <label for="riscoDescricaoInput" class="form-label">Descrição da Exposição Específica</label>
-                    <textarea class="form-control" id="riscoDescricaoInput" rows="3" placeholder="Ex: Exposição prolongada ao sol acima de 30ºC e poeira por deslocamentos." required></textarea>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                <button type="button" class="btn btn-success" id="btnAssociarRisco">Adicionar à Lista</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="modalAssociacaoCursos" tabindex="-1" aria-labelledby="modalCursosLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title" id="modalCursosLabel">Adicionar Curso e Detalhes</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Selecione um ou mais cursos. Os detalhes de obrigatoriedade e observação serão aplicados a todos os cursos selecionados.</p>
-                <div class="mb-3">
-                    <label for="cursoSelect" class="form-label">Selecione o Curso:</label>
-                    <select class="form-select searchable-select" id="cursoSelect" multiple="multiple" size="8" data-placeholder="Buscar Curso..." style="width: 100%;">
-                        <option value=""></option>
-                        <?php foreach ($cursos as $id => $nome): ?>
-                            <option value="<?php echo $id; ?>" data-nome="<?php echo htmlspecialchars($nome); ?>">
-                                <?php echo htmlspecialchars($nome); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                 <div class="mb-3">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" value="1" id="cursoObrigatorioInput">
-                        <label class="form-check-label" for="cursoObrigatorioInput">Curso Obrigatório?</label>
-                    </div>
-                </div>
-                 <div class="mb-3">
-                    <label for="cursoObsInput" class="form-label">Observação (Periodicidade, Requisito)</label>
-                    <textarea class="form-control" id="cursoObsInput" rows="2" placeholder="Ex: Deve ser refeito anualmente; Recomendado para certificação."></textarea>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                <button type="button" class="btn btn-success" id="btnAssociarCurso">Adicionar à Lista</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="modalAssociacaoRecursosGrupos" tabindex="-1" aria-labelledby="modalRecursosGruposLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title" id="modalRecursosGruposLabel">Adicionar Grupos de Recursos</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Selecione um ou mais grupos de recursos (Ctrl/Shift) utilizados pelo cargo.</p>
-                <div class="mb-3">
-                    <label for="recursosGruposSelect" class="form-label">Grupos de Recursos:</label>
-                    <select class="form-select searchable-select" id="recursosGruposSelect" multiple="multiple" size="8" data-placeholder="Buscar Grupo..." style="width: 100%;">
-                        <option value=""></option>
-                        <?php foreach ($recursosGrupos as $id => $nome): ?>
-                            <option value="<?php echo $id; ?>" data-nome="<?php echo htmlspecialchars($nome); ?>">
-                                <?php echo htmlspecialchars($nome); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                <button type="button" class="btn btn-success" id="btnAssociarRecursosGrupos">Adicionar Selecionados</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="modalAssociacaoAreasAtuacao" tabindex="-1" aria-labelledby="modalAreasAtuacaoLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title" id="modalAreasAtuacaoLabel">Adicionar Áreas de Atuação</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Selecione uma ou mais áreas (Ctrl/Shift) em que o cargo atua.</p>
-                <div class="mb-3">
-                    <label for="areasAtuacaoSelect" class="form-label">Áreas:</label>
-                    <select class="form-select searchable-select" id="areasAtuacaoSelect" multiple="multiple" size="8" data-placeholder="Buscar Área..." style="width: 100%;">
-                        <option value=""></option>
-                        <?php foreach ($areasAtuacao as $id => $nomeHierarquico): ?>
-                            <option value="<?php echo $id; ?>" data-nome="<?php echo htmlspecialchars($nomeHierarquico); ?>">
-                                <?php echo htmlspecialchars($nomeHierarquico); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                <button type="button" class="btn btn-success" id="btnAssociarAreasAtuacao">Adicionar Selecionados</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="modalEdicaoHabilidade" tabindex="-1" aria-labelledby="modalEdicaoHabilidadeLabel" aria-hidden="true">
+<div class="modal fade" id="modalEdicaoCurso" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-info text-white">
-                <h5 class="modal-title" id="modalEdicaoHabilidadeLabel">Editar Habilidade: <span id="habilidadeEditNome"></span></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="habilidadeEditId">
-                <div class="mb-3">
-                    <label for="habilidadeEditNomeInput" class="form-label">Nome da Habilidade</label>
-                    <input type="text" class="form-control" id="habilidadeEditNomeInput" readonly>
-                </div>
-                <div class="mb-3">
-                    <label for="habilidadeEditTipo" class="form-label">Tipo da Habilidade</label>
-                    <input type="text" class="form-control" id="habilidadeEditTipo" readonly>
-                </div>
-                <div class="alert alert-warning">
-                    Para trocar a Habilidade, você deve remover a atual e adicionar a nova. Este modal só permite ver os detalhes.
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="modalEdicaoCaracteristica" tabindex="-1" aria-labelledby="modalEdicaoCaracteristicaLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title" id="modalEdicaoCaracteristicaLabel">Editar Característica: <span id="caracteristicaEditNome"></span></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="caracteristicaEditId">
-                <div class="mb-3">
-                    <label for="caracteristicaEditNomeInput" class="form-label">Nome da Característica</label>
-                    <input type="text" class="form-control" id="caracteristicaEditNomeInput" readonly>
-                </div>
-                <div class="alert alert-warning">
-                    Para trocar a Característica, você deve remover a atual e adicionar a nova. Este modal só permite ver os detalhes.
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="modalEdicaoRecursoGrupo" tabindex="-1" aria-labelledby="modalEdicaoRecursoGrupoLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title" id="modalEdicaoRecursoGrupoLabel">Editar Grupo de Recurso: <span id="recursoGrupoEditNome"></span></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="recursoGrupoEditId">
-                <div class="mb-3">
-                    <label for="recursoGrupoEditNomeInput" class="form-label">Nome do Grupo de Recurso</label>
-                    <input type="text" class="form-control" id="recursoGrupoEditNomeInput" readonly>
-                </div>
-                 <div class="alert alert-warning">
-                    Para trocar o Grupo de Recurso, você deve remover o atual e adicionar o novo. Este modal só permite ver os detalhes.
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="modalEdicaoCurso" tabindex="-1" aria-labelledby="modalEdicaoCursoLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title" id="modalEdicaoCursoLabel">Editar Curso: <span id="cursoEditNome"></span></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title">Editar Curso: <span id="cursoEditNome"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="cursoEditId">
-                 <div class="mb-3">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" value="1" id="cursoEditObrigatorio">
-                        <label class="form-check-label" for="cursoEditObrigatorio">Curso Obrigatório?</label>
-                    </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" value="1" id="cursoEditObrigatorio">
+                    <label class="form-check-label" for="cursoEditObrigatorio">Curso Obrigatório?</label>
                 </div>
-                 <div class="mb-3">
-                    <label for="cursoEditObs" class="form-label">Observação (Periodicidade, Requisito)</label>
-                    <textarea class="form-control" id="cursoEditObs" rows="3" placeholder="Ex: Deve ser refeito anualmente; Recomendado para certificação."></textarea>
+                <div class="mb-3">
+                    <label for="cursoEditObs" class="form-label">Observação</label>
+                    <textarea class="form-control" id="cursoEditObs" rows="3"></textarea>
                 </div>
             </div>
             <div class="modal-footer">
@@ -890,18 +522,18 @@ require_once $root_path . 'includes/header.php';
     </div>
 </div>
 
-<div class="modal fade" id="modalEdicaoRisco" tabindex="-1" aria-labelledby="modalEdicaoRiscoLabel" aria-hidden="true">
+<div class="modal fade" id="modalEdicaoRisco" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-info text-white">
-                <h5 class="modal-title" id="modalEdicaoRiscoLabel">Editar Risco: <span id="riscoEditNome"></span></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title">Editar Risco: <span id="riscoEditNome"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="riscoEditId">
                 <div class="mb-3">
                     <label for="riscoEditDescricao" class="form-label">Descrição da Exposição Específica</label>
-                    <textarea class="form-control" id="riscoEditDescricao" rows="4" placeholder="Ex: Exposição prolongada ao sol acima de 30ºC e poeira por deslocamentos." required></textarea>
+                    <textarea class="form-control" id="riscoEditDescricao" rows="4" required></textarea>
                 </div>
             </div>
             <div class="modal-footer">
@@ -911,59 +543,107 @@ require_once $root_path . 'includes/header.php';
         </div>
     </div>
 </div>
-<div class="modal fade" id="modalNavegacaoInteligente" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-warning">
-            <div class="modal-header bg-warning text-dark">
-                <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Alterações Pendentes</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+
+<div class="modal fade" id="modalEdicaoHabilidade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">Detalhes da Habilidade: <span id="habilidadeEditNome"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                Fez alterações neste cargo que ainda não foram guardadas. Se avançar para outro registo agora, <strong>perderá todo o trabalho feito</strong> nesta página.
-                <br><br>Deseja realmente descartar as alterações e mudar de cargo?
+                <input type="hidden" id="habilidadeEditId">
+                <div class="mb-3">
+                    <label class="form-label">Nome da Habilidade</label>
+                    <input type="text" class="form-control" id="habilidadeEditNomeInput" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Tipo</label>
+                    <input type="text" class="form-control" id="habilidadeEditTipo" readonly>
+                </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Ficar na Página</button>
-                <button type="button" class="btn btn-danger" id="btnConfirmarNavegacao">Descartar e Avançar</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
             </div>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="modalDesbloqueioSenha" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-sm modal-dialog-centered">
-        <div class="modal-content border-danger">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title"><i class="fas fa-lock"></i> Autorizar Edição</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+<div class="modal fade" id="modalEdicaoCaracteristica" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">Detalhes da Característica: <span id="caracteristicaEditNome"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <?php if ($temPermissaoEdicao): ?>
-                    <p class="small text-muted mb-3">Tem permissões de gestão. Confirme a sua palavra-passe para libertar a edição:</p>
-                    <input type="hidden" id="emailDesbloqueioInput" value="">
-                <?php else: ?>
-                    <p class="small text-muted mb-3 text-danger fw-bold">Não tem permissões de gestão.</p>
-                    <p class="small text-muted mb-3">Solicite a um Administrador que insira as suas credenciais abaixo para autorizar:</p>
-                    <div class="mb-2">
-                        <input type="email" class="form-control text-center" id="emailDesbloqueioInput" placeholder="E-mail do Administrador">
-                    </div>
-                <?php endif; ?>
-                
-                <div class="mb-2">
-                    <input type="password" class="form-control text-center" id="senhaDesbloqueioInput" placeholder="Palavra-passe">
-                    <div id="erroSenhaDesbloqueio" class="text-danger small text-center mt-2 fw-bold" style="display: none;"></div>
+                <input type="hidden" id="caracteristicaEditId">
+                <div class="mb-3">
+                    <label class="form-label">Nome da Característica</label>
+                    <input type="text" class="form-control" id="caracteristicaEditNomeInput" readonly>
                 </div>
             </div>
-            <div class="modal-footer justify-content-center">
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-danger btn-sm" id="btnConfirmarDesbloqueio">
-                    <i class="fas fa-unlock"></i> Autorizar
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalEdicaoRecursoGrupo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">Detalhes do Recurso: <span id="recursoGrupoEditNome"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="recursoGrupoEditId">
+                <div class="mb-3">
+                    <label class="form-label">Grupo de Recurso</label>
+                    <input type="text" class="form-control" id="recursoGrupoEditNomeInput" readonly>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalJustificativaAlteracao" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-info shadow">
+            <div class="modal-header bg-info text-white fw-bold">
+                <h5 class="modal-title"><i class="fas fa-history"></i> Justificativa do Ajuste</h5>
+            </div>
+            <div class="modal-body py-3">
+                <div class="alert alert-warning small py-2 mb-3">
+                    <i class="fas fa-exclamation-circle"></i> <strong>Atenção:</strong> Este cargo já se encontra homologado, revisado e ativo. Qualquer alteração gerará uma notificação no log de auditoria.
+                </div>
+                <label for="txtJustificativaModal" class="form-label small fw-bold text-muted">Informe detalhadamente o motivo destas alterações para fins de relatório:</label>
+                <textarea class="form-control" id="txtJustificativaModal" rows="3" placeholder="Ex: Ajuste de nomenclatura do CBO e refinamento das Hard Skills após auditoria interna." required></textarea>
+                <div id="erroJustificativaModal" class="text-danger small mt-1 fw-bold" style="display:none;">Por favor, insira uma justificativa válida de pelo menos 10 caracteres.</div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar e Revisar</button>
+                <button type="button" class="btn btn-success btn-sm fw-bold" id="btnConfirmarSalvarComJustificativa">
+                    <i class="fas fa-save"></i> Confirmar e Salvar
                 </button>
             </div>
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="modalAssociacaoHabilidades" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header bg-success text-white"><h5>Habilidades</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><select class="form-select" id="habilidadeSelect" multiple="multiple"><?php foreach ($habilidadesAgrupadas as $gn => $hg): ?><optgroup label="<?php echo $gn; ?>"><?php foreach ($hg as $id => $n): ?><option value="<?php echo $id; ?>" data-nome="<?php echo $n; ?>" data-tipo="<?php echo $gn; ?>"><?php echo $n; ?></option><?php endforeach; ?></optgroup><?php endforeach; ?></select></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button><button type="button" class="btn btn-success" id="btnAssociarHabilidade">Adicionar</button></div></div></div></div>
+<div class="modal fade" id="modalAssociacaoCaracteristicas" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header bg-success text-white"><h5>Características</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><select class="form-select" id="caracteristicaSelect" multiple="multiple"><?php foreach ($caracteristicas as $id => $n): ?><option value="<?php echo $id; ?>" data-nome="<?php echo $n; ?>"><?php echo $n; ?></option><?php endforeach; ?></select></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button><button type="button" class="btn btn-success" id="btnAssociarCaracteristica">Adicionar</button></div></div></div></div>
+<div class="modal fade" id="modalAssociacaoRiscos" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header bg-success text-white"><h5>Riscos</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><select class="form-select mb-3" id="riscoSelect"><?php foreach ($riscos as $id => $n): ?><option value="<?php echo $id; ?>" data-nome="<?php echo $n; ?>"><?php echo $n; ?></option><?php endforeach; ?></select><textarea class="form-control" id="riscoDescricaoInput" rows="2" placeholder="Descrição..."></textarea></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button><button type="button" class="btn btn-success" id="btnAssociarRisco">Adicionar</button></div></div></div></div>
+<div class="modal fade" id="modalAssociacaoCursos" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header bg-success text-white"><h5>Cursos</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><select class="form-select mb-3" id="cursoSelect" multiple="multiple"><?php foreach ($cursos as $id => $n): ?><option value="<?php echo $id; ?>" data-nome="<?php echo $n; ?>"><?php echo $n; ?></option><?php endforeach; ?></select><div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="cursoObrigatorioInput"><label class="form-check-label" for="cursoObrigatorioInput">Obrigatório?</label></div><textarea class="form-control" id="cursoObsInput" rows="2" placeholder="Observações..."></textarea></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button><button type="button" class="btn btn-success" id="btnAssociarCurso">Adicionar</button></div></div></div></div>
+<div class="modal fade" id="modalAssociacaoRecursosGrupos" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header bg-success text-white"><h5>Recursos</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><select class="form-select" id="recursosGruposSelect" multiple="multiple"><?php foreach ($recursosGrupos as $id => $n): ?><option value="<?php echo $id; ?>" data-nome="<?php echo $n; ?>"><?php echo $n; ?></option><?php endforeach; ?></select></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button><button type="button" class="btn btn-success" id="btnAssociarRecursosGrupos">Adicionar</button></div></div></div></div>
+<div class="modal fade" id="modalAssociacaoAreasAtuacao" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header bg-success text-white"><h5>Áreas</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><select class="form-select" id="areasAtuacaoSelect" multiple="multiple"><?php foreach ($areasAtuacao as $id => $n): ?><option value="<?php echo $id; ?>" data-nome="<?php echo $n; ?>"><?php echo $n; ?></option><?php endforeach; ?></select></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button><button type="button" class="btn btn-success" id="btnAssociarAreasAtuacao">Adicionar</button></div></div></div></div>
+<div class="modal fade" id="modalNavegacaoInteligente" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-warning"><div class="modal-header bg-warning text-dark"><h5>Alterações Pendentes</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body">Deseja descartar as alterações realizadas?</div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Ficar</button><button type="button" class="btn btn-danger" id="btnConfirmarNavegacao">Avançar</button></div></div></div></div>
+<div class="modal fade" id="modalDesbloqueioSenha" tabindex="-1" data-bs-backdrop="static" aria-hidden="true"><div class="modal-dialog modal-sm modal-dialog-centered"><div class="modal-content border-danger"><div class="modal-header bg-danger text-white"><h5>Autorizar Edição</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><?php if ($temPermissaoEdicao): ?><p class="small text-muted mb-3">Confirme a palavra-passe:</p><input type="hidden" id="emailDesbloqueioInput" value=""><?php else: ?><p class="small text-muted mb-3">Insira as credenciais do Administrador:</p><div class="mb-2"><input type="email" class="form-control text-center" id="emailDesbloqueioInput" placeholder="E-mail"></div><?php endif; ?><div><input type="password" class="form-control text-center" id="senhaDesbloqueioInput" placeholder="Palavra-passe"><div id="erroSenhaDesbloqueio" class="text-danger small text-center mt-2 fw-bold" style="display: none;"></div></div></div><div class="modal-footer justify-content-center"><button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button><button type="button" class="btn btn-danger btn-sm" id="btnConfirmarDesbloqueio">Autorizar</button></div></div></div></div>
+
 <?php 
-// 8. INCLUSÃO DO FOOTER
 require_once $root_path . 'includes/footer.php';
 ?>
