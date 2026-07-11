@@ -99,7 +99,7 @@ if (empty($message) && isset($_GET['message'])) {
 // ----------------------------------------------------
 
 // 1. Busca Famílias (para o <select> e para a tabela)
-$todasFamilias = $familiaRepo->findAllSimple();
+$todasFamilias = $familiaRepo->findAllForLookup();
 
 // 2. Parâmetros de Filtro e Paginação (para CBOs)
 $params = [
