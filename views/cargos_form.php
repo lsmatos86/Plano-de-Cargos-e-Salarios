@@ -398,7 +398,7 @@ echo $extra_head_content;
                                 <th class="grid-action-cell text-center">Ação</th>
                             </tr>
                         </thead>
-                        <tbody id="areasAtuacaoGridBody">
+                        <tbody id="areasGridBody">
                             </tbody>
                     </table>
                 </div>
@@ -472,7 +472,7 @@ echo $extra_head_content;
                                 <th class="grid-action-cell text-center">Ação</th>
                             </tr>
                         </thead>
-                        <tbody id="recursosGruposGridBody">
+                        <tbody id="recursoGruposGridBody">
                             </tbody>
                     </table>
                 </div>
