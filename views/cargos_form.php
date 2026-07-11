@@ -379,7 +379,53 @@ echo $extra_head_content;
                 </div>
                 <div class="col-md-6 mb-3">
                     <label for="cargoExperiencia" class="form-label">Experiência Necessária</label>
-                    <input type="text" class="form-control" id="cargoExperiencia" name="cargoExperiencia" value="<?php echo htmlspecialchars($cargo['cargoExperiencia'] ?? ''); ?>">
+                    <?php
+                    $expOpcoes = [
+                        '' => '--- Não informada ---',
+                        'Sem experiência' => 'Sem experiência',
+                        'Até 3 meses' => 'Até 3 meses',
+                        '3 a 6 meses' => '3 a 6 meses',
+                        '6 meses a 1 ano' => '6 meses a 1 ano',
+                        '1 a 2 anos' => '1 a 2 anos',
+                        '2 a 3 anos' => '2 a 3 anos',
+                        '3 a 5 anos' => '3 a 5 anos',
+                        'Acima de 5 anos' => 'Acima de 5 anos',
+                    ];
+                    $expAtual = $cargo['cargoExperiencia'] ?? '';
+                    // Tenta mapear valor existente para uma das opções padrão
+                    $expMapeada = '';
+                    if (!empty($expAtual)) {
+                        $expLower = mb_strtolower($expAtual);
+                        if (preg_match('/sem\s+exig|sem\s+exp|não\s+exig/i', $expAtual)) $expMapeada = 'Sem experiência';
+                        elseif (preg_match('/acima.*5|mais.*5\s*an/i', $expAtual)) $expMapeada = 'Acima de 5 anos';
+                        elseif (preg_match('/3\s*a\s*5|cinco\s*an/i', $expAtual)) $expMapeada = '3 a 5 anos';
+                        elseif (preg_match('/2\s*a\s*3|30\s*mes/i', $expAtual)) $expMapeada = '2 a 3 anos';
+                        elseif (preg_match('/1\s*a\s*2|18\s*mes/i', $expAtual)) $expMapeada = '1 a 2 anos';
+                        elseif (preg_match('/1\s*(ano|an|year)|12\s*mes/i', $expAtual)) $expMapeada = '6 meses a 1 ano';
+                        elseif (preg_match('/6\s*mes.*1\s*an|ate.*1\s*an/i', $expAtual)) $expMapeada = '6 meses a 1 ano';
+                        elseif (preg_match('/6\s*(mes|month)/i', $expAtual)) $expMapeada = '6 meses a 1 ano';
+                        elseif (preg_match('/3\s*a\s*6|ate\s*6\s*mes/i', $expAtual)) $expMapeada = '3 a 6 meses';
+                        elseif (preg_match('/ate\s*3\s*mes|3\s*mes|90\s*dias/i', $expAtual)) $expMapeada = 'Até 3 meses';
+                        elseif (isset($expOpcoes[$expAtual])) $expMapeada = $expAtual;
+                        else $expMapeada = '__custom__';
+                    }
+                    ?>
+                    <select class="form-select" id="cargoExperiencia" name="cargoExperiencia">
+                        <?php foreach ($expOpcoes as $val => $label): ?>
+                            <option value="<?php echo htmlspecialchars($val); ?>"
+                                <?php echo ($expMapeada === $val || ($expMapeada === '' && $val === '' && empty($expAtual))) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($label); ?>
+                            </option>
+                        <?php endforeach; ?>
+                        <?php if ($expMapeada === '__custom__'): ?>
+                            <option value="<?php echo htmlspecialchars($expAtual); ?>" selected>
+                                <?php echo htmlspecialchars(mb_substr($expAtual, 0, 60) . (mb_strlen($expAtual) > 60 ? '...' : '')); ?>
+                            </option>
+                        <?php endif; ?>
+                    </select>
+                    <?php if ($expMapeada === '__custom__'): ?>
+                        <div class="form-text text-warning"><i class="fas fa-info-circle"></i> Valor original preservado. Atualize ao salvar.</div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -587,6 +633,12 @@ echo $extra_head_content;
         
     </div>
     
+    <div class="card mt-4 border-warning">
+        <div class="card-body">
+            <label for="motivoAlteracao" class="form-label fw-semibold"><i class="fas fa-comment-alt text-warning"></i> Motivo da Alteração <span class="text-muted fw-normal">(opcional — registrado no log)</span></label>
+            <textarea class="form-control" id="motivoAlteracao" name="motivoAlteracao" rows="2" placeholder="Ex: Atualização após revisão do cargo em reunião de 10/07/2026..."></textarea>
+        </div>
+    </div>
     <button type="submit" class="btn btn-lg btn-success w-100 mt-3">
         <i class="fas fa-check-circle"></i> SALVAR CARGO
     </button>
@@ -923,7 +975,7 @@ echo $extra_head_content;
 $extra_scripts = '
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
-    <script src="../scripts/cargos_form.js?v=5"></script>
+    <script src="../scripts/cargos_form.js?v=6"></script>
 ';
 echo $extra_scripts;
 

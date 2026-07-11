@@ -125,7 +125,10 @@ class CargoRepository
                 $novoCargoId = $cargoIdSubmissao;
 
                 // --- 7. LOG DE AUDITORIA (UPDATE) ---
-                $this->auditService->log('UPDATE', 'cargos', $novoCargoId, $postData);
+                $motivo = trim($postData['motivoAlteracao'] ?? '');
+                $dadosLog = $postData;
+                if (!empty($motivo)) $dadosLog['_motivo'] = $motivo;
+                $this->auditService->log('UPDATE', 'cargos', $novoCargoId, $dadosLog);
 
             } else {
                 $sql_fields = implode(', ', $quotedFields);
@@ -136,7 +139,10 @@ class CargoRepository
                 $novoCargoId = (int)$this->pdo->lastInsertId('cargos_cargoId_seq');
                 
                 // --- 8. LOG DE AUDITORIA (CREATE) ---
-                $this->auditService->log('CREATE', 'cargos', $novoCargoId, $postData);
+                $motivo = trim($postData['motivoAlteracao'] ?? '');
+                $dadosLog = $postData;
+                if (!empty($motivo)) $dadosLog['_motivo'] = $motivo;
+                $this->auditService->log('CREATE', 'cargos', $novoCargoId, $dadosLog);
             }
 
             // 6. Salva Relacionamentos N:M Simples

@@ -142,7 +142,7 @@ include '../includes/header.php';
 
 <div class="card shadow-sm">
     <div class="card-header bg-white py-3">
-        <form method="GET" class="d-flex">
+        <form method="GET" action="habilidades.php" class="d-flex">
             <input type="search" name="term" class="form-control me-2" placeholder="Filtrar por nome ou tipo (Hardskill/Softskill)..." value="<?php echo htmlspecialchars($params['term']); ?>">
             <input type="hidden" name="sort_col" value="<?php echo htmlspecialchars($params['sort_col']); ?>">
             <input type="hidden" name="sort_dir" value="<?php echo htmlspecialchars($params['sort_dir']); ?>">

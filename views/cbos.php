@@ -16,7 +16,7 @@ if (!isUserLoggedIn()) {
     exit;
 }
 // (OPCIONAL - Verificação de permissão)
-$authService->checkAndFail('config:view', '../index.php?error=Acesso+negado');
+$authService->checkAndFail('cbos:manage', '../index.php?error=Acesso+negado');
 
 
 // 4. Definições da Página (para o header.php)

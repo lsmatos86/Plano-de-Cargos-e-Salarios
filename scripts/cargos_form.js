@@ -170,15 +170,14 @@ $(document).ready(function() {
             newRow.setAttribute('data-id', item.id);
             
             const itemDescricao = item.descricao || '';
-            const trimmedDesc = itemDescricao.length > 50 ? itemDescricao.substring(0, 50) + '...' : itemDescricao;
 
             newRow.innerHTML = `
                 <td>
                     ${item.nome}
                     <input type="hidden" name="riscoId[]" value="${item.id}">
                 </td>
-                <td>
-                    <span title="${itemDescricao}">${trimmedDesc}</span>
+                <td style="white-space:pre-wrap;word-break:break-word;max-width:320px;">
+                    ${itemDescricao}
                     <input type="hidden" name="riscoDescricao[]" value="${itemDescricao}">
                 </td>
                 <td class="text-center grid-action-cell">
@@ -588,6 +587,18 @@ $(document).ready(function() {
     }
     
     initSelect2();
+
+    // Re-dispara Select2 em selects de abas ocultas ao torná-las visíveis
+    document.querySelectorAll('[data-bs-toggle="tab"]').forEach(function(tabEl) {
+        tabEl.addEventListener('shown.bs.tab', function() {
+            var paneId = tabEl.getAttribute('data-bs-target');
+            if (paneId) {
+                $(paneId + ' .searchable-select').each(function() {
+                    $(this).trigger('change');
+                });
+            }
+        });
+    });
 
     var firstTab = document.querySelector('#basicas-tab');
     if (firstTab) {

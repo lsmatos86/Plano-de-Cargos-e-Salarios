@@ -48,11 +48,12 @@ try {
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $titulo = trim($_POST[$name_column] ?? '');
         
-        $repo->save($_POST); // O repositório lida com insert/update
+        $repo->save($_POST);
         
         $action_desc = ($_POST['action'] === 'insert') ? 'cadastrada' : 'atualizada';
         $message = "Área '{$titulo}' {$action_desc} com sucesso!";
-        $message_type = 'success';
+        header("Location: areas_atuacao.php?message=" . urlencode($message) . "&type=success");
+        exit;
     }
 
     // 2. Lógica de DELETE (GET)
