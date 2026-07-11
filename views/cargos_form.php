@@ -206,11 +206,11 @@ $extra_head_content = '
         // Usando o operador ?? [] para garantir que as variáveis sejam arrays JSON válidos
         window.habilidadesAssociadas = ' . json_encode($cargoHabilidades ?? []) . ';
         window.caracteristicasAssociadas = ' . json_encode($cargoCaracteristicas ?? []) . ';
-        window.riscosAssociados = ' . json_encode($cargoRiscos ?? []) . ';
-        window.cursosAssociados = ' . json_encode($cargoCursos ?? []) . ';
-        window.recursosGruposAssociados = ' . json_encode($cargoRecursosGrupos ?? []) . ';
+        window.riscosAssociadas = ' . json_encode($cargoRiscos ?? []) . ';
+        window.cursosAssociadas = ' . json_encode($cargoCursos ?? []) . ';
+        window.recursoGruposAssociadas = ' . json_encode($cargoRecursosGrupos ?? []) . ';
         window.areasAssociadas = ' . json_encode($cargoAreas ?? []) . ';
-        window.sinonimosAssociados = ' . json_encode($cargoSinonimos ?? []) . ';
+        window.sinonimosAssociadas = ' . json_encode($cargoSinonimos ?? []) . ';
     </script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
