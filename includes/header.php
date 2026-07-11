@@ -123,6 +123,8 @@ $is_dashboard = $is_dashboard ?? false;
                             <i class="fas fa-sitemap me-1"></i> Estrutura
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navEstrutura">
+                            <li><a class="dropdown-item fw-semibold" href="<?php echo htmlspecialchars($root_path); ?>views/organograma.php"><i class="fas fa-project-diagram me-1 text-primary"></i>Organograma</a></li>
+                            <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>views/areas_atuacao.php">Áreas de Atuação</a></li>
                             <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>views/tipo_hierarquia.php">Tipos de Hierarquia</a></li>
                             <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>views/nivel_hierarquico.php">Níveis Hierárquicos</a></li>
