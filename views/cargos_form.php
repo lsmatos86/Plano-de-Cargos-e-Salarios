@@ -31,6 +31,24 @@ $isEditing = !$isDuplicating && $originalId > 0;
 $currentFormId = $isEditing ? $originalId : 0;
 $cargoId = $originalId;
 
+// Navegação entre registros (apenas no modo edição)
+$nav = ['first' => null, 'prev' => null, 'next' => null, 'last' => null, 'pos' => null, 'total' => null];
+if ($isEditing) {
+    try {
+        $pdo = \App\Core\Database::getConnection();
+        $ids = $pdo->query('SELECT "cargoId" FROM cargos ORDER BY "cargoId"')->fetchAll(PDO::FETCH_COLUMN);
+        $pos = array_search($originalId, $ids);
+        if ($pos !== false) {
+            $nav['total'] = count($ids);
+            $nav['pos']   = $pos + 1;
+            $nav['first'] = $pos > 0               ? $ids[0]          : null;
+            $nav['prev']  = $pos > 0               ? $ids[$pos - 1]   : null;
+            $nav['next']  = $pos < count($ids) - 1 ? $ids[$pos + 1]   : null;
+            $nav['last']  = $pos < count($ids) - 1 ? $ids[count($ids) - 1] : null;
+        }
+    } catch (\Exception $e) { /* silencioso */ }
+}
+
 // ======================================================
 // Definições de Página para o header.php
 // ======================================================
@@ -248,11 +266,38 @@ echo $extra_head_content;
         <?php endif; ?>
     </h1>
     <?php if ($isEditing && $originalId > 0): ?>
-         <a href="cargos_form.php?id=<?php echo $originalId; ?>&action=duplicate" 
-            class="btn btn-warning btn-sm" 
-            title="Criar um novo registro com base neste.">
+    <div class="d-flex flex-column align-items-end gap-2">
+        <a href="cargos_form.php?id=<?php echo $originalId; ?>&action=duplicate" 
+           class="btn btn-warning btn-sm" 
+           title="Criar um novo registro com base neste.">
             <i class="fas fa-copy"></i> Duplicar Cadastro
         </a>
+        <div class="btn-group btn-group-sm" role="group" aria-label="Navegação entre registros">
+            <a href="<?php echo $nav['first'] ? 'cargos_form.php?id='.$nav['first'] : '#'; ?>"
+               class="btn btn-outline-secondary <?php echo $nav['first'] ? '' : 'disabled'; ?>"
+               title="Primeiro registro">
+                <i class="fas fa-angle-double-left"></i>
+            </a>
+            <a href="<?php echo $nav['prev'] ? 'cargos_form.php?id='.$nav['prev'] : '#'; ?>"
+               class="btn btn-outline-secondary <?php echo $nav['prev'] ? '' : 'disabled'; ?>"
+               title="Registro anterior">
+                <i class="fas fa-angle-left"></i>
+            </a>
+            <span class="btn btn-outline-secondary disabled px-3" style="cursor:default;min-width:70px">
+                <?php echo $nav['pos']; ?> / <?php echo $nav['total']; ?>
+            </span>
+            <a href="<?php echo $nav['next'] ? 'cargos_form.php?id='.$nav['next'] : '#'; ?>"
+               class="btn btn-outline-secondary <?php echo $nav['next'] ? '' : 'disabled'; ?>"
+               title="Próximo registro">
+                <i class="fas fa-angle-right"></i>
+            </a>
+            <a href="<?php echo $nav['last'] ? 'cargos_form.php?id='.$nav['last'] : '#'; ?>"
+               class="btn btn-outline-secondary <?php echo $nav['last'] ? '' : 'disabled'; ?>"
+               title="Último registro">
+                <i class="fas fa-angle-double-right"></i>
+            </a>
+        </div>
+    </div>
     <?php endif; ?>
 </div>
 
