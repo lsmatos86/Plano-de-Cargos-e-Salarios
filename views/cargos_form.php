@@ -236,7 +236,7 @@ $extra_head_content = '
         textarea { resize: vertical; }
         .grid-header { background-color: #f8f9fa; border-top: 1px solid #dee2e6; padding-top: 10px; }
         .grid-body tr:last-child td { border-bottom: none; }
-        .grid-action-cell { width: 80px; } 
+        .grid-action-cell { width: 90px; white-space: nowrap; } 
         .grid-risco-desc textarea { width: 100%; resize: vertical; min-height: 40px; border: 1px solid #ced4da; padding: 5px; }
         .table-group-separator { background-color: #e9ecef; }
         .grid-container { max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; }
@@ -635,7 +635,7 @@ echo $extra_head_content;
     
     <div class="card mt-4 border-warning">
         <div class="card-body">
-            <label for="motivoAlteracao" class="form-label fw-semibold"><i class="fas fa-comment-alt text-warning"></i> Motivo da Alteração <span class="text-muted fw-normal">(opcional — registrado no log)</span></label>
+            <label for="motivoAlteracao" class="form-label fw-semibold"><i class="fas fa-comment text-warning"></i> Motivo da Alteração <span class="text-muted fw-normal">(opcional — registrado no log)</span></label>
             <textarea class="form-control" id="motivoAlteracao" name="motivoAlteracao" rows="2" placeholder="Ex: Atualização após revisão do cargo em reunião de 10/07/2026..."></textarea>
         </div>
     </div>

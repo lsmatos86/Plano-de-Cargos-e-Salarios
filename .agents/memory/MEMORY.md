@@ -1,3 +1,3 @@
-- [PostgreSQL camelCase quoting](postgres-quoting.md) — all camelCase columns MUST be double-quoted in SQL; fix script at scripts/fix_postgres.php
-- [Dynamic ORDER BY quoting](postgres-quoting.md) — use Database::quoteIdent() for runtime column names with optional table alias
-- [Admin credentials](admin-setup.md) — admin@sistema.com / admin123; original hash was for "password" not "admin123"
+- [Schema VARCHAR limits](varchar-limits.md) — colunas de nomes eram VARCHAR(64), já expandidas para 255; verificar novas tabelas.
+- [Font Awesome local](font-awesome-local.md) — FA 6.5.2 hospedado em /css/fa/all.min.css + /css/webfonts/; header.php usa caminho local.
+- [PostgreSQL quirks](pg-quirks.md) — lastInsertId() precisa de sequência explícita; colunas camelCase precisam de aspas duplas.
