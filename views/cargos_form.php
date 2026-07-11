@@ -227,8 +227,8 @@ $extra_head_content = '
     </style>
 ';
 
-//
 include '../includes/header.php';
+echo $extra_head_content;
 
 // ======================================================
 // AJUSTE: O <nav> manual foi REMOVIDO
@@ -879,7 +879,7 @@ $extra_scripts = '
     <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
     <script src="../scripts/cargos_form.js?v=4"></script>
 ';
+echo $extra_scripts;
 
-//
 include '../includes/footer.php';
 ?>
