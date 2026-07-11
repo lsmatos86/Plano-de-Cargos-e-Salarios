@@ -61,7 +61,7 @@ class CargoRepository
         $isUpdating = $cargoIdSubmissao > 0;
 
         // --- 6. VERIFICAÇÃO DE PERMISSÃO (AuthService) ---
-        $permissionNeeded = $isUpdating ? 'cargos:edit' : 'cargos:create';
+        $permissionNeeded = 'cargos:manage';
         // Lança uma exceção se o usuário não tiver permissão
         $this->authService->checkAndFail($permissionNeeded); 
 

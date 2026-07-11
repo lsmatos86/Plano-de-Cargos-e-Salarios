@@ -85,7 +85,7 @@ class AreaRepository
         $isUpdating = $id > 0;
 
         // 2. Validação de Permissão e Dados
-        $permissionNeeded = $isUpdating ? 'estruturas:edit' : 'estruturas:create';
+        $permissionNeeded = 'areas:manage';
         $this->authService->checkAndFail($permissionNeeded);
 
         if (empty($nome)) {
