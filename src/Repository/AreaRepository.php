@@ -29,14 +29,14 @@ class AreaRepository
     
     public function find(int $id)
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM areas_atuacao WHERE areaId = ?");
+        $stmt = $this->pdo->prepare("SELECT * FROM areas_atuacao WHERE \"areaId\" = ?");
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     public function findAll(): array
     {
-        $stmt = $this->pdo->query("SELECT * FROM areas_atuacao ORDER BY areaNome ASC");
+        $stmt = $this->pdo->query("SELECT * FROM areas_atuacao ORDER BY \"areaNome\" ASC");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -106,7 +106,7 @@ class AreaRepository
 
         try {
             if ($isUpdating) {
-                $sql = "UPDATE {$tableName} SET areaNome = :nome, areaDescricao = :descricao, areaPaiId = :areaPaiId WHERE areaId = :id";
+                $sql = "UPDATE {$tableName} SET \"areaNome\" = :nome, \"areaDescricao\" = :descricao, \"areaPaiId\" = :areaPaiId WHERE \"areaId\" = :id";
                 $params[':id'] = $id;
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = $id;
@@ -117,7 +117,7 @@ class AreaRepository
                 $this->auditService->log('UPDATE', $tableName, $savedId, $data);
                 
             } else {
-                $sql = "INSERT INTO {$tableName} (areaNome, areaDescricao, areaPaiId) VALUES (:nome, :descricao, :areaPaiId)";
+                $sql = "INSERT INTO {$tableName} (\"areaNome\", \"areaDescricao\", \"areaPaiId\") VALUES (:nome, :descricao, :areaPaiId)";
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = (int)$this->pdo->lastInsertId();
                 
@@ -130,7 +130,7 @@ class AreaRepository
             return $savedId;
 
         } catch (Exception $e) {
-            if (str_contains($e->getMessage(), 'Duplicate entry')) {
+            if ($e->getCode() == '23505') {
                  throw new Exception("A área '$nome' já existe.");
             }
             throw $e; // Propaga outros erros
@@ -149,21 +149,21 @@ class AreaRepository
 
         try {
             // 1. Verifica se a área está sendo usada como pai
-            $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM {$tableName} WHERE areaPaiId = ?");
+            $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM {$tableName} WHERE \"areaPaiId\" = ?");
             $stmtCheck->execute([$id]);
             if ($stmtCheck->fetchColumn() > 0) {
                 throw new Exception("Esta área não pode ser excluída pois é usada como 'Área Pai' por outras áreas.");
             }
             
             // 2. Verifica se a área está sendo usada por um cargo
-            $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM cargos_area WHERE areaId = ?");
+            $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM cargos_area WHERE \"areaId\" = ?");
             $stmtCheck->execute([$id]);
             if ($stmtCheck->fetchColumn() > 0) {
                 throw new Exception("Esta área não pode ser excluída pois está associada a um ou mais cargos.");
             }
 
             // 3. Exclui
-            $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE areaId = ?");
+            $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE \"areaId\" = ?");
             $stmt->execute([$id]);
             
             $success = $stmt->rowCount() > 0;

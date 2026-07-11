@@ -192,7 +192,7 @@ include '../includes/header.php';
                                             <i class="fas fa-pen"></i>
                                         </a>
                                         <?php if ($role['roleId'] != 1): // Não deixa excluir o Admin ?>
-                                            <a href="roles.php?delete=<?php echo $role['roleId']; ?>" 
+                                            <a href="roles.php?delete=<?php echo $role['\"roleId\"']; ?>" 
                                                class="btn btn-sm btn-danger" 
                                                title="Excluir"
                                                onclick="return confirm('Atenção: Excluir um papel irá removê-lo de todos os usuários. Deseja continuar?');">

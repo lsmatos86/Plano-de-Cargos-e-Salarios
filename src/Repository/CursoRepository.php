@@ -36,7 +36,7 @@ class CursoRepository
         // Apenas quem pode gerenciar pode buscar os dados
         $this->authService->checkAndFail('cadastros:manage');
         
-        $stmt = $this->pdo->prepare("SELECT * FROM cursos WHERE cursoId = ?");
+        $stmt = $this->pdo->prepare("SELECT * FROM cursos WHERE \"cursoId\" = ?");
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
@@ -70,7 +70,7 @@ class CursoRepository
 
         try {
             if ($isUpdating) {
-                $sql = "UPDATE {$tableName} SET cursoNome = :nome, cursoDescricao = :descricao WHERE cursoId = :id";
+                $sql = "UPDATE {$tableName} SET \"cursoNome\" = :nome, \"cursoDescricao\" = :descricao WHERE \"cursoId\" = :id";
                 $params[':id'] = $id;
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = $id;
@@ -81,7 +81,7 @@ class CursoRepository
                 $this->auditService->log('UPDATE', $tableName, $savedId, $data);
                 
             } else {
-                $sql = "INSERT INTO {$tableName} (cursoNome, cursoDescricao) VALUES (:nome, :descricao)";
+                $sql = "INSERT INTO {$tableName} (\"cursoNome\", \"cursoDescricao\") VALUES (:nome, :descricao)";
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = (int)$this->pdo->lastInsertId();
                 
@@ -94,7 +94,7 @@ class CursoRepository
             return $savedId;
 
         } catch (Exception $e) {
-            if (str_contains($e->getMessage(), 'Duplicate entry')) {
+            if ($e->getCode() == '23505') {
                  throw new Exception("O curso '$nome' já existe.");
             }
             throw $e; // Propaga outros erros
@@ -113,14 +113,14 @@ class CursoRepository
         try {
             // 1. Verifica se o curso está sendo usado por um cargo
             //
-            $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM cursos_cargo WHERE cursoId = ?");
+            $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM cursos_cargo WHERE \"cursoId\" = ?");
             $stmtCheck->execute([$id]);
             if ($stmtCheck->fetchColumn() > 0) {
                 throw new Exception("Este curso não pode ser excluído pois está associado a um ou mais cargos.");
             }
 
             // 2. Exclui
-            $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE cursoId = ?");
+            $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE \"cursoId\" = ?");
             $stmt->execute([$id]);
             
             $success = $stmt->rowCount() > 0;
@@ -160,7 +160,7 @@ class CursoRepository
 
         // 2. Montagem dos Filtros
         if (!empty($term)) {
-            $where[] = "(cursoNome LIKE :term OR cursoDescricao LIKE :term)";
+            $where[] = "(\"cursoNome\" LIKE :term OR \"cursoDescricao\" LIKE :term)";
             $bindings[':term'] = $sqlTerm;
         }
         
@@ -198,7 +198,7 @@ class CursoRepository
         $orderBy = in_array($sort_col, $validColumns) ? $sort_col : 'cursoNome';
         $sortDir = in_array(strtoupper($sort_dir), ['ASC', 'DESC']) ? strtoupper($sort_dir) : 'ASC';
 
-        $sql .= " ORDER BY {$orderBy} {$sortDir}";
+        $sql .= ' ORDER BY "' . $orderBy . '" ' . $sortDir;
         $sql .= " LIMIT :limit OFFSET :offset";
 
         $bindings[':limit'] = $itemsPerPage;

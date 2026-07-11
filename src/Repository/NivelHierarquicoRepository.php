@@ -35,7 +35,7 @@ class NivelHierarquicoRepository
         // ======================================================
         $this->authService->checkAndFail('estruturas:manage');
 
-        $stmt = $this->pdo->prepare("SELECT * FROM nivel_hierarquico WHERE nivelId = ?");
+        $stmt = $this->pdo->prepare("SELECT * FROM nivel_hierarquico WHERE \"nivelId\" = ?");
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
@@ -45,7 +45,7 @@ class NivelHierarquicoRepository
      */
     public function findAllTipos(): array
     {
-        $stmt = $this->pdo->query("SELECT tipoId, tipoNome FROM tipo_hierarquia ORDER BY tipoNome ASC");
+        $stmt = $this->pdo->query("SELECT \"tipoId\", \"tipoNome\" FROM tipo_hierarquia ORDER BY \"tipoNome\" ASC");
         return $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
     }
 
@@ -84,13 +84,13 @@ class NivelHierarquicoRepository
         try {
             if ($isUpdating) {
                 $sql = "UPDATE {$tableName} SET 
-                            tipoId = :tipoId, 
-                            nivelOrdem = :nivelOrdem, 
-                            nivelDescricao = :nivelDescricao, 
-                            nivelAtribuicoes = :nivelAtribuicoes, 
-                            nivelAutonomia = :nivelAutonomia, 
-                            nivelQuandoUtilizar = :nivelQuandoUtilizar 
-                        WHERE nivelId = :id";
+                            \"tipoId\" = :tipoId, 
+                            \"nivelOrdem\" = :nivelOrdem, 
+                            \"nivelDescricao\" = :nivelDescricao, 
+                            \"nivelAtribuicoes\" = :nivelAtribuicoes, 
+                            \"nivelAutonomia\" = :nivelAutonomia, 
+                            \"nivelQuandoUtilizar\" = :nivelQuandoUtilizar 
+                        WHERE \"nivelId\" = :id";
                 $params[':id'] = $id;
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = $id;
@@ -101,7 +101,7 @@ class NivelHierarquicoRepository
                 $this->auditService->log('UPDATE', $tableName, $savedId, $data);
                 
             } else {
-                $sql = "INSERT INTO {$tableName} (tipoId, nivelOrdem, nivelDescricao, nivelAtribuicoes, nivelAutonomia, nivelQuandoUtilizar) 
+                $sql = "INSERT INTO {$tableName} (\"tipoId\", \"nivelOrdem\", \"nivelDescricao\", \"nivelAtribuicoes\", \"nivelAutonomia\", \"nivelQuandoUtilizar\") 
                         VALUES (:tipoId, :nivelOrdem, :nivelDescricao, :nivelAtribuicoes, :nivelAutonomia, :nivelQuandoUtilizar)";
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = (int)$this->pdo->lastInsertId();
@@ -134,14 +134,14 @@ class NivelHierarquicoRepository
         try {
             // 1. Verifica se o nível está sendo usado por um cargo
             //
-            $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM cargos WHERE nivelHierarquicoId = ?");
+            $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM cargos WHERE \"nivelHierarquicoId\" = ?");
             $stmtCheck->execute([$id]);
             if ($stmtCheck->fetchColumn() > 0) {
                 throw new Exception("Este nível não pode ser excluído pois está associado a um ou mais cargos.");
             }
 
             // 2. Exclui
-            $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE nivelId = ?");
+            $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE \"nivelId\" = ?");
             $stmt->execute([$id]);
             
             $success = $stmt->rowCount() > 0;
@@ -181,18 +181,18 @@ class NivelHierarquicoRepository
 
         // 2. Montagem dos Filtros
         if (!empty($term)) {
-            $where[] = "(n.nivelDescricao LIKE :term OR t.tipoNome LIKE :term)";
+            $where[] = "(n.\"nivelDescricao\" LIKE :term OR t.\"tipoNome\" LIKE :term)";
             $bindings[':term'] = $sqlTerm;
         }
         
-        $sqlJoin = " FROM nivel_hierarquico n LEFT JOIN tipo_hierarquia t ON n.tipoId = t.tipoId";
+        $sqlJoin = " FROM nivel_hierarquico n LEFT JOIN tipo_hierarquia t ON n.\"tipoId\" = t.\"tipoId\"";
         $sqlWhere = "";
         if (!empty($where)) {
             $sqlWhere = " WHERE " . implode(" AND ", $where);
         }
 
         // 3. Query para Contagem Total
-        $count_sql = "SELECT COUNT(n.nivelId)" . $sqlJoin . $sqlWhere;
+        $count_sql = "SELECT COUNT(n.\"nivelId\")" . $sqlJoin . $sqlWhere;
         
         try {
             $count_stmt = $this->pdo->prepare($count_sql);
@@ -211,7 +211,7 @@ class NivelHierarquicoRepository
         $offset = ($currentPage - 1) * $itemsPerPage;
 
         // 5. Query Principal
-        $sql = "SELECT n.*, t.tipoNome" . $sqlJoin . $sqlWhere;
+        $sql = "SELECT n.*, t.\"tipoNome\"" . $sqlJoin . $sqlWhere;
         
         // Validação de Colunas de Ordenação
         $sort_col = $params['sort_col'] ?? 'n.nivelOrdem';
@@ -220,8 +220,9 @@ class NivelHierarquicoRepository
         $validColumns = ['n.nivelId', 'n.nivelOrdem', 'n.nivelDescricao', 't.tipoNome', 'n.nivelDataAtualizacao'];
         $orderBy = in_array($sort_col, $validColumns) ? $sort_col : 'n.nivelOrdem';
         $sortDir = in_array(strtoupper($sort_dir), ['ASC', 'DESC']) ? strtoupper($sort_dir) : 'ASC';
+        $quotedOrder = \App\Core\Database::quoteIdent($orderBy);
 
-        $sql .= " ORDER BY {$orderBy} {$sortDir}";
+        $sql .= " ORDER BY {$quotedOrder} {$sortDir}";
         $sql .= " LIMIT :limit OFFSET :offset";
 
         $bindings[':limit'] = $itemsPerPage;

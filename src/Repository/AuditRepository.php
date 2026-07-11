@@ -45,7 +45,7 @@ class AuditRepository
 
         // 2. Montagem dos Filtros
         if (!empty($term)) {
-            $where[] = "(a.nomeUsuario LIKE :term OR a.dadosJson LIKE :term OR a.idRegistro LIKE :term)";
+            $where[] = "(a.\"nomeUsuario\" LIKE :term OR a.\"dadosJson\" LIKE :term OR a.\"idRegistro\" LIKE :term)";
             $bindings[':term'] = $sqlTerm;
         }
         if (!empty($acao)) {
@@ -83,7 +83,7 @@ class AuditRepository
 
         // 5. Query Principal (Ordena pelos mais recentes primeiro)
         $sql = "SELECT a.* FROM audit_log a" . $sqlWhere;
-        $sql .= " ORDER BY a.dataHora DESC";
+        $sql .= " ORDER BY a.\"dataHora\" DESC";
         $sql .= " LIMIT :limit OFFSET :offset";
 
         $bindings[':limit'] = $itemsPerPage;
@@ -139,7 +139,7 @@ class AuditRepository
     public function getDistinctTabelas(): array
     {
          try {
-            $stmt = $this->pdo->query("SELECT DISTINCT nomeTabela FROM audit_log WHERE nomeTabela IS NOT NULL ORDER BY nomeTabela ASC");
+            $stmt = $this->pdo->query("SELECT DISTINCT \"nomeTabela\" FROM audit_log WHERE \"nomeTabela\" IS NOT NULL ORDER BY \"nomeTabela\" ASC");
             return $stmt->fetchAll(PDO::FETCH_COLUMN);
         } catch (\PDOException $e) {
             return [];

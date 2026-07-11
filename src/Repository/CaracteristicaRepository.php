@@ -36,7 +36,7 @@ class CaracteristicaRepository
         // Apenas quem pode gerenciar pode buscar os dados
         $this->authService->checkAndFail('cadastros:manage');
         
-        $stmt = $this->pdo->prepare("SELECT * FROM caracteristicas WHERE caracteristicaId = ?");
+        $stmt = $this->pdo->prepare("SELECT * FROM caracteristicas WHERE \"caracteristicaId\" = ?");
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
@@ -70,7 +70,7 @@ class CaracteristicaRepository
 
         try {
             if ($isUpdating) {
-                $sql = "UPDATE {$tableName} SET caracteristicaNome = :nome, caracteristicaDescricao = :descricao WHERE caracteristicaId = :id";
+                $sql = "UPDATE {$tableName} SET \"caracteristicaNome\" = :nome, \"caracteristicaDescricao\" = :descricao WHERE \"caracteristicaId\" = :id";
                 $params[':id'] = $id;
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = $id;
@@ -81,7 +81,7 @@ class CaracteristicaRepository
                 $this->auditService->log('UPDATE', $tableName, $savedId, $data);
                 
             } else {
-                $sql = "INSERT INTO {$tableName} (caracteristicaNome, caracteristicaDescricao) VALUES (:nome, :descricao)";
+                $sql = "INSERT INTO {$tableName} (\"caracteristicaNome\", \"caracteristicaDescricao\") VALUES (:nome, :descricao)";
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = (int)$this->pdo->lastInsertId();
                 
@@ -94,7 +94,7 @@ class CaracteristicaRepository
             return $savedId;
 
         } catch (Exception $e) {
-            if (str_contains($e->getMessage(), 'Duplicate entry')) {
+            if ($e->getCode() == '23505') {
                  throw new Exception("A característica '$nome' já existe.");
             }
             throw $e; // Propaga outros erros
@@ -113,14 +113,14 @@ class CaracteristicaRepository
         try {
             // 1. Verifica se a característica está sendo usada por um cargo
             //
-            $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM caracteristicas_cargo WHERE caracteristicaId = ?");
+            $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM caracteristicas_cargo WHERE \"caracteristicaId\" = ?");
             $stmtCheck->execute([$id]);
             if ($stmtCheck->fetchColumn() > 0) {
                 throw new Exception("Esta característica não pode ser excluída pois está associada a um ou mais cargos.");
             }
 
             // 2. Exclui
-            $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE caracteristicaId = ?");
+            $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE \"caracteristicaId\" = ?");
             $stmt->execute([$id]);
             
             $success = $stmt->rowCount() > 0;
@@ -160,7 +160,7 @@ class CaracteristicaRepository
 
         // 2. Montagem dos Filtros
         if (!empty($term)) {
-            $where[] = "(caracteristicaNome LIKE :term OR caracteristicaDescricao LIKE :term)";
+            $where[] = "(\"caracteristicaNome\" LIKE :term OR \"caracteristicaDescricao\" LIKE :term)";
             $bindings[':term'] = $sqlTerm;
         }
         
@@ -198,7 +198,7 @@ class CaracteristicaRepository
         $orderBy = in_array($sort_col, $validColumns) ? $sort_col : 'caracteristicaNome';
         $sortDir = in_array(strtoupper($sort_dir), ['ASC', 'DESC']) ? strtoupper($sort_dir) : 'ASC';
 
-        $sql .= " ORDER BY {$orderBy} {$sortDir}";
+        $sql .= ' ORDER BY "' . $orderBy . '" ' . $sortDir;
         $sql .= " LIMIT :limit OFFSET :offset";
 
         $bindings[':limit'] = $itemsPerPage;

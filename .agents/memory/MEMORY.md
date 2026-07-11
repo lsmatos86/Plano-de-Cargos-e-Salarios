@@ -1,0 +1,3 @@
+- [PostgreSQL camelCase quoting](postgres-quoting.md) — all camelCase columns MUST be double-quoted in SQL; fix script at scripts/fix_postgres.php
+- [Dynamic ORDER BY quoting](postgres-quoting.md) — use Database::quoteIdent() for runtime column names with optional table alias
+- [Admin credentials](admin-setup.md) — admin@sistema.com / admin123; original hash was for "password" not "admin123"

@@ -242,7 +242,7 @@ include '../includes/header.php';
                                         <a href="usuarios.php?edit=<?php echo $user['usuarioId']; ?>" class="btn btn-sm btn-info text-white" title="Editar">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <a href="usuarios.php?delete=<?php echo $user['usuarioId']; ?>" 
+                                        <a href="usuarios.php?delete=<?php echo $user['\"usuarioId\"']; ?>" 
                                            class="btn btn-sm btn-danger <?php echo ($isSelf || $isAdmin1) ? 'disabled' : ''; ?>" 
                                            title="<?php echo ($isSelf || $isAdmin1) ? 'Não pode ser excluído' : 'Excluir'; ?>"
                                            onclick="return <?php echo ($isSelf || $isAdmin1) ? 'false' : "confirm('Tem certeza que deseja excluir este usuário?');"; ?>">

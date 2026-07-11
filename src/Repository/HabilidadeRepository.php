@@ -35,7 +35,7 @@ class HabilidadeRepository
         // ======================================================
         $this->authService->checkAndFail('cadastros:manage');
 
-        $stmt = $this->pdo->prepare("SELECT * FROM habilidades WHERE habilidadeId = ?");
+        $stmt = $this->pdo->prepare("SELECT * FROM habilidades WHERE \"habilidadeId\" = ?");
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
@@ -58,7 +58,7 @@ class HabilidadeRepository
 
         // 2. Montagem dos Filtros
         if (!empty($term)) {
-            $where[] = "(habilidadeNome LIKE :term OR habilidadeDescricao LIKE :term)";
+            $where[] = "(\"habilidadeNome\" LIKE :term OR \"habilidadeDescricao\" LIKE :term)";
             $bindings[':term'] = $sqlTerm;
         }
         if (!empty($tipo)) {
@@ -100,7 +100,7 @@ class HabilidadeRepository
         $orderBy = in_array($sort_col, $validColumns) ? $sort_col : 'habilidadeNome';
         $sortDir = in_array(strtoupper($sort_dir), ['ASC', 'DESC']) ? strtoupper($sort_dir) : 'ASC';
 
-        $sql .= " ORDER BY {$orderBy} {$sortDir}";
+        $sql .= ' ORDER BY "' . $orderBy . '" ' . $sortDir;
         $sql .= " LIMIT :limit OFFSET :offset";
 
         $bindings[':limit'] = $itemsPerPage;
@@ -140,7 +140,7 @@ class HabilidadeRepository
     public function getGroupedLookup(): array
     {
         try {
-            $stmt = $this->pdo->query("SELECT habilidadeId, habilidadeNome, habilidadeTipo FROM habilidades ORDER BY habilidadeTipo, habilidadeNome ASC");
+            $stmt = $this->pdo->query("SELECT \"habilidadeId\", \"habilidadeNome\", \"habilidadeTipo\" FROM habilidades ORDER BY \"habilidadeTipo\", \"habilidadeNome\" ASC");
             $habilidades = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             $grouped = [
@@ -208,7 +208,7 @@ class HabilidadeRepository
 
         try {
             if ($isUpdating) {
-                $sql = "UPDATE {$tableName} SET habilidadeNome = :nome, habilidadeTipo = :tipo, habilidadeDescricao = :descricao WHERE habilidadeId = :id";
+                $sql = "UPDATE {$tableName} SET \"habilidadeNome\" = :nome, \"habilidadeTipo\" = :tipo, \"habilidadeDescricao\" = :descricao WHERE \"habilidadeId\" = :id";
                 $params[':id'] = $id;
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = $id;
@@ -219,7 +219,7 @@ class HabilidadeRepository
                 $this->auditService->log('UPDATE', $tableName, $savedId, $data);
                 
             } else {
-                $sql = "INSERT INTO {$tableName} (habilidadeNome, habilidadeTipo, habilidadeDescricao) VALUES (:nome, :tipo, :descricao)";
+                $sql = "INSERT INTO {$tableName} (\"habilidadeNome\", \"habilidadeTipo\", \"habilidadeDescricao\") VALUES (:nome, :tipo, :descricao)";
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = (int)$this->pdo->lastInsertId();
                 
@@ -232,7 +232,7 @@ class HabilidadeRepository
             return $savedId;
 
         } catch (Exception $e) {
-            if (str_contains($e->getMessage(), 'Duplicate entry')) {
+            if ($e->getCode() == '23505') {
                  throw new Exception("A habilidade '$nome' já existe.");
             }
             throw $e; // Propaga outros erros
@@ -254,14 +254,14 @@ class HabilidadeRepository
         try {
             // 1. Verifica se a habilidade está sendo usada por um cargo
             //
-            $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM habilidades_cargo WHERE habilidadeId = ?");
+            $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM habilidades_cargo WHERE \"habilidadeId\" = ?");
             $stmtCheck->execute([$id]);
             if ($stmtCheck->fetchColumn() > 0) {
                 throw new Exception("Esta habilidade não pode ser excluída pois está associada a um ou mais cargos.");
             }
 
             // 2. Exclui
-            $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE habilidadeId = ?");
+            $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE \"habilidadeId\" = ?");
             $stmt->execute([$id]);
             
             $success = $stmt->rowCount() > 0;

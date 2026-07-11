@@ -35,7 +35,7 @@ class RiscoRepository
         // ======================================================
         $this->authService->checkAndFail('cadastros:manage');
         
-        $stmt = $this->pdo->prepare("SELECT * FROM riscos WHERE riscoId = ?");
+        $stmt = $this->pdo->prepare("SELECT * FROM riscos WHERE \"riscoId\" = ?");
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
@@ -55,14 +55,14 @@ class RiscoRepository
         try {
             // 1. Verifica se o risco está sendo usado por um cargo
             //
-            $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM riscos_cargo WHERE riscoId = ?");
+            $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM riscos_cargo WHERE \"riscoId\" = ?");
             $stmtCheck->execute([$id]);
             if ($stmtCheck->fetchColumn() > 0) {
                 throw new Exception("Este risco não pode ser excluído pois está associado a um ou mais cargos.");
             }
 
             // 2. Exclui
-            $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE riscoId = ?");
+            $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE \"riscoId\" = ?");
             $stmt->execute([$id]);
             
             $success = $stmt->rowCount() > 0;
@@ -102,7 +102,7 @@ class RiscoRepository
 
         // 2. Montagem dos Filtros
         if (!empty($term)) {
-            $where[] = "(riscoNome LIKE :term)";
+            $where[] = "(\"riscoNome\" LIKE :term)";
             $bindings[':term'] = "%{$term}%"; // Permitir busca parcial no enum
         }
         
@@ -140,7 +140,7 @@ class RiscoRepository
         $orderBy = in_array($sort_col, $validColumns) ? $sort_col : 'riscoNome';
         $sortDir = in_array(strtoupper($sort_dir), ['ASC', 'DESC']) ? strtoupper($sort_dir) : 'ASC';
 
-        $sql .= " ORDER BY {$orderBy} {$sortDir}";
+        $sql .= ' ORDER BY "' . $orderBy . '" ' . $sortDir;
         $sql .= " LIMIT :limit OFFSET :offset";
 
         $bindings[':limit'] = $itemsPerPage;

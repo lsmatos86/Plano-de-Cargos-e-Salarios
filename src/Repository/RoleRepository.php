@@ -30,7 +30,7 @@ class RoleRepository
     {
         $this->authService->checkAndFail('usuarios:manage');
         
-        $stmt = $this->pdo->prepare("SELECT * FROM roles WHERE roleId = ?");
+        $stmt = $this->pdo->prepare("SELECT * FROM roles WHERE \"roleId\" = ?");
         $stmt->execute([$roleId]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
@@ -40,7 +40,7 @@ class RoleRepository
      */
     public function findAll(): array
     {
-        $stmt = $this->pdo->query("SELECT * FROM roles ORDER BY roleName ASC");
+        $stmt = $this->pdo->query("SELECT * FROM roles ORDER BY \"roleName\" ASC");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
@@ -51,7 +51,7 @@ class RoleRepository
     {
         $this->authService->checkAndFail('usuarios:manage');
         
-        $stmt = $this->pdo->query("SELECT * FROM permissions ORDER BY permissionName ASC");
+        $stmt = $this->pdo->query("SELECT * FROM permissions ORDER BY \"permissionName\" ASC");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -62,7 +62,7 @@ class RoleRepository
     {
         $this->authService->checkAndFail('usuarios:manage');
         
-        $stmt = $this->pdo->prepare("SELECT permissionId FROM role_permissions WHERE roleId = ?");
+        $stmt = $this->pdo->prepare("SELECT \"permissionId\" FROM role_permissions WHERE \"roleId\" = ?");
         $stmt->execute([$roleId]);
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
@@ -88,7 +88,7 @@ class RoleRepository
         try {
             // 1. Salva o Papel (Role)
             if ($isEditing) {
-                $sql = "UPDATE roles SET roleName = :nome, roleDescription = :descricao WHERE roleId = :id";
+                $sql = "UPDATE roles SET \"roleName\" = :nome, \"roleDescription\" = :descricao WHERE \"roleId\" = :id";
                 $this->pdo->prepare($sql)->execute([
                     ':nome' => $nome,
                     ':descricao' => $descricao,
@@ -97,7 +97,7 @@ class RoleRepository
                 
                 $this->auditService->log('UPDATE', 'roles', $roleId, $data);
             } else {
-                $sql = "INSERT INTO roles (roleName, roleDescription) VALUES (:nome, :descricao)";
+                $sql = "INSERT INTO roles (\"roleName\", \"roleDescription\") VALUES (:nome, :descricao)";
                 $this->pdo->prepare($sql)->execute([
                     ':nome' => $nome,
                     ':descricao' => $descricao
@@ -109,11 +109,11 @@ class RoleRepository
 
             // 2. Sincroniza as Permissões
             // 2.1. Remove permissões antigas
-            $this->pdo->prepare("DELETE FROM role_permissions WHERE roleId = ?")->execute([$roleId]);
+            $this->pdo->prepare("DELETE FROM role_permissions WHERE \"roleId\" = ?")->execute([$roleId]);
 
             // 2.2. Insere as novas permissões
             if (!empty($permissionIds)) {
-                $sql_perm = "INSERT INTO role_permissions (roleId, permissionId) VALUES (?, ?)";
+                $sql_perm = "INSERT INTO role_permissions (\"roleId\", \"permissionId\") VALUES (?, ?)";
                 $stmt_perm = $this->pdo->prepare($sql_perm);
                 foreach ($permissionIds as $permId) {
                     $stmt_perm->execute([$roleId, (int)$permId]);
@@ -125,7 +125,7 @@ class RoleRepository
 
         } catch (Exception $e) {
             $this->pdo->rollBack();
-            if (str_contains($e->getMessage(), 'Duplicate entry')) {
+            if ($e->getCode() == '23505') {
                  throw new Exception("O papel '$nome' já está cadastrado.");
             }
             throw new Exception("Erro ao salvar o papel: " . $e->getMessage());
@@ -147,14 +147,14 @@ class RoleRepository
         $this->pdo->beginTransaction();
         try {
             // 1. Remove associações de permissões
-            $this->pdo->prepare("DELETE FROM role_permissions WHERE roleId = ?")->execute([$roleId]);
+            $this->pdo->prepare("DELETE FROM role_permissions WHERE \"roleId\" = ?")->execute([$roleId]);
             
             // 2. Remove associações de usuários (importante!)
             //
-            $this->pdo->prepare("DELETE FROM user_roles WHERE roleId = ?")->execute([$roleId]);
+            $this->pdo->prepare("DELETE FROM user_roles WHERE \"roleId\" = ?")->execute([$roleId]);
 
             // 3. Remove o papel
-            $stmt = $this->pdo->prepare("DELETE FROM roles WHERE roleId = ?");
+            $stmt = $this->pdo->prepare("DELETE FROM roles WHERE \"roleId\" = ?");
             $stmt->execute([$roleId]);
             
             $success = $stmt->rowCount() > 0;

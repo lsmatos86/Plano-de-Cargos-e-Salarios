@@ -33,7 +33,7 @@ class FamiliaCboRepository
         // Apenas quem pode gerenciar pode buscar os dados
         $this->authService->checkAndFail('cadastros:manage');
         
-        $stmt = $this->pdo->prepare("SELECT * FROM familia_cbo WHERE familiaCboId = ?");
+        $stmt = $this->pdo->prepare("SELECT * FROM familia_cbo WHERE \"familiaCboId\" = ?");
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
@@ -43,7 +43,7 @@ class FamiliaCboRepository
      */
     public function findAllForLookup(): array
     {
-        $stmt = $this->pdo->query("SELECT familiaCboId, familiaCboNome FROM familia_cbo ORDER BY familiaCboNome ASC");
+        $stmt = $this->pdo->query("SELECT \"familiaCboId\", \"familiaCboNome\" FROM familia_cbo ORDER BY \"familiaCboNome\" ASC");
         return $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
     }
 
@@ -69,7 +69,7 @@ class FamiliaCboRepository
         
         try {
             if ($isUpdating) {
-                $sql = "UPDATE {$tableName} SET familiaCboNome = :nome WHERE familiaCboId = :id";
+                $sql = "UPDATE {$tableName} SET \"familiaCboNome\" = :nome WHERE \"familiaCboId\" = :id";
                 $stmt = $this->pdo->prepare($sql);
                 $stmt->execute([':nome' => $nome, ':id' => $id]);
                 $savedId = $id;
@@ -80,7 +80,7 @@ class FamiliaCboRepository
                 $this->auditService->log('UPDATE', $tableName, $savedId, $data);
                 
             } else {
-                $sql = "INSERT INTO {$tableName} (familiaCboNome) VALUES (:nome)";
+                $sql = "INSERT INTO {$tableName} (\"familiaCboNome\") VALUES (:nome)";
                 $stmt = $this->pdo->prepare($sql);
                 $stmt->execute([':nome' => $nome]);
                 $savedId = (int)$this->pdo->lastInsertId();
@@ -94,7 +94,7 @@ class FamiliaCboRepository
             return $savedId;
 
         } catch (\PDOException $e) {
-            if ($e->errorInfo[1] == 1062) { // Duplicate entry
+            if ($e->getCode() == '23505') { // Duplicate entry
                 throw new Exception("A família '$nome' já existe.");
             }
             throw $e;
@@ -115,7 +115,7 @@ class FamiliaCboRepository
             //
             // é tratada pelo catch (PDOException) abaixo.
             
-            $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE familiaCboId = ?");
+            $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE \"familiaCboId\" = ?");
             $stmt->execute([$id]);
             
             $success = $stmt->rowCount() > 0;
@@ -130,7 +130,7 @@ class FamiliaCboRepository
             return $success;
 
         } catch (\PDOException $e) {
-            if ($e->errorInfo[1] == 1451) { // Foreign key constraint
+            if ($e->getCode() == '23503') { // Foreign key constraint
                 throw new Exception("Esta família não pode ser excluída pois está sendo utilizada em um ou mais CBOs.");
             }
             throw $e;
@@ -152,7 +152,7 @@ class FamiliaCboRepository
         $bindings = [];
 
         if (!empty($term)) {
-            $where = " WHERE familiaCboNome LIKE :term";
+            $where = " WHERE \"familiaCboNome\" LIKE :term";
             $bindings[':term'] = $sqlTerm;
         }
         
@@ -172,7 +172,7 @@ class FamiliaCboRepository
         $validColumns = ['familiaCboId', 'familiaCboNome', 'familiaCboDataAtualizacao'];
         $orderBy = in_array($sort_col, $validColumns) ? $sort_col : 'familiaCboNome';
         $sortDir = in_array(strtoupper($sort_dir), ['ASC', 'DESC']) ? strtoupper($sort_dir) : 'ASC';
-        $dataSql .= " ORDER BY $orderBy $sortDir";
+        $dataSql .= ' ORDER BY "' . $orderBy . '" ' . $sortDir;
         
         $dataSql .= " LIMIT :limit OFFSET :offset";
         $bindings[':limit'] = $itemsPerPage;

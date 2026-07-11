@@ -51,9 +51,9 @@ class LookupRepository
     public function findCbos(): array
     {
         try {
-            $sql = "SELECT cboId, cboCod, cboTituloOficial, CONCAT(cboCod, ' - ', cboTituloOficial) AS display_name
+            $sql = "SELECT \"cboId\", \"cboCod\", \"cboTituloOficial\", CONCAT(\"cboCod\", ' - ', \"cboTituloOficial\") AS display_name
                     FROM cbos
-                    ORDER BY cboCod ASC";
+                    ORDER BY \"cboCod\" ASC";
             $stmt = $this->pdo->query($sql);
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
@@ -68,7 +68,7 @@ class LookupRepository
     public function findEscolaridades(): array
     {
         try {
-            $sql = "SELECT escolaridadeId, escolaridadeTitulo FROM escolaridades ORDER BY escolaridadeOrdem ASC";
+            $sql = 'SELECT "escolaridadeId", "escolaridadeTitulo" FROM escolaridades ORDER BY "escolaridadeId" ASC';
             $stmt = $this->pdo->query($sql);
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
@@ -83,7 +83,7 @@ class LookupRepository
     public function findFaixas(): array
     {
         try {
-            $sql = "SELECT faixaId, faixaNivel FROM faixas_salariais ORDER BY faixaOrdem ASC";
+            $sql = 'SELECT "faixaId", "faixaNivel" FROM faixas_salariais ORDER BY "faixaId" ASC';
             $stmt = $this->pdo->query($sql);
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
@@ -98,10 +98,10 @@ class LookupRepository
     public function findNivelHierarquico(): array
     {
         try {
-            $sql = "SELECT n.nivelId, n.nivelOrdem, n.nivelNome, t.tipoNome AS tipoHierarquiaNome
+            $sql = 'SELECT n."nivelId", n."nivelOrdem", n."nivelDescricao" AS "nivelNome", t."tipoNome" AS "tipoHierarquiaNome"
                     FROM nivel_hierarquico n
-                    JOIN tipo_hierarquia t ON t.tipoId = n.tipoId
-                    ORDER BY n.nivelOrdem DESC";
+                    JOIN tipo_hierarquia t ON t."tipoId" = n."tipoId"
+                    ORDER BY n."nivelOrdem" DESC';
             $stmt = $this->pdo->query($sql);
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
@@ -116,7 +116,7 @@ class LookupRepository
     public function findCargosForSelect(): array
     {
         try {
-            $sql = "SELECT cargoId AS id, cargoNome AS nome FROM cargos ORDER BY cargoNome ASC";
+            $sql = "SELECT \"cargoId\" AS id, \"cargoNome\" AS nome FROM cargos ORDER BY \"cargoNome\" ASC";
             $stmt = $this->pdo->query($sql);
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
@@ -131,7 +131,7 @@ class LookupRepository
     public function findHabilidades(): array
     {
         try {
-            $sql = "SELECT habilidadeId AS id, habilidadeNome AS nome, habilidadeTipo AS tipo FROM habilidades ORDER BY habilidadeTipo DESC, habilidadeNome ASC";
+            $sql = "SELECT \"habilidadeId\" AS id, \"habilidadeNome\" AS nome, \"habilidadeTipo\" AS tipo FROM habilidades ORDER BY \"habilidadeTipo\" DESC, \"habilidadeNome\" ASC";
             $stmt = $this->pdo->query($sql);
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
@@ -146,7 +146,7 @@ class LookupRepository
     public function findCaracteristicas(): array
     {
         try {
-            $sql = "SELECT caracteristicaId AS id, caracteristicaNome AS nome FROM caracteristicas ORDER BY caracteristicaNome ASC";
+            $sql = "SELECT \"caracteristicaId\" AS id, \"caracteristicaNome\" AS nome FROM caracteristicas ORDER BY \"caracteristicaNome\" ASC";
             $stmt = $this->pdo->query($sql);
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
@@ -161,7 +161,7 @@ class LookupRepository
     public function findRiscos(): array
     {
         try {
-            $sql = "SELECT riscoId AS id, riscoNome AS nome FROM riscos ORDER BY riscoNome ASC";
+            $sql = "SELECT \"riscoId\" AS id, \"riscoNome\" AS nome FROM riscos ORDER BY \"riscoNome\" ASC";
             $stmt = $this->pdo->query($sql);
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
@@ -176,7 +176,7 @@ class LookupRepository
     public function findCursos(): array
     {
         try {
-            $sql = "SELECT cursoId AS id, cursoNome AS nome FROM cursos ORDER BY cursoNome ASC";
+            $sql = "SELECT \"cursoId\" AS id, \"cursoNome\" AS nome FROM cursos ORDER BY \"cursoNome\" ASC";
             $stmt = $this->pdo->query($sql);
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
@@ -191,7 +191,7 @@ class LookupRepository
     public function findRecursosGrupos(): array
     {
         try {
-            $sql = "SELECT recursoGrupoId AS id, recursoGrupoNome AS nome FROM recursos_grupos ORDER BY recursoGrupoNome ASC";
+            $sql = "SELECT \"recursoGrupoId\" AS id, \"recursoGrupoNome\" AS nome FROM recursos_grupos ORDER BY \"recursoGrupoNome\" ASC";
             $stmt = $this->pdo->query($sql);
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
@@ -206,7 +206,7 @@ class LookupRepository
     public function findAreasAtuacao(): array
     {
         try {
-            $sql = "SELECT areaId AS id, areaNome AS nome FROM areas_atuacao ORDER BY areaNome ASC";
+            $sql = "SELECT \"areaId\" AS id, \"areaNome\" AS nome FROM areas_atuacao ORDER BY \"areaNome\" ASC";
             $stmt = $this->pdo->query($sql);
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {

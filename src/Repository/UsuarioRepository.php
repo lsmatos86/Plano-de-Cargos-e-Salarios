@@ -34,7 +34,7 @@ class UsuarioRepository
         // Apenas quem pode gerenciar usuários pode buscar os dados
         $this->authService->checkAndFail('usuarios:manage');
         
-        $stmt = $this->pdo->prepare("SELECT usuarioId, nome, email, ativo FROM usuarios WHERE usuarioId = ?");
+        $stmt = $this->pdo->prepare("SELECT \"usuarioId\", nome, email, ativo FROM usuarios WHERE \"usuarioId\" = ?");
         $stmt->execute([$usuarioId]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
@@ -48,7 +48,7 @@ class UsuarioRepository
     {
         $this->authService->checkAndFail('usuarios:manage');
         
-        $stmt = $this->pdo->prepare("SELECT roleId FROM user_roles WHERE usuarioId = ?");
+        $stmt = $this->pdo->prepare("SELECT \"roleId\" FROM user_roles WHERE \"usuarioId\" = ?");
         $stmt->execute([$usuarioId]);
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
@@ -109,7 +109,7 @@ class UsuarioRepository
                     $params['senha'] = password_hash($senha, PASSWORD_DEFAULT);
                     $sql .= ", senha = :senha";
                 }
-                $sql .= " WHERE usuarioId = :usuarioId";
+                $sql .= " WHERE \"usuarioId\" = :usuarioId";
                 $params['usuarioId'] = $usuarioId;
                 
                 $this->pdo->prepare($sql)->execute($params);
@@ -130,11 +130,11 @@ class UsuarioRepository
             // 4. Sincroniza os Papéis na tabela user_roles
             
             // 4.1. Remove papéis antigos
-            $this->pdo->prepare("DELETE FROM user_roles WHERE usuarioId = ?")->execute([$usuarioId]);
+            $this->pdo->prepare("DELETE FROM user_roles WHERE \"usuarioId\" = ?")->execute([$usuarioId]);
 
             // 4.2. Insere os novos papéis
             if (!empty($roleIds)) {
-                $sql_role = "INSERT INTO user_roles (usuarioId, roleId) VALUES (?, ?)";
+                $sql_role = "INSERT INTO user_roles (\"usuarioId\", \"roleId\") VALUES (?, ?)";
                 $stmt_role = $this->pdo->prepare($sql_role);
                 foreach ($roleIds as $roleId) {
                     $stmt_role->execute([$usuarioId, (int)$roleId]);
@@ -147,7 +147,7 @@ class UsuarioRepository
         } catch (Exception $e) {
             $this->pdo->rollBack();
             // Verifica se é erro de e-mail duplicado
-            if (str_contains($e->getMessage(), 'Duplicate entry')) {
+            if ($e->getCode() == '23505') {
                  throw new Exception("O e-mail '$email' já está cadastrado.");
             }
             throw new Exception("Erro ao salvar usuário: " . $e->getMessage());
@@ -179,10 +179,10 @@ class UsuarioRepository
         $this->pdo->beginTransaction();
         try {
             // 4. Remove associações de papéis
-            $this->pdo->prepare("DELETE FROM user_roles WHERE usuarioId = ?")->execute([$usuarioId]);
+            $this->pdo->prepare("DELETE FROM user_roles WHERE \"usuarioId\" = ?")->execute([$usuarioId]);
             
             // 5. Remove o usuário
-            $stmt = $this->pdo->prepare("DELETE FROM usuarios WHERE usuarioId = ?");
+            $stmt = $this->pdo->prepare("DELETE FROM usuarios WHERE \"usuarioId\" = ?");
             $stmt->execute([$usuarioId]);
             
             $success = $stmt->rowCount() > 0;
@@ -219,7 +219,7 @@ class UsuarioRepository
         $bindings = [];
         
         // Query de Contagem
-        $countSql = "SELECT COUNT(DISTINCT u.usuarioId) FROM usuarios u";
+        $countSql = "SELECT COUNT(DISTINCT u.\"usuarioId\") FROM usuarios u";
         if (!empty($term)) {
             $countSql .= " WHERE u.nome LIKE ? OR u.email LIKE ?";
             $bindings[] = $sqlTerm;
@@ -234,11 +234,11 @@ class UsuarioRepository
         // Query Principal (com JOIN para papéis)
         $dataSql = "
             SELECT 
-                u.usuarioId, u.nome, u.email, u.ativo,
-                (SELECT GROUP_CONCAT(r.roleName SEPARATOR ', ') 
+                u.\"usuarioId\", u.nome, u.email, u.ativo,
+                (SELECT STRING_AGG(r.\"roleName\", ', ') 
                  FROM roles r
-                 JOIN user_roles ur ON r.roleId = ur.roleId
-                 WHERE ur.usuarioId = u.usuarioId) AS papeis
+                 JOIN user_roles ur ON r.\"roleId\" = ur.\"roleId\"
+                 WHERE ur.\"usuarioId\" = u.\"usuarioId\") AS papeis
             FROM usuarios u
         ";
         

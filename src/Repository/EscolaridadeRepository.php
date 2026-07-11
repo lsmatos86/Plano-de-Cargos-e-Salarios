@@ -36,7 +36,7 @@ class EscolaridadeRepository
         // Apenas quem pode gerenciar pode buscar os dados
         $this->authService->checkAndFail('cadastros:manage');
         
-        $stmt = $this->pdo->prepare("SELECT * FROM escolaridades WHERE escolaridadeId = ?");
+        $stmt = $this->pdo->prepare("SELECT * FROM escolaridades WHERE \"escolaridadeId\" = ?");
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
@@ -69,7 +69,7 @@ class EscolaridadeRepository
 
         try {
             if ($isUpdating) {
-                $sql = "UPDATE {$tableName} SET escolaridadeTitulo = :titulo WHERE escolaridadeId = :id";
+                $sql = "UPDATE {$tableName} SET \"escolaridadeTitulo\" = :titulo WHERE \"escolaridadeId\" = :id";
                 $params[':id'] = $id;
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = $id;
@@ -80,7 +80,7 @@ class EscolaridadeRepository
                 $this->auditService->log('UPDATE', $tableName, $savedId, $data);
                 
             } else {
-                $sql = "INSERT INTO {$tableName} (escolaridadeTitulo) VALUES (:titulo)";
+                $sql = "INSERT INTO {$tableName} (\"escolaridadeTitulo\") VALUES (:titulo)";
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = (int)$this->pdo->lastInsertId();
                 
@@ -93,7 +93,7 @@ class EscolaridadeRepository
             return $savedId;
 
         } catch (Exception $e) {
-            if (str_contains($e->getMessage(), 'Duplicate entry')) {
+            if ($e->getCode() == '23505') {
                  throw new Exception("A escolaridade '$titulo' já existe.");
             }
             throw $e; // Propaga outros erros
@@ -112,14 +112,14 @@ class EscolaridadeRepository
         try {
             // 1. Verifica se a escolaridade está sendo usada por um cargo
             //
-            $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM cargos WHERE escolaridadeId = ?");
+            $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM cargos WHERE \"escolaridadeId\" = ?");
             $stmtCheck->execute([$id]);
             if ($stmtCheck->fetchColumn() > 0) {
                 throw new Exception("Esta escolaridade não pode ser excluída pois está associada a um ou mais cargos.");
             }
 
             // 2. Exclui
-            $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE escolaridadeId = ?");
+            $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE \"escolaridadeId\" = ?");
             $stmt->execute([$id]);
             
             $success = $stmt->rowCount() > 0;
@@ -159,7 +159,7 @@ class EscolaridadeRepository
 
         // 2. Montagem dos Filtros
         if (!empty($term)) {
-            $where[] = "(escolaridadeTitulo LIKE :term)";
+            $where[] = "(\"escolaridadeTitulo\" LIKE :term)";
             $bindings[':term'] = $sqlTerm;
         }
         
@@ -197,7 +197,7 @@ class EscolaridadeRepository
         $orderBy = in_array($sort_col, $validColumns) ? $sort_col : 'escolaridadeTitulo';
         $sortDir = in_array(strtoupper($sort_dir), ['ASC', 'DESC']) ? strtoupper($sort_dir) : 'ASC';
 
-        $sql .= " ORDER BY {$orderBy} {$sortDir}";
+        $sql .= ' ORDER BY "' . $orderBy . '" ' . $sortDir;
         $sql .= " LIMIT :limit OFFSET :offset";
 
         $bindings[':limit'] = $itemsPerPage;

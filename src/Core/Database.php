@@ -48,4 +48,18 @@ class Database
 
         return self::$pdo;
     }
+
+    /**
+     * Adiciona aspas duplas em um identificador SQL, suportando alias.tableName.
+     * Exemplo: "c.cargoNome" → 'c."cargoNome"'
+     *          "cargoNome"   → '"cargoNome"'
+     */
+    public static function quoteIdent(string $ident): string
+    {
+        if (str_contains($ident, '.')) {
+            [$alias, $col] = explode('.', $ident, 2);
+            return "{$alias}.\"{$col}\"";
+        }
+        return "\"{$ident}\"";
+    }
 }

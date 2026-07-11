@@ -38,7 +38,7 @@ class RecursoRepository
         // ======================================================
         $this->authService->checkAndFail('cadastros:manage');
         
-        $stmt = $this->pdo->prepare("SELECT * FROM recursos WHERE recursoId = ?");
+        $stmt = $this->pdo->prepare("SELECT * FROM recursos WHERE \"recursoId\" = ?");
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
@@ -75,7 +75,7 @@ class RecursoRepository
 
         try {
             if ($isUpdating) {
-                $sql = "UPDATE {$tableName} SET recursoNome = :nome, recursoDescricao = :descricao WHERE recursoId = :id";
+                $sql = "UPDATE {$tableName} SET \"recursoNome\" = :nome, \"recursoDescricao\" = :descricao WHERE \"recursoId\" = :id";
                 $params[':id'] = $id;
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = $id;
@@ -86,7 +86,7 @@ class RecursoRepository
                 $this->auditService->log('UPDATE', $tableName, $savedId, $data);
                 
             } else {
-                $sql = "INSERT INTO {$tableName} (recursoNome, recursoDescricao) VALUES (:nome, :descricao)";
+                $sql = "INSERT INTO {$tableName} (\"recursoNome\", \"recursoDescricao\") VALUES (:nome, :descricao)";
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = (int)$this->pdo->lastInsertId();
                 
@@ -99,7 +99,7 @@ class RecursoRepository
             return $savedId;
 
         } catch (Exception $e) {
-            if (str_contains($e->getMessage(), 'Duplicate entry')) {
+            if ($e->getCode() == '23505') {
                  throw new Exception("O recurso '$nome' já existe.");
             }
             throw $e; // Propaga outros erros
@@ -121,7 +121,7 @@ class RecursoRepository
         try {
             // 1. Verifica se o recurso está sendo usado por um cargo
             //
-            $stmtCheck1 = $this->pdo->prepare("SELECT COUNT(*) FROM recursos_cargo WHERE recursoId = ?");
+            $stmtCheck1 = $this->pdo->prepare("SELECT COUNT(*) FROM recursos_cargo WHERE \"recursoId\" = ?");
             $stmtCheck1->execute([$id]);
             if ($stmtCheck1->fetchColumn() > 0) {
                 throw new Exception("Este recurso não pode ser excluído pois está associado a um ou mais cargos.");
@@ -129,14 +129,14 @@ class RecursoRepository
             
             // 2. Verifica se o recurso está sendo usado por um grupo
             //
-            $stmtCheck2 = $this->pdo->prepare("SELECT COUNT(*) FROM recurso_grupo_recurso WHERE recursoId = ?");
+            $stmtCheck2 = $this->pdo->prepare("SELECT COUNT(*) FROM recurso_grupo_recurso WHERE \"recursoId\" = ?");
             $stmtCheck2->execute([$id]);
             if ($stmtCheck2->fetchColumn() > 0) {
                 throw new Exception("Este recurso não pode ser excluído pois está associado a um ou mais grupos de recursos.");
             }
 
             // 3. Exclui
-            $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE recursoId = ?");
+            $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE \"recursoId\" = ?");
             $stmt->execute([$id]);
             
             $success = $stmt->rowCount() > 0;
@@ -176,7 +176,7 @@ class RecursoRepository
 
         // 2. Montagem dos Filtros
         if (!empty($term)) {
-            $where[] = "(recursoNome LIKE :term OR recursoDescricao LIKE :term)";
+            $where[] = "(\"recursoNome\" LIKE :term OR \"recursoDescricao\" LIKE :term)";
             $bindings[':term'] = $sqlTerm;
         }
         
@@ -214,7 +214,7 @@ class RecursoRepository
         $orderBy = in_array($sort_col, $validColumns) ? $sort_col : 'recursoNome';
         $sortDir = in_array(strtoupper($sort_dir), ['ASC', 'DESC']) ? strtoupper($sort_dir) : 'ASC';
 
-        $sql .= " ORDER BY {$orderBy} {$sortDir}";
+        $sql .= ' ORDER BY "' . $orderBy . '" ' . $sortDir;
         $sql .= " LIMIT :limit OFFSET :offset";
 
         $bindings[':limit'] = $itemsPerPage;

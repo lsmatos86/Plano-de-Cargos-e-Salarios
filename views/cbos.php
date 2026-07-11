@@ -189,7 +189,7 @@ include '../includes/header.php';
                                                     title="Editar">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <a href="cbos.php?action=delete&type=familia&id=<?php echo $familia['familiaCboId']; ?>" 
+                                            <a href="cbos.php?action=delete&type=familia&id=<?php echo $familia['\"familiaCboId\"']; ?>" 
                                                class="btn btn-sm btn-danger" 
                                                title="Excluir"
                                                onclick="return confirm('Deseja realmente excluir esta Família? Se houver CBOs ligados a ela, a exclusão falhará.');">
@@ -251,7 +251,7 @@ include '../includes/header.php';
                                                     title="Editar">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <a href="cbos.php?action=delete&type=cbo&id=<?php echo $row['cboId']; ?>" 
+                                            <a href="cbos.php?action=delete&type=cbo&id=<?php echo $row['\"cboId\"']; ?>" 
                                                class="btn btn-sm btn-danger" 
                                                title="Excluir"
                                                onclick="return confirm('Deseja realmente excluir este CBO?');">

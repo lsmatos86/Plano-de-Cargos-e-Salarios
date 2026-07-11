@@ -33,7 +33,7 @@ class CboRepository
         // Apenas quem pode gerenciar pode buscar os dados
         $this->authService->checkAndFail('cadastros:manage');
         
-        $stmt = $this->pdo->prepare("SELECT c.*, f.familiaCboNome FROM cbos c LEFT JOIN familia_cbo f ON f.familiaCboId = c.familiaCboId WHERE c.cboId = ?");
+        $stmt = $this->pdo->prepare("SELECT c.*, f.\"familiaCboNome\" FROM cbos c LEFT JOIN familia_cbo f ON f.\"familiaCboId\" = c.\"familiaCboId\" WHERE c.\"cboId\" = ?");
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
@@ -66,7 +66,7 @@ class CboRepository
         // 3. Execução
         try {
             if ($isUpdating) {
-                $sql = "UPDATE {$tableName} SET cboCod = :cboCod, cboTituloOficial = :cboTituloOficial, familiaCboId = :familiaCboId WHERE cboId = :id";
+                $sql = "UPDATE {$tableName} SET \"cboCod\" = :cboCod, \"cboTituloOficial\" = :cboTituloOficial, \"familiaCboId\" = :familiaCboId WHERE \"cboId\" = :id";
                 $params[':id'] = $id;
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = $id;
@@ -77,7 +77,7 @@ class CboRepository
                 $this->auditService->log('UPDATE', $tableName, $savedId, $data);
                 
             } else {
-                $sql = "INSERT INTO {$tableName} (cboCod, cboTituloOficial, familiaCboId) VALUES (:cboCod, :cboTituloOficial, :familiaCboId)";
+                $sql = "INSERT INTO {$tableName} (\"cboCod\", \"cboTituloOficial\", \"familiaCboId\") VALUES (:cboCod, :cboTituloOficial, :familiaCboId)";
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = (int)$this->pdo->lastInsertId();
                 
@@ -90,7 +90,7 @@ class CboRepository
             return $savedId;
 
         } catch (\PDOException $e) {
-            if ($e->errorInfo[1] == 1062) { // Duplicate entry
+            if ($e->getCode() == '23505') { // Duplicate entry
                 throw new Exception("O código CBO '{$params[':cboCod']}' já está cadastrado.");
             }
             throw $e;
@@ -107,7 +107,7 @@ class CboRepository
         $this->authService->checkAndFail('cadastros:manage');
 
         try {
-            $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE cboId = ?");
+            $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE \"cboId\" = ?");
             $stmt->execute([$id]);
             
             $success = $stmt->rowCount() > 0;
@@ -122,7 +122,7 @@ class CboRepository
             return $success;
             
         } catch (\PDOException $e) {
-            if ($e->errorInfo[1] == 1451) { // Foreign key constraint
+            if ($e->getCode() == '23503') { // Foreign key constraint
                 // (tabela 'cargos' usa 'cboId')
                 throw new Exception("Este CBO não pode ser excluído pois está sendo utilizado em um ou mais Cargos.");
             }
@@ -145,19 +145,19 @@ class CboRepository
         $bindings = [];
 
         if (!empty($term)) {
-            $where = " WHERE c.cboCod LIKE :term OR c.cboTituloOficial LIKE :term OR f.familiaCboNome LIKE :term";
+            $where = " WHERE c.\"cboCod\" LIKE :term OR c.\"cboTituloOficial\" LIKE :term OR f.\"familiaCboNome\" LIKE :term";
             $bindings[':term'] = $sqlTerm;
         }
         
         // Count total
-        $countSql = "SELECT COUNT(c.cboId) FROM cbos c LEFT JOIN familia_cbo f ON f.familiaCboId = c.familiaCboId" . $where;
+        $countSql = "SELECT COUNT(c.\"cboId\") FROM cbos c LEFT JOIN familia_cbo f ON f.\"familiaCboId\" = c.\"familiaCboId\"" . $where;
         $countStmt = $this->pdo->prepare($countSql);
         $countStmt->execute($bindings);
         $totalRecords = (int)$countStmt->fetchColumn();
         $totalPages = $totalRecords > 0 ? ceil($totalRecords / $itemsPerPage) : 1;
 
         // Data query
-        $dataSql = "SELECT c.*, f.familiaCboNome FROM cbos c LEFT JOIN familia_cbo f ON f.familiaCboId = c.familiaCboId" . $where;
+        $dataSql = "SELECT c.*, f.\"familiaCboNome\" FROM cbos c LEFT JOIN familia_cbo f ON f.\"familiaCboId\" = c.\"familiaCboId\"" . $where;
         
         // Order by
         $sort_col = $params['sort_col'] ?? 'cboTituloOficial';
@@ -165,7 +165,7 @@ class CboRepository
         $validColumns = ['cboId', 'cboCod', 'cboTituloOficial', 'familiaCboNome'];
         $orderBy = in_array($sort_col, $validColumns) ? $sort_col : 'cboTituloOficial';
         $sortDir = in_array(strtoupper($sort_dir), ['ASC', 'DESC']) ? strtoupper($sort_dir) : 'ASC';
-        $dataSql .= " ORDER BY $orderBy $sortDir";
+        $dataSql .= ' ORDER BY "' . $orderBy . '" ' . $sortDir;
         
         $dataSql .= " LIMIT :limit OFFSET :offset";
         $bindings[':limit'] = $itemsPerPage;

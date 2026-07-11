@@ -49,7 +49,7 @@ function authenticateUser(string $email, string $password): bool
     try {
         $db = Database::getConnection();
 
-        $stmt = $db->prepare("SELECT usuarioId, nome, email, senha, ativo FROM usuarios WHERE email = :email LIMIT 1");
+        $stmt = $db->prepare('SELECT "usuarioId", nome, email, senha, ativo FROM usuarios WHERE email = :email LIMIT 1');
         $stmt->execute([':email' => $email]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 

@@ -214,7 +214,7 @@ include '../includes/header.php';
                                         <i class="fas fa-edit"></i>
                                     </a>
                                     
-                                    <a href="cargos.php?action=delete&id=<?php echo $row['cargoId']; ?>" 
+                                    <a href="cargos.php?action=delete&id=<?php echo $row['\"cargoId\"']; ?>" 
                                        class="btn btn-sm btn-danger" 
                                        title="Excluir Cargo"
                                        onclick="return confirm('ATENÇÃO: Excluir este cargo removerá todos os seus requisitos associados (Habilidades, Riscos, etc.). Deseja realmente excluir?');">
