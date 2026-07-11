@@ -876,8 +876,9 @@ echo $extra_head_content;
 // AJUSTE: Inclui os scripts JS específicos desta página ANTES de incluir o footer
 // ======================================================
 $extra_scripts = '
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
-    <script src="../scripts/cargos_form.js?v=4"></script>
+    <script src="../scripts/cargos_form.js?v=5"></script>
 ';
 echo $extra_scripts;
 
