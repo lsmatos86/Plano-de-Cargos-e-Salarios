@@ -51,7 +51,7 @@ class CursoRepository
         // 1. Coleta de Dados
         $id = (int)($data['cursoId'] ?? 0);
         $nome = trim($data['cursoNome'] ?? '');
-        $descricao = trim($data['cursoDescricao'] ?? null);
+        $descricao = trim($data['cursoDescricao'] ?? '');
         $isUpdating = $id > 0;
 
         // 2. Validação de Permissão e Dados

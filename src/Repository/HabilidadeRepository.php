@@ -182,7 +182,7 @@ class HabilidadeRepository
         $id = (int)($data['habilidadeId'] ?? 0);
         $nome = trim($data['habilidadeNome'] ?? '');
         $tipo = trim($data['habilidadeTipo'] ?? '');
-        $descricao = trim($data['habilidadeDescricao'] ?? null);
+        $descricao = trim($data['habilidadeDescricao'] ?? '');
         $isUpdating = $id > 0;
 
         // 2. Validação de Permissão e Dados

@@ -80,7 +80,7 @@ class AreaRepository
         // 1. Coleta de Dados
         $id = (int)($data['areaId'] ?? 0);
         $nome = trim($data['areaNome'] ?? '');
-        $descricao = trim($data['areaDescricao'] ?? null);
+        $descricao = trim($data['areaDescricao'] ?? '');
         $areaPaiId = empty($data['areaPaiId']) ? null : (int)$data['areaPaiId'];
         $isUpdating = $id > 0;
 

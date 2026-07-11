@@ -64,9 +64,9 @@ class NivelHierarquicoRepository
             ':tipoId' => (int)($data['tipoId'] ?? 0),
             ':nivelOrdem' => (int)($data['nivelOrdem'] ?? 0),
             ':nivelDescricao' => trim($data['nivelDescricao'] ?? ''),
-            ':nivelAtribuicoes' => trim($data['nivelAtribuicoes'] ?? null),
-            ':nivelAutonomia' => trim($data['nivelAutonomia'] ?? null),
-            ':nivelQuandoUtilizar' => trim($data['nivelQuandoUtilizar'] ?? null),
+            ':nivelAtribuicoes' => trim($data['nivelAtribuicoes'] ?? ''),
+            ':nivelAutonomia' => trim($data['nivelAutonomia'] ?? ''),
+            ':nivelQuandoUtilizar' => trim($data['nivelQuandoUtilizar'] ?? ''),
         ];
 
         // 2. Validação de Permissão e Dados

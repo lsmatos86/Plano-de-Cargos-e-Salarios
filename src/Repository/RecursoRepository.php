@@ -53,7 +53,7 @@ class RecursoRepository
         // 1. Coleta de Dados
         $id = (int)($data['recursoId'] ?? 0);
         $nome = trim($data['recursoNome'] ?? '');
-        $descricao = trim($data['recursoDescricao'] ?? null);
+        $descricao = trim($data['recursoDescricao'] ?? '');
         $isUpdating = $id > 0;
 
         // 2. Validação de Permissão e Dados

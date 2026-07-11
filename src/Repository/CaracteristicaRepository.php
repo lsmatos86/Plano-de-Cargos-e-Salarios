@@ -51,7 +51,7 @@ class CaracteristicaRepository
         // 1. Coleta de Dados
         $id = (int)($data['caracteristicaId'] ?? 0);
         $nome = trim($data['caracteristicaNome'] ?? '');
-        $descricao = trim($data['caracteristicaDescricao'] ?? null);
+        $descricao = trim($data['caracteristicaDescricao'] ?? '');
         $isUpdating = $id > 0;
 
         // 2. Validação de Permissão e Dados

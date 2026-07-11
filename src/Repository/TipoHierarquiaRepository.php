@@ -50,7 +50,7 @@ class TipoHierarquiaRepository
         // 1. Coleta de Dados
         $id = (int)($data['tipoId'] ?? 0);
         $nome = trim($data['tipoNome'] ?? '');
-        $descricao = trim($data['tipoDescricao'] ?? null);
+        $descricao = trim($data['tipoDescricao'] ?? '');
         $isUpdating = $id > 0;
         
         // 2. Validação de Permissão e Dados

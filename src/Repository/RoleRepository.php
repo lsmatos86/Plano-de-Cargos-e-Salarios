@@ -77,7 +77,7 @@ class RoleRepository
         $roleId = (int)($data['roleId'] ?? 0);
         $isEditing = $roleId > 0;
         $nome = trim($data['roleName'] ?? '');
-        $descricao = trim($data['roleDescription'] ?? null);
+        $descricao = trim($data['roleDescription'] ?? '');
         $permissionIds = $data['permissionIds'] ?? [];
 
         if (empty($nome)) {
