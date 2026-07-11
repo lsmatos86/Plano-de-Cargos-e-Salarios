@@ -45,7 +45,7 @@ class AuditRepository
 
         // 2. Montagem dos Filtros
         if (!empty($term)) {
-            $where[] = "(a.\"nomeUsuario\" LIKE :term OR a.\"dadosJson\" LIKE :term OR a.\"idRegistro\" LIKE :term)";
+            $where[] = "(a.\"nomeUsuario\" ILIKE :term OR a.\"dadosJson\" ILIKE :term OR a.\"idRegistro\" ILIKE :term)";
             $bindings[':term'] = $sqlTerm;
         }
         if (!empty($acao)) {

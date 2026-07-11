@@ -58,7 +58,7 @@ class HabilidadeRepository
 
         // 2. Montagem dos Filtros
         if (!empty($term)) {
-            $where[] = "(\"habilidadeNome\" LIKE :term OR \"habilidadeDescricao\" LIKE :term)";
+            $where[] = "(\"habilidadeNome\" ILIKE :term OR \"habilidadeDescricao\" ILIKE :term)";
             $bindings[':term'] = $sqlTerm;
         }
         if (!empty($tipo)) {

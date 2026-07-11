@@ -145,7 +145,7 @@ class CboRepository
         $bindings = [];
 
         if (!empty($term)) {
-            $where = " WHERE c.\"cboCod\" LIKE :term OR c.\"cboTituloOficial\" LIKE :term OR f.\"familiaCboNome\" LIKE :term";
+            $where = " WHERE c.\"cboCod\" ILIKE :term OR c.\"cboTituloOficial\" ILIKE :term OR f.\"familiaCboNome\" ILIKE :term";
             $bindings[':term'] = $sqlTerm;
         }
         
@@ -162,10 +162,11 @@ class CboRepository
         // Order by
         $sort_col = $params['sort_col'] ?? 'cboTituloOficial';
         $sort_dir = $params['sort_dir'] ?? 'ASC';
-        $validColumns = ['cboId', 'cboCod', 'cboTituloOficial', 'familiaCboNome'];
-        $orderBy = in_array($sort_col, $validColumns) ? $sort_col : 'cboTituloOficial';
+        $validColumns = ['cboId' => 'c', 'cboCod' => 'c', 'cboTituloOficial' => 'c', 'familiaCboNome' => 'f'];
+        $orderBy = array_key_exists($sort_col, $validColumns) ? $sort_col : 'cboTituloOficial';
+        $tableAlias = $validColumns[$orderBy];
         $sortDir = in_array(strtoupper($sort_dir), ['ASC', 'DESC']) ? strtoupper($sort_dir) : 'ASC';
-        $dataSql .= ' ORDER BY "' . $orderBy . '" ' . $sortDir;
+        $dataSql .= ' ORDER BY ' . $tableAlias . '."' . $orderBy . '" ' . $sortDir;
         
         $dataSql .= " LIMIT :limit OFFSET :offset";
         $bindings[':limit'] = $itemsPerPage;

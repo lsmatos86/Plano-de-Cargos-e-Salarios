@@ -63,13 +63,15 @@ class EscolaridadeRepository
         }
         
         // 3. SQL
+        $pesoPontuacao = (int)($data['peso_pontuacao'] ?? 0);
         $params = [
             ':titulo' => $titulo,
+            ':peso'   => $pesoPontuacao,
         ];
 
         try {
             if ($isUpdating) {
-                $sql = "UPDATE {$tableName} SET \"escolaridadeTitulo\" = :titulo WHERE \"escolaridadeId\" = :id";
+                $sql = "UPDATE {$tableName} SET \"escolaridadeTitulo\" = :titulo, peso_pontuacao = :peso WHERE \"escolaridadeId\" = :id";
                 $params[':id'] = $id;
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = $id;
@@ -80,7 +82,7 @@ class EscolaridadeRepository
                 $this->auditService->log('UPDATE', $tableName, $savedId, $data);
                 
             } else {
-                $sql = "INSERT INTO {$tableName} (\"escolaridadeTitulo\") VALUES (:titulo)";
+                $sql = "INSERT INTO {$tableName} (\"escolaridadeTitulo\", peso_pontuacao) VALUES (:titulo, :peso)";
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = (int)$this->pdo->lastInsertId();
                 
@@ -159,7 +161,7 @@ class EscolaridadeRepository
 
         // 2. Montagem dos Filtros
         if (!empty($term)) {
-            $where[] = "(\"escolaridadeTitulo\" LIKE :term)";
+            $where[] = "(\"escolaridadeTitulo\" ILIKE :term)";
             $bindings[':term'] = $sqlTerm;
         }
         

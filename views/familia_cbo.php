@@ -72,8 +72,8 @@ try {
     }
 
 } catch (Exception $e) {
-    // Captura erro de chave estrangeira
-    if (strpos($e->getMessage(), 'foreign key constraint') !== false) {
+    // Captura erro de chave estrangeira (SQLSTATE 23503 no PostgreSQL)
+    if ($e->getCode() == '23503' || strpos($e->getMessage(), 'foreign key constraint') !== false) {
         $message = "Erro: Esta Família CBO não pode ser excluída pois está sendo usada por um CBO.";
         $message_type = 'danger';
     } else {
@@ -140,7 +140,7 @@ include '../includes/header.php';
 
 <?php if ($message): ?>
     <div class="alert alert-<?php echo $message_type; ?> alert-dismissible fade show" role="alert">
-        <?php echo $message; ?>
+        <?php echo htmlspecialchars($message ?? ''); ?>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 <?php endif; ?>

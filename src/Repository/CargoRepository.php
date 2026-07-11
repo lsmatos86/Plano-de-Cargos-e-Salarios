@@ -308,7 +308,7 @@ class CargoRepository
         $count_bindings = [];
 
         if (!empty($term)) {
-            $count_sql .= " WHERE c.\"cargoNome\" LIKE :term1 OR c.\"cargoResumo\" LIKE :term2 OR b.\"cboTituloOficial\" LIKE :term3";
+            $count_sql .= " WHERE c.\"cargoNome\" ILIKE :term1 OR c.\"cargoResumo\" ILIKE :term2 OR b.\"cboTituloOficial\" ILIKE :term3";
             $count_bindings[':term1'] = $sqlTerm;
             $count_bindings[':term2'] = $sqlTerm;
             $count_bindings[':term3'] = $sqlTerm;
@@ -340,7 +340,7 @@ class CargoRepository
         ";
 
         if (!empty($term)) {
-            $sql .= " WHERE c.\"cargoNome\" LIKE :term1 OR c.\"cargoResumo\" LIKE :term2 OR b.\"cboTituloOficial\" LIKE :term3";
+            $sql .= " WHERE c.\"cargoNome\" ILIKE :term1 OR c.\"cargoResumo\" ILIKE :term2 OR b.\"cboTituloOficial\" ILIKE :term3";
             $all_bindings[':term1'] = $sqlTerm;
             $all_bindings[':term2'] = $sqlTerm;
             $all_bindings[':term3'] = $sqlTerm;
@@ -572,7 +572,7 @@ class CargoRepository
         
         $whereClause = "";
         if (!empty($term)) {
-            $whereClause = " WHERE c.\"cargoNome\" LIKE :term1 OR c.\"cargoResumo\" LIKE :term2 OR b.\"cboTituloOficial\" LIKE :term3";
+            $whereClause = " WHERE c.\"cargoNome\" ILIKE :term1 OR c.\"cargoResumo\" ILIKE :term2 OR b.\"cboTituloOficial\" ILIKE :term3";
             $bindings[':term1'] = $sqlTerm;
             $bindings[':term2'] = $sqlTerm;
             $bindings[':term3'] = $sqlTerm;
@@ -632,7 +632,7 @@ class CargoRepository
         
         $whereClause = "";
         if (!empty($term)) {
-            $whereClause = " WHERE c.\"cargoNome\" LIKE :term1 OR c.\"cargoResumo\" LIKE :term2 OR b.\"cboTituloOficial\" LIKE :term3";
+            $whereClause = " WHERE c.\"cargoNome\" ILIKE :term1 OR c.\"cargoResumo\" ILIKE :term2 OR b.\"cboTituloOficial\" ILIKE :term3";
             $bindings[':term1'] = $sqlTerm;
             $bindings[':term2'] = $sqlTerm;
             $bindings[':term3'] = $sqlTerm;

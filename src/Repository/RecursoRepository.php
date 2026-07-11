@@ -176,7 +176,7 @@ class RecursoRepository
 
         // 2. Montagem dos Filtros
         if (!empty($term)) {
-            $where[] = "(\"recursoNome\" LIKE :term OR \"recursoDescricao\" LIKE :term)";
+            $where[] = "(\"recursoNome\" ILIKE :term OR \"recursoDescricao\" ILIKE :term)";
             $bindings[':term'] = $sqlTerm;
         }
         

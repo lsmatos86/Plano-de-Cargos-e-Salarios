@@ -160,7 +160,7 @@ class CaracteristicaRepository
 
         // 2. Montagem dos Filtros
         if (!empty($term)) {
-            $where[] = "(\"caracteristicaNome\" LIKE :term OR \"caracteristicaDescricao\" LIKE :term)";
+            $where[] = "(\"caracteristicaNome\" ILIKE :term OR \"caracteristicaDescricao\" ILIKE :term)";
             $bindings[':term'] = $sqlTerm;
         }
         

@@ -181,7 +181,7 @@ class NivelHierarquicoRepository
 
         // 2. Montagem dos Filtros
         if (!empty($term)) {
-            $where[] = "(n.\"nivelDescricao\" LIKE :term OR t.\"tipoNome\" LIKE :term)";
+            $where[] = "(n.\"nivelDescricao\" ILIKE :term OR t.\"tipoNome\" ILIKE :term)";
             $bindings[':term'] = $sqlTerm;
         }
         

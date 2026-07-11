@@ -102,7 +102,7 @@ class RiscoRepository
 
         // 2. Montagem dos Filtros
         if (!empty($term)) {
-            $where[] = "(\"riscoNome\" LIKE :term)";
+            $where[] = "(\"riscoNome\" ILIKE :term)";
             $bindings[':term'] = "%{$term}%"; // Permitir busca parcial no enum
         }
         

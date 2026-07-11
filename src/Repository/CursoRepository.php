@@ -160,7 +160,7 @@ class CursoRepository
 
         // 2. Montagem dos Filtros
         if (!empty($term)) {
-            $where[] = "(\"cursoNome\" LIKE :term OR \"cursoDescricao\" LIKE :term)";
+            $where[] = "(\"cursoNome\" ILIKE :term OR \"cursoDescricao\" ILIKE :term)";
             $bindings[':term'] = $sqlTerm;
         }
         

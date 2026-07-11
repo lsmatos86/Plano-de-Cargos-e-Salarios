@@ -221,7 +221,7 @@ class UsuarioRepository
         // Query de Contagem
         $countSql = "SELECT COUNT(DISTINCT u.\"usuarioId\") FROM usuarios u";
         if (!empty($term)) {
-            $countSql .= " WHERE u.nome LIKE ? OR u.email LIKE ?";
+            $countSql .= " WHERE u.nome ILIKE ? OR u.email ILIKE ?";
             $bindings[] = $sqlTerm;
             $bindings[] = $sqlTerm;
         }
@@ -243,7 +243,7 @@ class UsuarioRepository
         ";
         
         if (!empty($term)) {
-            $dataSql .= " WHERE u.nome LIKE ? OR u.email LIKE ?";
+            $dataSql .= " WHERE u.nome ILIKE ? OR u.email ILIKE ?";
         }
         
         $dataSql .= " ORDER BY u.nome ASC LIMIT ? OFFSET ?";

@@ -152,7 +152,7 @@ class FamiliaCboRepository
         $bindings = [];
 
         if (!empty($term)) {
-            $where = " WHERE \"familiaCboNome\" LIKE :term";
+            $where = " WHERE \"familiaCboNome\" ILIKE :term";
             $bindings[':term'] = $sqlTerm;
         }
         

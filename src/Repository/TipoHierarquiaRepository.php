@@ -165,7 +165,7 @@ class TipoHierarquiaRepository
 
         // 2. Montagem dos Filtros
         if (!empty($term)) {
-            $where[] = "(\"tipoNome\" LIKE :term OR \"tipoDescricao\" LIKE :term)";
+            $where[] = "(\"tipoNome\" ILIKE :term OR \"tipoDescricao\" ILIKE :term)";
             $bindings[':term'] = $sqlTerm;
         }
         
