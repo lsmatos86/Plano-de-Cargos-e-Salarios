@@ -64,7 +64,7 @@ class LookupRepository
         try {
             $sql = "SELECT \"{$idColumn}\", \"{$nameColumn}\" FROM {$tableName} ORDER BY \"{$nameColumn}\" ASC";
             $stmt = $this->pdo->query($sql);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            return $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
         } catch (\PDOException $e) {
             error_log("Erro no getLookup({$tableName}): " . $e->getMessage());
             return [];
