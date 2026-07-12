@@ -53,7 +53,13 @@ if (!isset($cargo) || !isset($section_counter)) {
     </tr>
      <tr>
         <th><i class="fas fa-user-tie"></i> Reporta-se a</th>
-        <td><?php echo htmlspecialchars($cargo['cargoSupervisorNome'] ?? 'N/A'); ?></td>
+        <td><?php 
+        if (!empty($supervisores)) {
+            echo htmlspecialchars(implode(' | ', $supervisores));
+        } else {
+            echo 'N/A';
+        }
+    ?></td>
     </tr>
      <tr>
         <th><i class="fas fa-building"></i> Áreas de Atuação</th>

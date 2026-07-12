@@ -1,5 +1,4 @@
 // Arquivo: scripts/escolaridades.js
-// (Este código foi movido de views/escolaridades.php)
 
 // Espera que o DOM esteja pronto
 document.addEventListener('DOMContentLoaded', function() {
@@ -12,6 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const modalAction = document.getElementById('modalAction');
         const modalId = document.getElementById('modalId');
         const inputTitulo = document.getElementById('modalTitulo');
+        const inputPeso = document.getElementById('modalPeso'); // NOVO: Captura o campo de peso
         const btnSalvar = document.getElementById('btnSalvar');
         const btnNovo = document.getElementById('btnNovoCadastro');
 
@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 modalAction.value = 'insert';
                 modalId.value = '';
                 inputTitulo.value = ''; // Limpa o campo
+                inputPeso.value = '0';  // NOVO: Zera a pontuação
                 btnSalvar.textContent = 'Salvar Cadastro';
                 document.querySelector('.modal-header').classList.remove('bg-info');
                 document.querySelector('.modal-header').classList.add('bg-primary');
@@ -36,12 +37,14 @@ document.addEventListener('DOMContentLoaded', function() {
             if (button && button.classList.contains('btn-edit')) {
                 const id = button.getAttribute('data-id');
                 const titulo = button.getAttribute('data-titulo');
+                const peso = button.getAttribute('data-peso'); // NOVO: Puxa o peso do botão
                 
                 // Preenche os campos para Edição
                 modalTitle.textContent = 'Editar Escolaridade (ID: ' + id + ')';
                 modalAction.value = 'update';
                 modalId.value = id;
                 inputTitulo.value = titulo;
+                inputPeso.value = peso; // NOVO: Preenche o input com o peso
                 btnSalvar.textContent = 'Atualizar';
 
                 // Altera a cor do modal para sinalizar o modo Edição

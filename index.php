@@ -48,13 +48,6 @@ include 'includes/header.php';
 
 <h2 class="mb-4">Estatísticas Chave</h2>
 <div class="row g-4 mb-5">
-    
-    <style> /* Estilos locais apenas para os cards de estatística */
-        .card-stat { border-left: 5px solid; transition: transform 0.2s; }
-        .card-stat:hover { transform: translateY(-3px); }
-        .stat-icon { font-size: 2.5rem; }
-    </style>
-
     <div class="col-md-6 col-lg-3">
         <div class="card card-stat border-primary h-100 shadow-sm">
             <div class="card-body d-flex justify-content-between align-items-center">

@@ -1,38 +1,34 @@
 <?php
-// Arquivo: views/riscos.php (REFATORADO COM HEADER/FOOTER)
+// Arquivo: views/riscos.php (VIEW: Ponto de Entrada)
 
-// 1. Inclusão de arquivos
-require_once '../vendor/autoload.php';
+// 1. INCLUDES GLOBAIS
+require_once '../vendor/autoload.php'; // Carrega o autoload do Composer
 require_once '../config.php';
-require_once '../includes/functions.php'; // Para login e helpers
+require_once '../includes/functions.php'; // Necessário para isUserLoggedIn() e createSortLink()
 
-// 2. Importa o novo Repositório
-use App\Repository\RiscoRepository;
+// 2. IMPORTA O CONTROLLER
+use App\Controller\RiscoController;
 
-// 3. Segurança
-if (!isUserLoggedIn()) {
-    header('Location: ../login.php');
-    exit;
-}
-// (OPCIONAL - Verificação de permissão)
-$authService->checkAndFail('riscos:manage', '../index.php?error=Acesso+negado');
-
-
-// 4. Definições da Página (para o header.php)
+// 3. DEFINIÇÕES DA PÁGINA 
 $page_title = 'Gestão de Riscos de Exposição';
 $root_path = '../'; 
 $breadcrumb_items = [
-    'Dashboard' => '../index.php',
+    'Dashboard' => $root_path . 'index.php',
     'Gestão de Riscos' => null // Página ativa
 ];
-// NOVO: Informa ao footer.php qual script JS carregar
-$page_scripts = ['../scripts/riscos.js'];
+$page_scripts = [$root_path . 'scripts/riscos.js'];
 
+// 4. INSTANCIA O CONTROLLER E PROCESSA A REQUISIÇÃO
+// O Controller fará a segurança, o CRUD (e redirecionará se necessário),
+// ou buscará os dados para a listagem.
+$controller = new RiscoController();
+$data = $controller->handleRequest($_GET, $_POST, $_SERVER['REQUEST_METHOD']);
 
-// Configurações específicas desta tabela
-$id_column = 'riscoId';
-$name_column = 'riscoNome';
+// 5. EXTRAI AS VARIÁVEIS PARA A VIEW
+// Isso cria $registros, $params, $message, $id_column, etc.
+extract($data);
 
+<<<<<<< HEAD
 $message = '';
 $message_type = '';
 
@@ -135,7 +131,14 @@ $tipos_risco_enum = [
 
 // 7. Inclui o Header
 include '../includes/header.php';
+=======
+// 6. Inclui o Header (HTML)
+// (O header.php agora aplica o padding-top globalmente)
+include $root_path . 'includes/header.php';
+>>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
 ?>
+
+<div class="container mt-4 mb-5">
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="mb-0"><?php echo $page_title; ?></h1>
@@ -146,7 +149,11 @@ include '../includes/header.php';
 
 <?php if ($message): ?>
     <div class="alert alert-<?php echo $message_type; ?> alert-dismissible fade show" role="alert">
+<<<<<<< HEAD
         <?php echo htmlspecialchars($message ?? ''); ?>
+=======
+        <?php echo htmlspecialchars($message); ?>
+>>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 <?php endif; ?>
@@ -213,18 +220,20 @@ include '../includes/header.php';
         <nav aria-label="Navegação de página">
             <ul class="pagination mb-0">
                 
-                <li class="page-item <?php echo ($currentPage <= 1) ? 'disabled' : ''; ?>">
-                    <?php $prev_query = http_build_query(array_merge($params, ['page' => $currentPage - 1])); ?>
-                    <a class="page-link" href="?<?php echo $prev_query; ?>">Anterior</a>
-                </li>
-
                 <?php 
+                $prev_query = http_build_query(array_merge($params, ['page' => $currentPage - 1]));
+                $next_query = http_build_query(array_merge($params, ['page' => $currentPage + 1]));
                 $startPage = max(1, $currentPage - 2);
                 $endPage = min($totalPages, $currentPage + 2);
                 if ($endPage - $startPage < 4) { $startPage = max(1, $endPage - 4); }
                 if ($endPage - $startPage < 4) { $endPage = min($totalPages, $startPage + 4); }
+                ?>
 
-                for ($i = $startPage; $i <= $endPage; $i++): 
+                <li class="page-item <?php echo ($currentPage <= 1) ? 'disabled' : ''; ?>">
+                    <a class="page-link" href="?<?php echo $prev_query; ?>">Anterior</a>
+                </li>
+
+                <?php for ($i = $startPage; $i <= $endPage; $i++): 
                     $page_query = http_build_query(array_merge($params, ['page' => $i]));
                 ?>
                     <li class="page-item <?php echo ($i === $currentPage) ? 'active' : ''; ?>">
@@ -233,7 +242,6 @@ include '../includes/header.php';
                 <?php endfor; ?>
 
                 <li class="page-item <?php echo ($currentPage >= $totalPages) ? 'disabled' : ''; ?>">
-                    <?php $next_query = http_build_query(array_merge($params, ['page' => $currentPage + 1])); ?>
                     <a class="page-link" href="?<?php echo $next_query; ?>">Próxima</a>
                 </li>
             </ul>
@@ -242,16 +250,14 @@ include '../includes/header.php';
     </div>
     <?php endif; ?>
 
-</div>
-
-<div class="modal fade" id="cadastroModal" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
+</div> </div> <div class="modal fade" id="cadastroModal" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title" id="modalLabel">Cadastrar Novo Risco</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="POST">
+            <form method="POST" action="riscos.php"> 
                 <div class="modal-body">
                     <input type="hidden" name="action" id="modalAction" value="insert">
 
@@ -275,6 +281,6 @@ include '../includes/header.php';
 </div>
 
 <?php
-// 8. Inclui o Footer
-include '../includes/footer.php';
+// 7. Inclui o Footer
+include $root_path . 'includes/footer.php';
 ?>

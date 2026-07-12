@@ -6,6 +6,13 @@ namespace App\Service;
 use App\Core\Database;
 use PDO;
 
+<<<<<<< HEAD
+=======
+/**
+ * Classe para gerenciar Autenticação e Autorização (Permissões).
+ * (Versão corrigida com nomes de colunas em Português e lógica de URL)
+ */
+>>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
 class AuthService
 {
     private ?PDO $db;
@@ -14,6 +21,13 @@ class AuthService
     public function __construct()
     {
         $this->db = Database::getConnection();
+        
+        // ==================================================================
+        // CORREÇÃO 1: Garante que a sessão esteja sempre iniciada
+        // ==================================================================
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
     }
 
     public function userCan(string $permissionName): bool
@@ -27,6 +41,10 @@ class AuthService
             $this->loadUserPermissions($usuarioId);
         }
 
+<<<<<<< HEAD
+=======
+        // 2. Verifica se a permissão existe no array (formato ['perm' => true])
+>>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
         return isset($this->userPermissions[$permissionName]);
     }
 
@@ -36,6 +54,7 @@ class AuthService
         
         $sql = 'SELECT DISTINCT p."permissionName"
                 FROM permissions p
+<<<<<<< HEAD
                 JOIN role_permissions rp ON p."permissionId" = rp."permissionId"
                 JOIN user_roles ur ON rp."roleId" = ur."roleId"
                 WHERE ur."usuarioId" = :usuarioId';
@@ -43,6 +62,15 @@ class AuthService
         try {
             $stmt = $this->db->prepare($sql);
             $stmt->bindParam(':usuarioId', $usuarioId, PDO::PARAM_INT);
+=======
+                JOIN role_permissions rp ON p.permissionId = rp.permissionId
+                JOIN user_roles ur ON rp.roleId = ur.roleId
+                WHERE ur.usuarioId = :usuarioId"; //
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindParam(':usuarioId', $usuarioId, PDO::PARAM_INT); //
+>>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
             $stmt->execute();
             
             $permissions = $stmt->fetchAll(PDO::FETCH_COLUMN);
@@ -54,6 +82,15 @@ class AuthService
         }
     }
 
+<<<<<<< HEAD
+=======
+    /**
+     * Força o recarregamento das permissões (ex: após mudar o papel do usuário)
+     */
+    // ==================================================================
+    // CORREÇÃO 2: Removido o "publicS public" duplicado
+    // ==================================================================
+>>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
     public function refreshPermissions(): void
     {
         $this->userPermissions = null;
@@ -69,8 +106,28 @@ class AuthService
             return;
         }
 
+<<<<<<< HEAD
+=======
+        // ==================================================================
+        // CORREÇÃO 3: Lógica de redirecionamento corrigida
+        // ==================================================================
+>>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
         if ($redirectUrl) {
-            header("Location: $redirectUrl?error=" . urlencode('Acesso negado'));
+            
+            // Mensagem de erro padrão que os Controllers esperam
+            $errorMessage = urlencode("Acesso negado. Você não tem permissão para esta ação.");
+            
+            // Limpa o 'error=Acesso+negado' antigo se ele existir na URL base
+            $redirectUrl = str_replace("?error=Acesso+negado", "", $redirectUrl);
+            $redirectUrl = str_replace("&error=Acesso+negado", "", $redirectUrl);
+            
+            // Determina o separador correto ('?' ou '&')
+            $separator = (strpos($redirectUrl, '?') === false) ? '?' : '&';
+            
+            // Constrói a URL final corretamente (usando message e type)
+            $location = "{$redirectUrl}{$separator}message={$errorMessage}&type=danger";
+            
+            header("Location: $location");
             exit;
         } else {
             throw new \Exception('Acesso negado. Você não tem permissão para esta ação.');

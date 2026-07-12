@@ -178,7 +178,13 @@ include '../includes/header.php';
                         <?php foreach ($registros as $row): ?>
                             <tr>
                                 <td><?php echo htmlspecialchars($row['cargoId']); ?></td>
-                                <td><strong class="text-primary"><?php echo htmlspecialchars($row['cargoNome']); ?></strong></td> 
+                                <td>
+        <strong><?php echo htmlspecialchars($row['cargoNome']); ?></strong>
+        
+        <?php if (!empty($row['is_revisado'])): ?>
+            <i class="fas fa-check-double text-success ms-2" title="Cargo Revisado e Bloqueado"></i>
+        <?php endif; ?>
+    </td> 
                                 <td><?php echo htmlspecialchars($row['cboTituloOficial'] ?? 'N/A'); ?></td>
                                 <td class="action-cell text-center">
                                     

@@ -44,14 +44,14 @@ class EscolaridadeRepository
     /**
      * Salva (cria ou atualiza) uma Escolaridade.
      */
-    public function save(array $data): int
+   public function save(array $data): int
     {
         $tableName = 'escolaridades';
 
         // 1. Coleta de Dados
         $id = (int)($data['escolaridadeId'] ?? 0);
-        //
         $titulo = trim($data['escolaridadeTitulo'] ?? ''); 
+        $peso = (int)($data['peso_pontuacao'] ?? 0); // NOVO CAMPO ADICIONADO AQUI
         $isUpdating = $id > 0;
 
         // 2. Validação de Permissão e Dados
@@ -66,12 +66,21 @@ class EscolaridadeRepository
         $pesoPontuacao = (int)($data['peso_pontuacao'] ?? 0);
         $params = [
             ':titulo' => $titulo,
+<<<<<<< HEAD
             ':peso'   => $pesoPontuacao,
+=======
+            ':peso' => $peso, // NOVO PARÂMETRO ADICIONADO AQUI
+>>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
         ];
 
         try {
             if ($isUpdating) {
+<<<<<<< HEAD
                 $sql = "UPDATE {$tableName} SET \"escolaridadeTitulo\" = :titulo, peso_pontuacao = :peso WHERE \"escolaridadeId\" = :id";
+=======
+                // ATUALIZADO: Inclui peso_pontuacao no UPDATE
+                $sql = "UPDATE {$tableName} SET escolaridadeTitulo = :titulo, peso_pontuacao = :peso WHERE escolaridadeId = :id";
+>>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
                 $params[':id'] = $id;
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = $id;
@@ -82,7 +91,12 @@ class EscolaridadeRepository
                 $this->auditService->log('UPDATE', $tableName, $savedId, $data);
                 
             } else {
+<<<<<<< HEAD
                 $sql = "INSERT INTO {$tableName} (\"escolaridadeTitulo\", peso_pontuacao) VALUES (:titulo, :peso)";
+=======
+                // ATUALIZADO: Inclui peso_pontuacao no INSERT
+                $sql = "INSERT INTO {$tableName} (escolaridadeTitulo, peso_pontuacao) VALUES (:titulo, :peso)";
+>>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = (int)$this->pdo->lastInsertId();
                 

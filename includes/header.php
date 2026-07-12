@@ -14,6 +14,9 @@ if (!isset($page_title)) {
     $page_title = 'Sistema de Cargos';
 }
 
+if (!isset($root_path)) {
+    $root_path = '../';
+}
 // Define o padrão para $is_dashboard se não for fornecido
 $is_dashboard = $is_dashboard ?? false;
 ?>
@@ -25,7 +28,7 @@ $is_dashboard = $is_dashboard ?? false;
     <title><?php echo htmlspecialchars($page_title); ?> | ITACITRUS</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/css/fa/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     
     <style>
         body {
@@ -128,7 +131,8 @@ $is_dashboard = $is_dashboard ?? false;
                             <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>views/areas_atuacao.php">Áreas de Atuação</a></li>
                             <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>views/tipo_hierarquia.php">Tipos de Hierarquia</a></li>
                             <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>views/nivel_hierarquico.php">Níveis Hierárquicos</a></li>
-                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>views/faixas_salariais.php">Faixas Salariais</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>views/faixas_salariais.php"><i class="fas fa-money-check-alt text-success me-1"></i> Matriz Salarial</a></li>
                         </ul>
                     </li>
 
@@ -165,6 +169,7 @@ $is_dashboard = $is_dashboard ?? false;
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navRelatorios">
                             <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>relatorios/cargo_total.php">Relatório Consolidado</a></li>
+                            <li><a class="dropdown-item fw-bold" href="<?php echo htmlspecialchars($root_path); ?>relatorios/tabela_salarial_gerencial.php"><i class="fas fa-file-excel text-success me-1"></i> Tabela Salarial (Excel)</a></li>
                             <li><a class="dropdown-item disabled" href="#">Organograma (em breve)</a></li>
                         </ul>
                     </li>
@@ -194,5 +199,3 @@ $is_dashboard = $is_dashboard ?? false;
             </ol>
         </nav>
     <?php endif; ?>
-
-<?php 

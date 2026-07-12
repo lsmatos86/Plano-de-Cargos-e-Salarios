@@ -1,10 +1,10 @@
 <?php
-// Arquivo: views/cursos.php (REFATORADO COM HEADER/FOOTER)
+// Arquivo: views/cursos.php
 
 // 1. Inclusão de arquivos
 require_once '../vendor/autoload.php';
 require_once '../config.php';
-require_once '../includes/functions.php'; // Para login e helpers
+require_once '../includes/functions.php';
 
 // 2. Importa o novo Repositório
 use App\Repository\CursoRepository;
@@ -14,20 +14,16 @@ if (!isUserLoggedIn()) {
     header('Location: ../login.php');
     exit;
 }
-// (OPCIONAL - Verificação de permissão)
-$authService->checkAndFail('cursos:manage', '../index.php?error=Acesso+negado');
-
+$authService->checkAndFail('cadastros:manage', '../index.php?error=Acesso+negado');
 
 // 4. Definições da Página (para o header.php)
-$page_title = 'Gestão de Cursos e Treinamentos';
+$page_title = 'Gestão de Cursos';
 $root_path = '../'; 
 $breadcrumb_items = [
     'Dashboard' => '../index.php',
-    'Gestão de Cursos' => null // Página ativa
+    'Gestão de Cursos' => null
 ];
-// NOVO: Informa ao footer.php qual script JS carregar
 $page_scripts = ['../scripts/cursos.js'];
-
 
 // Configurações específicas desta tabela
 $id_column = 'cursoId';
@@ -47,7 +43,7 @@ try {
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $titulo = trim($_POST[$name_column] ?? '');
         
-        $repo->save($_POST); // O repositório lida com insert/update
+        $repo->save($_POST); // O repositório lida com insert/update e grava a periodicidade
         
         $action_desc = ($_POST['action'] === 'insert') ? 'cadastrado' : 'atualizado';
         $message = "Curso '{$titulo}' {$action_desc} com sucesso!";
@@ -85,16 +81,14 @@ if (empty($message) && isset($_GET['message'])) {
 // ----------------------------------------------------
 // LÓGICA DE LEITURA (READ)
 // ----------------------------------------------------
-// 1. Parâmetros de Filtro e Ordenação
 $params = [
     'term' => $_GET['term'] ?? '',
-    'sort_col' => $_GET['sort_col'] ?? $id_column,
+    'sort_col' => $_GET['sort_col'] ?? $name_column,
     'sort_dir' => $_GET['sort_dir'] ?? 'ASC',
     'page' => $_GET['page'] ?? 1,
     'limit' => 10
 ];
 
-// 2. Busca os dados
 try {
     $repoParams = [
         'term' => $params['term'],
@@ -120,8 +114,7 @@ try {
     $message_type = 'danger';
 }
 
-
-// 7. Inclui o Header
+// 5. Inclui o Header
 include '../includes/header.php';
 ?>
 
@@ -142,7 +135,7 @@ include '../includes/header.php';
 <div class="card shadow-sm">
     <div class="card-header bg-white py-3">
         <form method="GET" class="d-flex">
-            <input type="search" name="term" class="form-control me-2" placeholder="Filtrar por nome..." value="<?php echo htmlspecialchars($params['term']); ?>">
+            <input type="search" name="term" class="form-control me-2" placeholder="Filtrar por nome do curso..." value="<?php echo htmlspecialchars($params['term']); ?>">
             <input type="hidden" name="sort_col" value="<?php echo htmlspecialchars($params['sort_col']); ?>">
             <input type="hidden" name="sort_dir" value="<?php echo htmlspecialchars($params['sort_dir']); ?>">
             
@@ -157,9 +150,11 @@ include '../includes/header.php';
             <table class="table table-striped table-hover table-sm mb-0">
                 <thead class="bg-light">
                     <tr>
-                        <th><?php echo createSortLink($id_column, 'ID', $params); ?></th>
+                        <th width="80px"><?php echo createSortLink($id_column, 'ID', $params); ?></th>
                         <th><?php echo createSortLink($name_column, 'Nome do Curso', $params); ?></th>
-                        <th width="150px" class="text-center">Ações</th>
+                        <th>Descrição</th>
+                        <th width="220px"><?php echo createSortLink('cursoPeriodicidade', 'Periodicidade Padrão', $params); ?></th>
+                        <th width="120px" class="text-center">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -168,6 +163,16 @@ include '../includes/header.php';
                             <tr>
                                 <td><?php echo htmlspecialchars($row[$id_column]); ?></td>
                                 <td><strong><?php echo htmlspecialchars($row[$name_column]); ?></strong></td>
+                                <td><?php echo htmlspecialchars($row['cursoDescricao'] ?? '<em>N/A</em>'); ?></td>
+                                <td>
+                                    <?php 
+                                    if (!empty($row['cursoPeriodicidade'])) {
+                                        echo '<span class="badge bg-info text-dark"><i class="fas fa-sync-alt"></i> A cada ' . htmlspecialchars($row['cursoPeriodicidade']) . ' meses</span>';
+                                    } else {
+                                        echo '<span class="text-muted"><em>Sem reciclagem obrigatória</em></span>';
+                                    }
+                                    ?>
+                                </td>
                                 <td class="text-center">
                                     <button class="btn btn-sm btn-info text-white btn-edit" 
                                             data-bs-toggle="modal" 
@@ -175,6 +180,7 @@ include '../includes/header.php';
                                             data-id="<?php echo $row[$id_column]; ?>"
                                             data-nome="<?php echo htmlspecialchars($row[$name_column]); ?>"
                                             data-descricao="<?php echo htmlspecialchars($row['cursoDescricao'] ?? ''); ?>"
+                                            data-periodicidade="<?php echo htmlspecialchars($row['cursoPeriodicidade'] ?? ''); ?>"
                                             title="Editar">
                                         <i class="fas fa-edit"></i>
                                     </button>
@@ -182,7 +188,7 @@ include '../includes/header.php';
                                     <a href="cursos.php?action=delete&id=<?php echo $row[$id_column]; ?>" 
                                        class="btn btn-sm btn-danger" 
                                        title="Excluir"
-                                       onclick="return confirm('Deseja realmente excluir este item? Esta ação não pode ser desfeita.');">
+                                       onclick="return confirm('Deseja realmente excluir este curso? Esta ação não pode ser desfeita e falhará se estiver vinculado a algum cargo.');">
                                        <i class="fas fa-trash-alt"></i>
                                     </a>
                                 </td>
@@ -190,7 +196,7 @@ include '../includes/header.php';
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="3" class="text-center p-4">
+                            <td colspan="5" class="text-center p-4">
                                 <i class="fas fa-info-circle fa-2x text-muted mb-2"></i><br>
                                 Nenhum registro encontrado.
                             </td>
@@ -204,32 +210,23 @@ include '../includes/header.php';
     <?php if ($totalRecords > 0): ?>
     <div class="card-footer bg-white d-flex justify-content-between align-items-center">
         <span class="text-muted">
-            Total: <strong><?php echo $totalRecords; ?></strong> registo(s)
+            Total: <strong><?php echo $totalRecords; ?></strong> curso(s)
         </span>
         
         <?php if ($totalPages > 1): ?>
         <nav aria-label="Navegação de página">
             <ul class="pagination mb-0">
-                
                 <li class="page-item <?php echo ($currentPage <= 1) ? 'disabled' : ''; ?>">
                     <?php $prev_query = http_build_query(array_merge($params, ['page' => $currentPage - 1])); ?>
                     <a class="page-link" href="?<?php echo $prev_query; ?>">Anterior</a>
                 </li>
-
-                <?php 
-                $startPage = max(1, $currentPage - 2);
-                $endPage = min($totalPages, $currentPage + 2);
-                if ($endPage - $startPage < 4) { $startPage = max(1, $endPage - 4); }
-                if ($endPage - $startPage < 4) { $endPage = min($totalPages, $startPage + 4); }
-
-                for ($i = $startPage; $i <= $endPage; $i++): 
+                <?php for ($i = 1; $i <= $totalPages; $i++): 
                     $page_query = http_build_query(array_merge($params, ['page' => $i]));
                 ?>
                     <li class="page-item <?php echo ($i === $currentPage) ? 'active' : ''; ?>">
                         <a class="page-link" href="?<?php echo $page_query; ?>"><?php echo $i; ?></a>
                     </li>
                 <?php endfor; ?>
-
                 <li class="page-item <?php echo ($currentPage >= $totalPages) ? 'disabled' : ''; ?>">
                     <?php $next_query = http_build_query(array_merge($params, ['page' => $currentPage + 1])); ?>
                     <a class="page-link" href="?<?php echo $next_query; ?>">Próxima</a>
@@ -239,7 +236,6 @@ include '../includes/header.php';
         <?php endif; ?>
     </div>
     <?php endif; ?>
-
 </div>
 
 <div class="modal fade" id="cadastroModal" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
@@ -256,12 +252,21 @@ include '../includes/header.php';
 
                     <div class="mb-3">
                         <label for="modalNome" class="form-label">Nome do Curso *</label>
-                        <input type="text" class="form-control" id="modalNome" name="<?php echo $name_column; ?>" required maxlength="100">
+                        <input type="text" class="form-control" id="modalNome" name="<?php echo $name_column; ?>" required maxlength="150">
                     </div>
 
                     <div class="mb-3">
-                        <label for="modalDescricao" class="form-label">Descrição (Opcional)</label>
-                        <textarea class="form-control" id="modalDescricao" name="cursoDescricao" rows="3"></textarea>
+                        <label for="modalPeriodicidade" class="form-label">Periodicidade de Reciclagem (Opcional)</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="modalPeriodicidade" name="cursoPeriodicidade" min="1" max="120" placeholder="Ex: 12, 24, 36">
+                            <span class="input-group-text">meses</span>
+                        </div>
+                        <div class="form-text">Deixe em branco se for um curso de formação única (sem expiração compulsória).</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="modalDescricao" class="form-label">Descrição / Ementa Resumida (Opcional)</label>
+                        <textarea class="form-control" id="modalDescricao" name="cursoDescricao" rows="4"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -274,6 +279,5 @@ include '../includes/header.php';
 </div>
 
 <?php
-// 8. Inclui o Footer
 include '../includes/footer.php';
 ?>
