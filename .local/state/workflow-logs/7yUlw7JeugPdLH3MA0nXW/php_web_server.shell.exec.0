@@ -1,0 +1,22 @@
+[Sat Jul 11 22:25:23 2026] PHP 8.2.23 Development Server (http://0.0.0.0:5000) started
+[Sat Jul 11 22:25:25 2026] 127.0.0.1:35546 Accepted
+[Sat Jul 11 22:25:25 2026] 127.0.0.1:35546 [302]: GET /
+[Sat Jul 11 22:25:25 2026] 127.0.0.1:35546 Closing
+[Sat Jul 11 22:25:25 2026] 127.0.0.1:35556 Accepted
+[Sat Jul 11 22:25:25 2026] 127.0.0.1:35556 [200]: GET /login.php
+[Sat Jul 11 22:25:25 2026] 127.0.0.1:35556 Closing
+[Sat Jul 11 22:25:25 2026] 127.0.0.1:35570 Accepted
+[Sat Jul 11 22:25:25 2026] 127.0.0.1:35570 [404]: GET /favicon.ico - No such file or directory
+[Sat Jul 11 22:25:25 2026] 127.0.0.1:35570 Closing
+[Sat Jul 11 22:25:25 2026] 127.0.0.1:35586 Accepted
+[Sat Jul 11 22:25:25 2026] 127.0.0.1:35586 [200]: GET /views/cargos_form.php?id=2
+[Sat Jul 11 22:25:25 2026] 127.0.0.1:35586 Closing
+[Sat Jul 11 22:25:26 2026] 127.0.0.1:35600 Accepted
+[Sat Jul 11 22:25:26 2026] 127.0.0.1:35600 [200]: GET /scripts/cargos_form.js?v=6
+[Sat Jul 11 22:25:26 2026] 127.0.0.1:35600 Closing
+[Sat Jul 11 22:25:31 2026] 127.0.0.1:58660 Accepted
+[Sat Jul 11 22:25:31 2026] 127.0.0.1:58660 [302]: GET /views/cargos_form.php?id=2
+[Sat Jul 11 22:25:31 2026] 127.0.0.1:58660 Closing
+[Sat Jul 11 22:25:31 2026] 127.0.0.1:58666 Accepted
+[Sat Jul 11 22:25:31 2026] 127.0.0.1:58666 [200]: GET /login.php
+[Sat Jul 11 22:25:31 2026] 127.0.0.1:58666 Closing

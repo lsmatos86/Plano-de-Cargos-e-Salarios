@@ -1,0 +1,29 @@
+feat: Organograma com modo de visualização Por Setor (#10)
+
+Adiciona um segundo modo de visualização ao organograma, além do existente
+"Por Supervisão": o novo modo "Por Setor" organiza os cargos por Área de
+Atuação, usando a hierarquia de áreas (areaPaiId) e as vinculações em
+cargos_area.
+
+## Mudanças em views/organograma.php
+- Adicionado bloco PHP para carregar areas_atuacao e cargos_area
+- Função buildD3AreaNode() constrói árvore D3 recursiva com áreas como nós
+  internos e cargos como folhas
+- Dois botões de alternância (Por Supervisão / Por Setor) com btn-group Bootstrap
+- Badges de estatística distintos por modo (vinculados/sem-vínculo vs com-área/sem-área)
+- Função JS drawTree(data, isVR) unificada; renderiza nós de área em #546e7a
+  com badge "Área", nós de cargo mantêm as cores de nível hierárquico
+- window.setMode(mode) gerencia visibilidade de seções, badges, hint e título do card
+- Seção "Cargos sem área de atuação" exibida no modo Setor (análoga à seção
+  "Sem vínculo" do modo Supervisão)
+- Legenda dinâmica: item "Área/Setor" aparece apenas no modo Setor
+- Estados vazios tratados no JS para cada modo
+
+## Mudanças em relatorios/organograma_pdf.php
+- Adicionadas queries para areas_atuacao e cargos_area
+- Função renderAreaTreePdf() gera HTML indentado da hierarquia de áreas
+  com cargos vinculados como sub-itens coloridos por nível
+- Nova seção "Organização por Área de Atuação" com page-break antes dela
+- Seção "Cargos sem área" no PDF (análoga à seção sem-vínculo)
+- Stats do cabeçalho atualizados para incluir totalAreas e totalComSetor
+- Estilo: .secao-sup (azul escuro), .secao-set (#546e7a), .secao-warn (laranja)

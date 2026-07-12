@@ -1,0 +1,331 @@
+[Sat Jul 11 18:40:43 2026] PHP 8.2.23 Development Server (http://0.0.0.0:5000) started
+[Sat Jul 11 18:40:45 2026] 127.0.0.1:52910 Accepted
+[Sat Jul 11 18:40:45 2026] 127.0.0.1:52910 [302]: GET /
+[Sat Jul 11 18:40:45 2026] 127.0.0.1:52910 Closing
+[Sat Jul 11 18:40:46 2026] 127.0.0.1:52926 Accepted
+[Sat Jul 11 18:40:46 2026] 127.0.0.1:52926 [200]: GET /login.php
+[Sat Jul 11 18:40:46 2026] 127.0.0.1:52926 Closing
+[Sat Jul 11 18:42:05 2026] 127.0.0.1:60036 Accepted
+[Sat Jul 11 18:42:05 2026] Erro em authenticateUser: SQLSTATE[42P01]: Undefined table: 7 ERROR:  relation "usuarios" does not exist
+LINE 1: SELECT usuarioId, nome, email, senha, ativo FROM usuarios WH...
+                                                         ^
+[Sat Jul 11 18:42:05 2026] Falha ao registrar log de auditoria: SQLSTATE[42P01]: Undefined table: 7 ERROR:  relation "audit_log" does not exist
+LINE 1: INSERT INTO audit_log (usuarioId, nomeUsuario, acao, nomeTab...
+                    ^
+[Sat Jul 11 18:42:05 2026] 127.0.0.1:60036 [200]: POST /login.php
+[Sat Jul 11 18:42:05 2026] 127.0.0.1:60036 Closing
+[Sat Jul 11 18:44:45 2026] 127.0.0.1:38588 Accepted
+[Sat Jul 11 18:44:45 2026] 127.0.0.1:38588 [200]: GET /login.php
+[Sat Jul 11 18:44:45 2026] 127.0.0.1:38588 Closing
+[Sat Jul 11 18:44:46 2026] 127.0.0.1:38602 Accepted
+[Sat Jul 11 18:44:46 2026] 127.0.0.1:38602 [404]: GET /favicon.ico - No such file or directory
+[Sat Jul 11 18:44:46 2026] 127.0.0.1:38602 Closing
+[Sat Jul 11 18:45:08 2026] 127.0.0.1:38134 Accepted
+[Sat Jul 11 18:45:08 2026] Erro em authenticateUser: SQLSTATE[42703]: Undefined column: 7 ERROR:  column "usuarioid" does not exist
+LINE 1: SELECT usuarioId, nome, email, senha, ativo FROM usuarios WH...
+               ^
+HINT:  Perhaps you meant to reference the column "usuarios.usuarioId".
+[Sat Jul 11 18:45:08 2026] Falha ao registrar log de auditoria: SQLSTATE[42703]: Undefined column: 7 ERROR:  column "usuarioid" of relation "audit_log" does not exist
+LINE 1: INSERT INTO audit_log (usuarioId, nomeUsuario, acao, nomeTab...
+                               ^
+[Sat Jul 11 18:45:08 2026] 127.0.0.1:38134 [200]: POST /login.php
+[Sat Jul 11 18:45:08 2026] 127.0.0.1:38134 Closing
+[Sat Jul 11 18:45:21 2026] 127.0.0.1:59296 Accepted
+[Sat Jul 11 18:45:21 2026] Erro em authenticateUser: SQLSTATE[42703]: Undefined column: 7 ERROR:  column "usuarioid" does not exist
+LINE 1: SELECT usuarioId, nome, email, senha, ativo FROM usuarios WH...
+               ^
+HINT:  Perhaps you meant to reference the column "usuarios.usuarioId".
+[Sat Jul 11 18:45:21 2026] Falha ao registrar log de auditoria: SQLSTATE[42703]: Undefined column: 7 ERROR:  column "usuarioid" of relation "audit_log" does not exist
+LINE 1: INSERT INTO audit_log (usuarioId, nomeUsuario, acao, nomeTab...
+                               ^
+[Sat Jul 11 18:45:21 2026] 127.0.0.1:59296 [200]: POST /login.php
+[Sat Jul 11 18:45:21 2026] 127.0.0.1:59296 Closing
+[Sat Jul 11 18:45:25 2026] 127.0.0.1:59308 Accepted
+[Sat Jul 11 18:45:25 2026] 127.0.0.1:59308 [200]: GET /login.php
+[Sat Jul 11 18:45:25 2026] 127.0.0.1:59308 Closing
+[Sat Jul 11 18:45:32 2026] 127.0.0.1:47752 Accepted
+[Sat Jul 11 18:45:32 2026] Erro em authenticateUser: SQLSTATE[42703]: Undefined column: 7 ERROR:  column "usuarioid" does not exist
+LINE 1: SELECT usuarioId, nome, email, senha, ativo FROM usuarios WH...
+               ^
+HINT:  Perhaps you meant to reference the column "usuarios.usuarioId".
+[Sat Jul 11 18:45:32 2026] Falha ao registrar log de auditoria: SQLSTATE[42703]: Undefined column: 7 ERROR:  column "usuarioid" of relation "audit_log" does not exist
+LINE 1: INSERT INTO audit_log (usuarioId, nomeUsuario, acao, nomeTab...
+                               ^
+[Sat Jul 11 18:45:32 2026] 127.0.0.1:47752 [200]: POST /login.php
+[Sat Jul 11 18:45:32 2026] 127.0.0.1:47752 Closing
+[Sat Jul 11 19:09:50 2026] 127.0.0.1:36552 Accepted
+[Sat Jul 11 19:09:50 2026] 127.0.0.1:36552 [200]: GET /login.php
+[Sat Jul 11 19:09:50 2026] 127.0.0.1:36552 Closing
+[Sat Jul 11 19:09:51 2026] 127.0.0.1:36562 Accepted
+[Sat Jul 11 19:09:51 2026] 127.0.0.1:36562 [404]: GET /favicon.ico - No such file or directory
+[Sat Jul 11 19:09:51 2026] 127.0.0.1:36562 Closing
+[Sat Jul 11 19:10:01 2026] 127.0.0.1:43558 Accepted
+[Sat Jul 11 19:10:01 2026] 127.0.0.1:43558 [200]: POST /login.php
+[Sat Jul 11 19:10:01 2026] 127.0.0.1:43558 Closing
+[Sat Jul 11 19:10:47 2026] 127.0.0.1:35936 Accepted
+[Sat Jul 11 19:10:47 2026] 127.0.0.1:35936 [200]: POST /login.php
+[Sat Jul 11 19:10:47 2026] 127.0.0.1:35936 Closing
+[Sat Jul 11 19:11:28 2026] 127.0.0.1:58262 Accepted
+[Sat Jul 11 19:11:28 2026] 127.0.0.1:58262 [200]: POST /login.php
+[Sat Jul 11 19:11:28 2026] 127.0.0.1:58262 Closing
+[Sat Jul 11 19:12:01 2026] 127.0.0.1:56578 Accepted
+[Sat Jul 11 19:12:01 2026] 127.0.0.1:56578 [302]: POST /login.php
+[Sat Jul 11 19:12:01 2026] 127.0.0.1:56578 Closing
+[Sat Jul 11 19:12:07 2026] 127.0.0.1:52146 Accepted
+[Sat Jul 11 19:12:07 2026] 127.0.0.1:52146 [200]: GET /index.php
+[Sat Jul 11 19:12:07 2026] 127.0.0.1:52146 Closing
+[Sat Jul 11 19:12:11 2026] 127.0.0.1:52152 Accepted
+[Sat Jul 11 19:12:11 2026] 127.0.0.1:52152 [200]: GET /login.php
+[Sat Jul 11 19:12:11 2026] 127.0.0.1:52152 Closing
+[Sat Jul 11 19:12:23 2026] 127.0.0.1:47052 Accepted
+[Sat Jul 11 19:12:23 2026] 127.0.0.1:47052 [200]: GET /index.php
+[Sat Jul 11 19:12:23 2026] 127.0.0.1:47052 Closing
+[Sat Jul 11 19:12:23 2026] 127.0.0.1:47058 Accepted
+[Sat Jul 11 19:12:23 2026] 127.0.0.1:47058 [200]: GET /views/cargos.php
+[Sat Jul 11 19:12:23 2026] 127.0.0.1:47058 Closing
+[Sat Jul 11 19:12:23 2026] 127.0.0.1:47072 Accepted
+[Sat Jul 11 19:12:23 2026] 127.0.0.1:47072 [302]: GET /views/usuarios.php
+[Sat Jul 11 19:12:23 2026] 127.0.0.1:47072 Closing
+[Sat Jul 11 19:12:23 2026] 127.0.0.1:47074 Accepted
+[Sat Jul 11 19:12:23 2026] 127.0.0.1:47074 [302]: GET /views/habilidades.php
+[Sat Jul 11 19:12:23 2026] 127.0.0.1:47074 Closing
+[Sat Jul 11 19:12:23 2026] 127.0.0.1:47082 Accepted
+[Sat Jul 11 19:12:23 2026] 127.0.0.1:47082 [302]: GET /views/cbos.php
+[Sat Jul 11 19:12:23 2026] 127.0.0.1:47082 Closing
+[Sat Jul 11 19:12:23 2026] 127.0.0.1:47092 Accepted
+[Sat Jul 11 19:12:23 2026] 127.0.0.1:47092 [404]: GET /views/niveis_hierarquicos.php - No such file or directory
+[Sat Jul 11 19:12:23 2026] 127.0.0.1:47092 Closing
+[Sat Jul 11 19:12:23 2026] 127.0.0.1:47104 Accepted
+[Sat Jul 11 19:12:23 2026] 127.0.0.1:47104 [302]: GET /views/escolaridades.php
+[Sat Jul 11 19:12:23 2026] 127.0.0.1:47104 Closing
+[Sat Jul 11 19:12:39 2026] 127.0.0.1:48700 Accepted
+[Sat Jul 11 19:12:39 2026] 127.0.0.1:48700 [200]: GET /index.php
+[Sat Jul 11 19:12:39 2026] 127.0.0.1:48700 Closing
+[Sat Jul 11 19:12:39 2026] 127.0.0.1:48710 Accepted
+[Sat Jul 11 19:12:39 2026] 127.0.0.1:48710 [302]: GET /views/usuarios.php
+[Sat Jul 11 19:12:39 2026] 127.0.0.1:48710 Closing
+[Sat Jul 11 19:25:05 2026] 127.0.0.1:45474 Accepted
+[Sat Jul 11 19:25:05 2026] 127.0.0.1:45474 [200]: GET /login.php
+[Sat Jul 11 19:25:05 2026] 127.0.0.1:45474 Closing
+[Sat Jul 11 19:25:16 2026] 127.0.0.1:49422 Accepted
+[Sat Jul 11 19:25:16 2026] 127.0.0.1:49422 [302]: POST /login.php
+[Sat Jul 11 19:25:16 2026] 127.0.0.1:49422 Closing
+[Sat Jul 11 19:25:16 2026] 127.0.0.1:49424 Accepted
+[Sat Jul 11 19:25:16 2026] 127.0.0.1:49424 [200]: GET /index.php
+[Sat Jul 11 19:25:16 2026] 127.0.0.1:49424 Closing
+[Sat Jul 11 19:37:30 2026] 127.0.0.1:43604 Accepted
+[Sat Jul 11 19:37:31 2026] 127.0.0.1:43604 [200]: GET /
+[Sat Jul 11 19:37:31 2026] 127.0.0.1:43604 Closing
+[Sat Jul 11 19:41:12 2026] 127.0.0.1:57750 Accepted
+[Sat Jul 11 19:41:12 2026] 127.0.0.1:57750 [200]: GET /login.php
+[Sat Jul 11 19:41:12 2026] 127.0.0.1:57750 Closing
+[Sat Jul 11 19:41:12 2026] 127.0.0.1:57752 Accepted
+[Sat Jul 11 19:41:12 2026] 127.0.0.1:57752 [404]: GET /favicon.ico - No such file or directory
+[Sat Jul 11 19:41:12 2026] 127.0.0.1:57752 Closing
+[Sat Jul 11 19:43:36 2026] 127.0.0.1:32984 Accepted
+[Sat Jul 11 19:43:36 2026] 127.0.0.1:32984 [200]: GET /
+[Sat Jul 11 19:43:36 2026] 127.0.0.1:32984 Closing
+[Sat Jul 11 19:43:39 2026] 127.0.0.1:58726 Accepted
+[Sat Jul 11 19:43:39 2026] 127.0.0.1:58726 [200]: GET /views/cargos.php
+[Sat Jul 11 19:43:39 2026] 127.0.0.1:58726 Closing
+[Sat Jul 11 19:52:35 2026] 127.0.0.1:38652 Accepted
+[Sat Jul 11 19:52:35 2026] 127.0.0.1:38652 [302]: GET /views/faixas_salariais.php
+[Sat Jul 11 19:52:35 2026] 127.0.0.1:38652 Closing
+[Sat Jul 11 19:52:35 2026] 127.0.0.1:38656 Accepted
+[Sat Jul 11 19:52:35 2026] 127.0.0.1:38656 [200]: GET /login.php
+[Sat Jul 11 19:52:35 2026] 127.0.0.1:38656 Closing
+[Sat Jul 11 19:52:36 2026] 127.0.0.1:38672 Accepted
+[Sat Jul 11 19:52:36 2026] 127.0.0.1:38672 [404]: GET /favicon.ico - No such file or directory
+[Sat Jul 11 19:52:36 2026] 127.0.0.1:38672 Closing
+[Sat Jul 11 19:54:03 2026] 127.0.0.1:35982 Accepted
+[Sat Jul 11 19:54:03 2026] 127.0.0.1:35982 [200]: GET /views/cargos.php
+[Sat Jul 11 19:54:03 2026] 127.0.0.1:35982 Closing
+[Sat Jul 11 19:54:55 2026] 127.0.0.1:41696 Accepted
+[Sat Jul 11 19:54:55 2026] 127.0.0.1:41696 [302]: GET /views/cargos.php
+[Sat Jul 11 19:54:55 2026] 127.0.0.1:41696 Closing
+[Sat Jul 11 19:54:55 2026] 127.0.0.1:41704 Accepted
+[Sat Jul 11 19:54:55 2026] 127.0.0.1:41704 [200]: GET /login.php
+[Sat Jul 11 19:54:55 2026] 127.0.0.1:41704 Closing
+[Sat Jul 11 19:57:41 2026] 127.0.0.1:45002 Accepted
+[Sat Jul 11 19:57:41 2026] 127.0.0.1:45002 [302]: GET /views/cargos.php
+[Sat Jul 11 19:57:41 2026] 127.0.0.1:45002 Closing
+[Sat Jul 11 19:58:08 2026] 127.0.0.1:54516 Accepted
+[Sat Jul 11 19:58:08 2026] 127.0.0.1:54516 [200]: POST /login.php
+[Sat Jul 11 19:58:08 2026] 127.0.0.1:54516 Closing
+[Sat Jul 11 19:59:13 2026] 127.0.0.1:49256 Accepted
+[Sat Jul 11 19:59:13 2026] 127.0.0.1:49256 [200]: GET /login.php
+[Sat Jul 11 19:59:13 2026] 127.0.0.1:49256 Closing
+[Sat Jul 11 19:59:21 2026] 127.0.0.1:51242 Accepted
+[Sat Jul 11 19:59:21 2026] 127.0.0.1:51242 [200]: POST /login.php
+[Sat Jul 11 19:59:21 2026] 127.0.0.1:51242 Closing
+[Sat Jul 11 20:01:49 2026] 127.0.0.1:44488 Accepted
+[Sat Jul 11 20:01:49 2026] 127.0.0.1:44488 [302]: POST /login.php
+[Sat Jul 11 20:01:49 2026] 127.0.0.1:44488 Closing
+[Sat Jul 11 20:01:55 2026] 127.0.0.1:44492 Accepted
+[Sat Jul 11 20:01:55 2026] 127.0.0.1:44492 [200]: GET /views/cargos.php
+[Sat Jul 11 20:01:55 2026] 127.0.0.1:44492 Closing
+[Sat Jul 11 20:03:06 2026] 127.0.0.1:39176 Accepted
+[Sat Jul 11 20:03:06 2026] 127.0.0.1:39176 [200]: GET /views/cargos.php
+[Sat Jul 11 20:03:06 2026] 127.0.0.1:39176 Closing
+[Sat Jul 11 20:03:40 2026] 127.0.0.1:36038 Accepted
+[Sat Jul 11 20:03:40 2026] 127.0.0.1:36038 [200]: GET /views/cargos.php
+[Sat Jul 11 20:03:40 2026] 127.0.0.1:36038 Closing
+[Sat Jul 11 20:03:47 2026] 127.0.0.1:51392 Accepted
+[Sat Jul 11 20:03:47 2026] 127.0.0.1:51392 [200]: GET /views/cargos_form.php?id=1
+[Sat Jul 11 20:03:47 2026] 127.0.0.1:51392 Closing
+[Sat Jul 11 20:04:00 2026] 127.0.0.1:39248 Accepted
+[Sat Jul 11 20:04:00 2026] 127.0.0.1:39248 [200]: POST /views/cargos_form.php
+[Sat Jul 11 20:04:00 2026] 127.0.0.1:39248 Closing
+[Sat Jul 11 20:10:19 2026] 127.0.0.1:59874 Accepted
+[Sat Jul 11 20:10:19 2026] 127.0.0.1:59874 [200]: GET /views/cargos_form.php
+[Sat Jul 11 20:10:19 2026] 127.0.0.1:59874 Closing
+[Sat Jul 11 20:10:31 2026] 127.0.0.1:52944 Accepted
+[Sat Jul 11 20:10:31 2026] 127.0.0.1:52944 [200]: GET /views/cargos.php
+[Sat Jul 11 20:10:31 2026] 127.0.0.1:52944 Closing
+[Sat Jul 11 20:10:33 2026] 127.0.0.1:52958 Accepted
+[Sat Jul 11 20:10:33 2026] 127.0.0.1:52958 [200]: GET /views/cargos_form.php?id=1
+[Sat Jul 11 20:10:33 2026] 127.0.0.1:52958 Closing
+[Sat Jul 11 20:10:45 2026] 127.0.0.1:34258 Accepted
+[Sat Jul 11 20:10:45 2026] 127.0.0.1:34258 [200]: POST /views/cargos_form.php
+[Sat Jul 11 20:10:45 2026] 127.0.0.1:34258 Closing
+[Sat Jul 11 20:12:58 2026] 127.0.0.1:56372 Accepted
+[Sat Jul 11 20:12:58 2026] 127.0.0.1:56372 [200]: GET /views/cargos_form.php
+[Sat Jul 11 20:12:58 2026] 127.0.0.1:56372 Closing
+[Sat Jul 11 20:13:04 2026] 127.0.0.1:56380 Accepted
+[Sat Jul 11 20:13:04 2026] 127.0.0.1:56380 [200]: GET /views/cargos.php
+[Sat Jul 11 20:13:04 2026] 127.0.0.1:56380 Closing
+[Sat Jul 11 20:13:07 2026] 127.0.0.1:37260 Accepted
+[Sat Jul 11 20:13:07 2026] 127.0.0.1:37260 [200]: GET /views/cargos_form.php?id=1
+[Sat Jul 11 20:13:07 2026] 127.0.0.1:37260 Closing
+[Sat Jul 11 20:13:20 2026] 127.0.0.1:35518 Accepted
+[Sat Jul 11 20:13:20 2026] 127.0.0.1:35518 [302]: POST /views/cargos_form.php
+[Sat Jul 11 20:13:20 2026] 127.0.0.1:35518 Closing
+[Sat Jul 11 20:13:20 2026] 127.0.0.1:35530 Accepted
+[Sat Jul 11 20:13:20 2026] 127.0.0.1:35530 [200]: GET /views/cargos_form.php?id=1&message=Cargo+salvo+com+sucesso%21+ID%3A+1&type=success
+[Sat Jul 11 20:13:20 2026] 127.0.0.1:35530 Closing
+[Sat Jul 11 20:13:42 2026] 127.0.0.1:33394 Accepted
+[Sat Jul 11 20:13:42 2026] 127.0.0.1:33394 [200]: GET /views/cargos.php
+[Sat Jul 11 20:13:42 2026] 127.0.0.1:33394 Closing
+[Sat Jul 11 20:13:45 2026] 127.0.0.1:33398 Accepted
+[Sat Jul 11 20:13:45 2026] 127.0.0.1:33398 [200]: GET /views/cargos_form.php?id=2
+[Sat Jul 11 20:13:45 2026] 127.0.0.1:33398 Closing
+[Sat Jul 11 21:53:06 2026] 127.0.0.1:58296 Accepted
+[Sat Jul 11 21:53:06 2026] 127.0.0.1:58296 [200]: GET /views/cargos.php
+[Sat Jul 11 21:53:06 2026] 127.0.0.1:58296 Closing
+[Sat Jul 11 21:53:09 2026] 127.0.0.1:54320 Accepted
+[Sat Jul 11 21:53:09 2026] 127.0.0.1:54320 [200]: GET /views/cargos_form.php?id=1
+[Sat Jul 11 21:53:09 2026] 127.0.0.1:54320 Closing
+[Sat Jul 11 21:53:15 2026] 127.0.0.1:54324 Accepted
+[Sat Jul 11 21:53:15 2026] 127.0.0.1:54324 [200]: GET /views/cargos_form.php?id=1
+[Sat Jul 11 21:53:15 2026] 127.0.0.1:54324 Closing
+[Sat Jul 11 21:53:40 2026] 127.0.0.1:38590 Accepted
+[Sat Jul 11 21:53:40 2026] 127.0.0.1:38590 [200]: GET /views/cargos_form.php?id=13
+[Sat Jul 11 21:53:40 2026] 127.0.0.1:38590 Closing
+[Sat Jul 11 21:53:48 2026] 127.0.0.1:50482 Accepted
+[Sat Jul 11 21:53:48 2026] 127.0.0.1:50482 [200]: GET /views/cargos_form.php?id=13
+[Sat Jul 11 21:53:48 2026] 127.0.0.1:50482 Closing
+[Sat Jul 11 21:55:34 2026] 127.0.0.1:54148 Accepted
+[Sat Jul 11 21:55:34 2026] 127.0.0.1:54148 [200]: GET /views/cargos_form.php?id=13
+[Sat Jul 11 21:55:34 2026] 127.0.0.1:54148 Closing
+[Sat Jul 11 21:56:04 2026] 127.0.0.1:44304 Accepted
+[Sat Jul 11 21:56:04 2026] 127.0.0.1:44304 [200]: GET /views/cargos_form.php?id=1
+[Sat Jul 11 21:56:04 2026] 127.0.0.1:44304 Closing
+[Sat Jul 11 21:56:06 2026] 127.0.0.1:44318 Accepted
+[Sat Jul 11 21:56:06 2026] 127.0.0.1:44318 [200]: GET /scripts/cargos_form.js?v=4
+[Sat Jul 11 21:56:06 2026] 127.0.0.1:44318 Closing
+[Sat Jul 11 21:56:12 2026] 127.0.0.1:37936 Accepted
+[Sat Jul 11 21:56:12 2026] 127.0.0.1:37936 [200]: GET /views/cargos_form.php?id=1
+[Sat Jul 11 21:56:12 2026] 127.0.0.1:37936 Closing
+[Sat Jul 11 21:56:13 2026] 127.0.0.1:37948 Accepted
+[Sat Jul 11 21:56:13 2026] 127.0.0.1:37948 [200]: GET /scripts/cargos_form.js?v=4
+[Sat Jul 11 21:56:13 2026] 127.0.0.1:37948 Closing
+[Sat Jul 11 21:56:47 2026] 127.0.0.1:32896 Accepted
+[Sat Jul 11 21:56:47 2026] 127.0.0.1:32896 [200]: GET /views/cargos_form.php?id=13
+[Sat Jul 11 21:56:47 2026] 127.0.0.1:32896 Closing
+[Sat Jul 11 21:58:31 2026] 127.0.0.1:44210 Accepted
+[Sat Jul 11 21:58:31 2026] 127.0.0.1:44210 [200]: GET /views/cargos_form.php?id=1
+[Sat Jul 11 21:58:31 2026] 127.0.0.1:44210 Closing
+[Sat Jul 11 21:58:32 2026] 127.0.0.1:44212 Accepted
+[Sat Jul 11 21:58:32 2026] 127.0.0.1:44212 [200]: GET /scripts/cargos_form.js?v=5
+[Sat Jul 11 21:58:32 2026] 127.0.0.1:44212 Closing
+[Sat Jul 11 22:01:08 2026] 127.0.0.1:56130 Accepted
+[Sat Jul 11 22:01:08 2026] 127.0.0.1:56130 [200]: GET /views/cargos_form.php?id=1
+[Sat Jul 11 22:01:08 2026] 127.0.0.1:56130 Closing
+[Sat Jul 11 22:01:09 2026] 127.0.0.1:56146 Accepted
+[Sat Jul 11 22:01:09 2026] 127.0.0.1:56146 [200]: GET /scripts/cargos_form.js?v=5
+[Sat Jul 11 22:01:09 2026] 127.0.0.1:56146 Closing
+[Sat Jul 11 22:01:36 2026] 127.0.0.1:52556 Accepted
+[Sat Jul 11 22:01:36 2026] 127.0.0.1:52556 [200]: GET /views/cargos.php
+[Sat Jul 11 22:01:36 2026] 127.0.0.1:52556 Closing
+[Sat Jul 11 22:01:38 2026] 127.0.0.1:54756 Accepted
+[Sat Jul 11 22:01:38 2026] 127.0.0.1:54756 [200]: GET /views/cargos_form.php?id=2
+[Sat Jul 11 22:01:38 2026] 127.0.0.1:54756 Closing
+[Sat Jul 11 22:01:38 2026] 127.0.0.1:54762 Accepted
+[Sat Jul 11 22:01:38 2026] 127.0.0.1:54762 [200]: GET /scripts/cargos_form.js?v=5
+[Sat Jul 11 22:01:38 2026] 127.0.0.1:54762 Closing
+[Sat Jul 11 22:13:09 2026] 127.0.0.1:42230 Accepted
+[Sat Jul 11 22:13:09 2026] 127.0.0.1:42230 [302]: GET /views/cargos_form.php?id=1
+[Sat Jul 11 22:13:09 2026] 127.0.0.1:42230 Closing
+[Sat Jul 11 22:13:09 2026] 127.0.0.1:42242 Accepted
+[Sat Jul 11 22:13:09 2026] 127.0.0.1:42242 [200]: GET /login.php
+[Sat Jul 11 22:13:09 2026] 127.0.0.1:42242 Closing
+[Sat Jul 11 22:13:09 2026] 127.0.0.1:42252 Accepted
+[Sat Jul 11 22:13:09 2026] 127.0.0.1:42252 [404]: GET /favicon.ico - No such file or directory
+[Sat Jul 11 22:13:09 2026] 127.0.0.1:42252 Closing
+[Sat Jul 11 22:13:20 2026] 127.0.0.1:58384 Accepted
+[Sat Jul 11 22:13:20 2026] 127.0.0.1:58384 [200]: POST /login.php
+[Sat Jul 11 22:13:20 2026] 127.0.0.1:58384 Closing
+[Sat Jul 11 22:13:20 2026] 127.0.0.1:58388 Accepted
+[Sat Jul 11 22:13:20 2026] 127.0.0.1:58388 [302]: GET /views/cargos_form.php?id=5
+[Sat Jul 11 22:13:20 2026] 127.0.0.1:58388 Closing
+[Sat Jul 11 22:13:25 2026] 127.0.0.1:58402 Accepted
+[Sat Jul 11 22:13:25 2026] 127.0.0.1:58402 [200]: POST /login.php
+[Sat Jul 11 22:13:25 2026] 127.0.0.1:58402 Closing
+[Sat Jul 11 22:13:58 2026] 127.0.0.1:59546 Accepted
+[Sat Jul 11 22:13:58 2026] 127.0.0.1:59546 [200]: POST /login.php
+[Sat Jul 11 22:13:58 2026] 127.0.0.1:59546 Closing
+[Sat Jul 11 22:13:58 2026] 127.0.0.1:59556 Accepted
+[Sat Jul 11 22:13:58 2026] 127.0.0.1:59556 [302]: GET /views/cargos_form.php?id=5
+[Sat Jul 11 22:13:58 2026] 127.0.0.1:59556 Closing
+[Sat Jul 11 22:14:06 2026] 127.0.0.1:59558 Accepted
+[Sat Jul 11 22:14:06 2026] 127.0.0.1:59558 [200]: POST /login.php
+[Sat Jul 11 22:14:06 2026] 127.0.0.1:59558 Closing
+[Sat Jul 11 22:14:06 2026] 127.0.0.1:59568 Accepted
+[Sat Jul 11 22:14:06 2026] 127.0.0.1:59568 [302]: GET /views/cargos_form.php?id=5
+[Sat Jul 11 22:14:06 2026] 127.0.0.1:59568 Closing
+[Sat Jul 11 22:14:30 2026] 127.0.0.1:38012 Accepted
+[Sat Jul 11 22:14:30 2026] 127.0.0.1:38012 [302]: POST /login.php
+[Sat Jul 11 22:14:30 2026] 127.0.0.1:38012 Closing
+[Sat Jul 11 22:14:30 2026] 127.0.0.1:38026 Accepted
+[Sat Jul 11 22:14:30 2026] 127.0.0.1:38026 [200]: POST /index.php
+[Sat Jul 11 22:14:30 2026] 127.0.0.1:38026 Closing
+[Sat Jul 11 22:14:30 2026] 127.0.0.1:38042 Accepted
+[Sat Jul 11 22:14:31 2026] 127.0.0.1:38042 [200]: GET /views/cargos_form.php?id=5
+[Sat Jul 11 22:14:31 2026] 127.0.0.1:38042 Closing
+[Sat Jul 11 22:14:36 2026] 127.0.0.1:38052 Accepted
+[Sat Jul 11 22:14:36 2026] 127.0.0.1:38052 [200]: GET /views/cargos_form.php?id=5
+[Sat Jul 11 22:14:36 2026] 127.0.0.1:38052 Closing
+[Sat Jul 11 22:14:37 2026] 127.0.0.1:43504 Accepted
+[Sat Jul 11 22:14:37 2026] 127.0.0.1:43504 [302]: GET /views/cargos_form.php?id=5
+[Sat Jul 11 22:14:37 2026] 127.0.0.1:43504 Closing
+[Sat Jul 11 22:14:37 2026] 127.0.0.1:43508 Accepted
+[Sat Jul 11 22:14:37 2026] 127.0.0.1:43508 [200]: GET /login.php
+[Sat Jul 11 22:14:37 2026] 127.0.0.1:43508 Closing
+[Sat Jul 11 22:15:06 2026] 127.0.0.1:39724 Accepted
+[Sat Jul 11 22:15:06 2026] 127.0.0.1:39724 [200]: GET /views/cargos_form.php?id=2
+[Sat Jul 11 22:15:06 2026] 127.0.0.1:39724 Closing
+[Sat Jul 11 22:15:07 2026] 127.0.0.1:60084 Accepted
+[Sat Jul 11 22:15:07 2026] 127.0.0.1:60084 [200]: GET /scripts/cargos_form.js?v=5
+[Sat Jul 11 22:15:07 2026] 127.0.0.1:60084 Closing
+[Sat Jul 11 22:15:12 2026] 127.0.0.1:60098 Accepted
+[Sat Jul 11 22:15:12 2026] 127.0.0.1:60098 [200]: GET /views/cargos_form.php?id=3
+[Sat Jul 11 22:15:12 2026] 127.0.0.1:60098 Closing
+[Sat Jul 11 22:15:12 2026] 127.0.0.1:60106 Accepted
+[Sat Jul 11 22:15:12 2026] 127.0.0.1:60106 [200]: GET /scripts/cargos_form.js?v=5
+[Sat Jul 11 22:15:12 2026] 127.0.0.1:60106 Closing
+[Sat Jul 11 22:15:14 2026] 127.0.0.1:60120 Accepted
+[Sat Jul 11 22:15:14 2026] 127.0.0.1:60120 [200]: GET /views/cargos_form.php?id=2
+[Sat Jul 11 22:15:14 2026] 127.0.0.1:60120 Closing
+[Sat Jul 11 22:15:14 2026] 127.0.0.1:60128 Accepted
+[Sat Jul 11 22:15:14 2026] 127.0.0.1:60128 [200]: GET /scripts/cargos_form.js?v=5
+[Sat Jul 11 22:15:14 2026] 127.0.0.1:60128 Closing

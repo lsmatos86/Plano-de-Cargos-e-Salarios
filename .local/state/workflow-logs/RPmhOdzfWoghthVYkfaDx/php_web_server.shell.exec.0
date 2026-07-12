@@ -1,0 +1,97 @@
+[Sun Jul 12 18:41:03 2026] PHP 8.2.23 Development Server (http://0.0.0.0:5000) started
+[Sun Jul 12 18:46:12 2026] 127.0.0.1:48844 Accepted
+[Sun Jul 12 18:46:14 2026] 127.0.0.1:48844 [302]: GET /views/nivel_hierarquico.php
+[Sun Jul 12 18:46:14 2026] 127.0.0.1:48844 Closing
+[Sun Jul 12 18:46:14 2026] 127.0.0.1:48848 Accepted
+[Sun Jul 12 18:46:14 2026] 127.0.0.1:48848 [200]: GET /login.php
+[Sun Jul 12 18:46:14 2026] 127.0.0.1:48848 Closing
+[Sun Jul 12 18:46:23 2026] 127.0.0.1:56024 Accepted
+[Sun Jul 12 18:46:23 2026] 127.0.0.1:56024 [200]: GET /login.php
+[Sun Jul 12 18:46:23 2026] 127.0.0.1:56024 Closing
+[Sun Jul 12 18:46:32 2026] 127.0.0.1:53290 Accepted
+[Sun Jul 12 18:46:32 2026] 127.0.0.1:53290 [302]: POST /login.php
+[Sun Jul 12 18:46:32 2026] 127.0.0.1:53290 Closing
+[Sun Jul 12 18:46:32 2026] 127.0.0.1:53292 Accepted
+[Sun Jul 12 18:46:32 2026] 127.0.0.1:53292 [200]: GET /index.php
+[Sun Jul 12 18:46:32 2026] 127.0.0.1:53292 Closing
+[Sun Jul 12 18:46:32 2026] 127.0.0.1:53300 Accepted
+[Sun Jul 12 18:46:32 2026] 127.0.0.1:53300 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 18:46:32 2026] 127.0.0.1:53300 Closing
+[Sun Jul 12 18:46:33 2026] 127.0.0.1:53314 Accepted
+[Sun Jul 12 18:46:33 2026] 127.0.0.1:53314 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 18:46:33 2026] 127.0.0.1:53314 Closing
+[Sun Jul 12 18:46:41 2026] 127.0.0.1:43912 Accepted
+[Sun Jul 12 18:46:41 2026] 127.0.0.1:43912 [200]: GET /views/nivel_hierarquico.php
+[Sun Jul 12 18:46:41 2026] 127.0.0.1:43912 Closing
+[Sun Jul 12 18:46:42 2026] 127.0.0.1:43924 Accepted
+[Sun Jul 12 18:46:42 2026] 127.0.0.1:43924 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 18:46:42 2026] 127.0.0.1:43924 Closing
+[Sun Jul 12 18:46:42 2026] 127.0.0.1:43928 Accepted
+[Sun Jul 12 18:46:42 2026] 127.0.0.1:43928 [200]: GET /scripts/nivel_hierarquico.js?v=1783882001
+[Sun Jul 12 18:46:42 2026] 127.0.0.1:43928 Closing
+[Sun Jul 12 18:46:42 2026] 127.0.0.1:43932 Accepted
+[Sun Jul 12 18:46:42 2026] 127.0.0.1:43932 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 18:46:42 2026] 127.0.0.1:43932 Closing
+[Sun Jul 12 18:49:32 2026] 127.0.0.1:47314 Accepted
+[Sun Jul 12 18:49:32 2026] 127.0.0.1:47314 [200]: GET /views/cargos.php
+[Sun Jul 12 18:49:32 2026] 127.0.0.1:47314 Closing
+[Sun Jul 12 18:49:32 2026] 127.0.0.1:47322 Accepted
+[Sun Jul 12 18:49:32 2026] 127.0.0.1:47322 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 18:49:32 2026] 127.0.0.1:47322 Closing
+[Sun Jul 12 18:49:33 2026] 127.0.0.1:47324 Accepted
+[Sun Jul 12 18:49:33 2026] 127.0.0.1:47324 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 18:49:33 2026] 127.0.0.1:47324 Closing
+[Sun Jul 12 18:58:54 2026] 127.0.0.1:49748 Accepted
+[Sun Jul 12 18:58:54 2026] 127.0.0.1:49748 [302]: GET /login.php
+[Sun Jul 12 18:58:54 2026] 127.0.0.1:49748 Closing
+[Sun Jul 12 18:58:54 2026] 127.0.0.1:49760 Accepted
+[Sun Jul 12 18:58:54 2026] 127.0.0.1:49760 [200]: GET /index.php
+[Sun Jul 12 18:58:54 2026] 127.0.0.1:49760 Closing
+[Sun Jul 12 18:58:54 2026] 127.0.0.1:49768 Accepted
+[Sun Jul 12 18:58:54 2026] 127.0.0.1:49768 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 18:58:54 2026] 127.0.0.1:49768 Closing
+[Sun Jul 12 18:58:55 2026] 127.0.0.1:49774 Accepted
+[Sun Jul 12 18:58:55 2026] 127.0.0.1:49774 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 18:58:55 2026] 127.0.0.1:49774 Closing
+[Sun Jul 12 18:59:27 2026] 127.0.0.1:38238 Accepted
+[Sun Jul 12 18:59:27 2026] 127.0.0.1:38238 [302]: GET /login.php
+[Sun Jul 12 18:59:27 2026] 127.0.0.1:38238 Closing
+[Sun Jul 12 18:59:28 2026] 127.0.0.1:38246 Accepted
+[Sun Jul 12 18:59:28 2026] 127.0.0.1:38246 [200]: GET /index.php
+[Sun Jul 12 18:59:28 2026] 127.0.0.1:38246 Closing
+[Sun Jul 12 18:59:28 2026] 127.0.0.1:38260 Accepted
+[Sun Jul 12 18:59:28 2026] 127.0.0.1:38260 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 18:59:28 2026] 127.0.0.1:38260 Closing
+[Sun Jul 12 18:59:29 2026] 127.0.0.1:38268 Accepted
+[Sun Jul 12 18:59:29 2026] 127.0.0.1:38268 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 18:59:29 2026] 127.0.0.1:38268 Closing
+[Sun Jul 12 19:04:27 2026] 127.0.0.1:60528 Accepted
+[Sun Jul 12 19:04:27 2026] 127.0.0.1:60528 [302]: GET /login.php
+[Sun Jul 12 19:04:27 2026] 127.0.0.1:60528 Closing
+[Sun Jul 12 19:04:28 2026] 127.0.0.1:60536 Accepted
+[Sun Jul 12 19:04:28 2026] 127.0.0.1:60536 [200]: GET /index.php
+[Sun Jul 12 19:04:28 2026] 127.0.0.1:60536 Closing
+[Sun Jul 12 19:04:28 2026] 127.0.0.1:60542 Accepted
+[Sun Jul 12 19:04:28 2026] 127.0.0.1:60542 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 19:04:28 2026] 127.0.0.1:60542 Closing
+[Sun Jul 12 19:04:29 2026] 127.0.0.1:60550 Accepted
+[Sun Jul 12 19:04:29 2026] 127.0.0.1:60550 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 19:04:29 2026] 127.0.0.1:60550 Closing
+[Sun Jul 12 19:08:15 2026] 127.0.0.1:38650 Accepted
+[Sun Jul 12 19:08:15 2026] 127.0.0.1:38650 [302]: GET /login.php
+[Sun Jul 12 19:08:15 2026] 127.0.0.1:38650 Closing
+[Sun Jul 12 19:08:15 2026] 127.0.0.1:38662 Accepted
+[Sun Jul 12 19:08:15 2026] 127.0.0.1:38662 [200]: GET /index.php
+[Sun Jul 12 19:08:15 2026] 127.0.0.1:38662 Closing
+[Sun Jul 12 19:08:16 2026] 127.0.0.1:38674 Accepted
+[Sun Jul 12 19:08:16 2026] 127.0.0.1:38674 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 19:08:16 2026] 127.0.0.1:38674 Closing
+[Sun Jul 12 19:08:16 2026] 127.0.0.1:38678 Accepted
+[Sun Jul 12 19:08:16 2026] 127.0.0.1:38678 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 19:08:16 2026] 127.0.0.1:38678 Closing
+[Sun Jul 12 19:25:10 2026] 127.0.0.1:45736 Accepted
+[Sun Jul 12 19:25:10 2026] 127.0.0.1:45736 [302]: GET /
+[Sun Jul 12 19:25:10 2026] 127.0.0.1:45736 Closing
+[Sun Jul 12 19:25:10 2026] 127.0.0.1:45744 Accepted
+[Sun Jul 12 19:25:10 2026] 127.0.0.1:45744 [200]: GET /login.php
+[Sun Jul 12 19:25:10 2026] 127.0.0.1:45744 Closing

@@ -1,0 +1,1666 @@
+[Sat Jul 11 22:42:35 2026] PHP 8.2.23 Development Server (http://0.0.0.0:5000) started
+[Sat Jul 11 22:42:37 2026] 127.0.0.1:48296 Accepted
+[Sat Jul 11 22:42:37 2026] 127.0.0.1:48296 [200]: GET /views/cargos_form.php?id=2
+[Sat Jul 11 22:42:37 2026] 127.0.0.1:48296 Closing
+[Sat Jul 11 22:42:38 2026] 127.0.0.1:48306 Accepted
+[Sat Jul 11 22:42:38 2026] 127.0.0.1:48306 [200]: GET /css/fa/all.min.css
+[Sat Jul 11 22:42:38 2026] 127.0.0.1:48306 Closing
+[Sat Jul 11 22:42:38 2026] 127.0.0.1:48308 Accepted
+[Sat Jul 11 22:42:38 2026] 127.0.0.1:48308 [200]: GET /scripts/cargos_form.js?v=6
+[Sat Jul 11 22:42:38 2026] 127.0.0.1:48308 Closing
+[Sat Jul 11 22:42:38 2026] 127.0.0.1:48314 Accepted
+[Sat Jul 11 22:42:38 2026] 127.0.0.1:48314 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sat Jul 11 22:42:38 2026] 127.0.0.1:48314 Closing
+[Sat Jul 11 22:42:54 2026] 127.0.0.1:50792 Accepted
+[Sat Jul 11 22:42:54 2026] 127.0.0.1:50792 [302]: GET /views/organograma.php
+[Sat Jul 11 22:42:54 2026] 127.0.0.1:50792 Closing
+[Sat Jul 11 22:42:54 2026] 127.0.0.1:50808 Accepted
+[Sat Jul 11 22:42:54 2026] 127.0.0.1:50808 [200]: GET /login.php
+[Sat Jul 11 22:42:54 2026] 127.0.0.1:50808 Closing
+[Sat Jul 11 22:46:05 2026] 127.0.0.1:48390 Accepted
+[Sat Jul 11 22:46:05 2026] 127.0.0.1:48390 [200]: GET /views/organograma.php
+[Sat Jul 11 22:46:05 2026] 127.0.0.1:48390 Closing
+[Sat Jul 11 22:46:06 2026] 127.0.0.1:48404 Accepted
+[Sat Jul 11 22:46:06 2026] 127.0.0.1:48404 [200]: GET /css/fa/all.min.css
+[Sat Jul 11 22:46:06 2026] 127.0.0.1:48404 Closing
+[Sat Jul 11 22:46:06 2026] 127.0.0.1:33240 Accepted
+[Sat Jul 11 22:46:06 2026] 127.0.0.1:33240 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sat Jul 11 22:46:06 2026] 127.0.0.1:33240 Closing
+[Sat Jul 11 22:47:18 2026] 127.0.0.1:57028 Accepted
+[Sat Jul 11 22:47:18 2026] 127.0.0.1:57028 [200]: GET /views/faixas_salariais.php
+[Sat Jul 11 22:47:18 2026] 127.0.0.1:57028 Closing
+[Sat Jul 11 22:47:18 2026] 127.0.0.1:57032 Accepted
+[Sat Jul 11 22:47:18 2026] 127.0.0.1:57032 [200]: GET /css/fa/all.min.css
+[Sat Jul 11 22:47:18 2026] 127.0.0.1:57032 Closing
+[Sat Jul 11 22:47:19 2026] 127.0.0.1:57034 Accepted
+[Sat Jul 11 22:47:19 2026] 127.0.0.1:57034 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sat Jul 11 22:47:19 2026] 127.0.0.1:57034 Closing
+[Sat Jul 11 22:47:24 2026] 127.0.0.1:57036 Accepted
+[Sat Jul 11 22:47:24 2026] 127.0.0.1:57036 [200]: GET /views/cargos.php
+[Sat Jul 11 22:47:24 2026] 127.0.0.1:57036 Closing
+[Sat Jul 11 22:47:24 2026] 127.0.0.1:57052 Accepted
+[Sat Jul 11 22:47:24 2026] 127.0.0.1:57052 [200]: GET /css/fa/all.min.css
+[Sat Jul 11 22:47:24 2026] 127.0.0.1:57052 Closing
+[Sat Jul 11 22:47:25 2026] 127.0.0.1:57062 Accepted
+[Sat Jul 11 22:47:25 2026] 127.0.0.1:57062 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sat Jul 11 22:47:25 2026] 127.0.0.1:57062 Closing
+[Sat Jul 11 22:50:37 2026] 127.0.0.1:35386 Accepted
+[Sat Jul 11 22:50:37 2026] 127.0.0.1:35386 [302]: GET /
+[Sat Jul 11 22:50:37 2026] 127.0.0.1:35386 Closing
+[Sat Jul 11 22:50:37 2026] 127.0.0.1:35400 Accepted
+[Sat Jul 11 22:50:37 2026] 127.0.0.1:35400 [200]: GET /login.php
+[Sat Jul 11 22:50:37 2026] 127.0.0.1:35400 Closing
+[Sat Jul 11 22:56:29 2026] 127.0.0.1:41404 Accepted
+[Sat Jul 11 22:56:29 2026] 127.0.0.1:41404 [200]: GET /views/cbos.php - Uncaught Error: Call to undefined method App\Repository\FamiliaCboRepository::findAllSimple() in /home/runner/workspace/views/cbos.php:102
+Stack trace:
+#0 {main}
+  thrown in /home/runner/workspace/views/cbos.php on line 102
+[Sat Jul 11 22:56:29 2026] 127.0.0.1:41404 Closing
+[Sat Jul 11 22:56:52 2026] 127.0.0.1:49478 Accepted
+[Sat Jul 11 22:56:52 2026] 127.0.0.1:49478 [302]: GET /views/cbos.php
+[Sat Jul 11 22:56:52 2026] 127.0.0.1:49478 Closing
+[Sat Jul 11 22:57:03 2026] 127.0.0.1:51746 Accepted
+[Sat Jul 11 22:57:03 2026] 127.0.0.1:51746 [200]: GET /views/cargos.php
+[Sat Jul 11 22:57:03 2026] 127.0.0.1:51746 Closing
+[Sat Jul 11 22:57:03 2026] 127.0.0.1:51754 Accepted
+[Sat Jul 11 22:57:03 2026] 127.0.0.1:51754 [200]: GET /css/fa/all.min.css
+[Sat Jul 11 22:57:03 2026] 127.0.0.1:51754 Closing
+[Sat Jul 11 22:57:04 2026] 127.0.0.1:51766 Accepted
+[Sat Jul 11 22:57:04 2026] 127.0.0.1:51766 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sat Jul 11 22:57:04 2026] 127.0.0.1:51766 Closing
+[Sat Jul 11 22:57:06 2026] 127.0.0.1:52632 Accepted
+[Sat Jul 11 22:57:06 2026] 127.0.0.1:52632 [200]: GET /views/cbos.php - Uncaught TypeError: Cannot access offset of type string on string in /home/runner/workspace/views/cbos.php:182
+Stack trace:
+#0 {main}
+  thrown in /home/runner/workspace/views/cbos.php on line 182
+[Sat Jul 11 22:57:06 2026] 127.0.0.1:52632 Closing
+[Sat Jul 11 22:57:07 2026] 127.0.0.1:52642 Accepted
+[Sat Jul 11 22:57:07 2026] 127.0.0.1:52642 [200]: GET /css/fa/all.min.css
+[Sat Jul 11 22:57:07 2026] 127.0.0.1:52642 Closing
+[Sat Jul 11 22:57:07 2026] 127.0.0.1:52646 Accepted
+[Sat Jul 11 22:57:07 2026] 127.0.0.1:52646 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sat Jul 11 22:57:07 2026] 127.0.0.1:52646 Closing
+[Sat Jul 11 22:57:31 2026] 127.0.0.1:46708 Accepted
+[Sat Jul 11 22:57:31 2026] 127.0.0.1:46708 [200]: GET /views/cargos.php
+[Sat Jul 11 22:57:31 2026] 127.0.0.1:46708 Closing
+[Sat Jul 11 22:57:31 2026] 127.0.0.1:46724 Accepted
+[Sat Jul 11 22:57:31 2026] 127.0.0.1:46724 [200]: GET /css/fa/all.min.css
+[Sat Jul 11 22:57:31 2026] 127.0.0.1:46724 Closing
+[Sat Jul 11 22:57:32 2026] 127.0.0.1:46728 Accepted
+[Sat Jul 11 22:57:32 2026] 127.0.0.1:46728 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sat Jul 11 22:57:32 2026] 127.0.0.1:46728 Closing
+[Sat Jul 11 22:57:37 2026] 127.0.0.1:57554 Accepted
+[Sat Jul 11 22:57:37 2026] 127.0.0.1:57554 [302]: GET /views/cbos.php
+[Sat Jul 11 22:57:37 2026] 127.0.0.1:57554 Closing
+[Sat Jul 11 22:57:39 2026] 127.0.0.1:57562 Accepted
+[Sat Jul 11 22:57:39 2026] 127.0.0.1:57562 [200]: GET /views/usuarios.php
+[Sat Jul 11 22:57:39 2026] 127.0.0.1:57562 Closing
+[Sat Jul 11 22:57:39 2026] 127.0.0.1:57566 Accepted
+[Sat Jul 11 22:57:39 2026] 127.0.0.1:57566 [200]: GET /css/fa/all.min.css
+[Sat Jul 11 22:57:39 2026] 127.0.0.1:57566 Closing
+[Sat Jul 11 22:57:40 2026] 127.0.0.1:57582 Accepted
+[Sat Jul 11 22:57:40 2026] 127.0.0.1:57582 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sat Jul 11 22:57:40 2026] 127.0.0.1:57582 Closing
+[Sat Jul 11 22:57:49 2026] 127.0.0.1:35164 Accepted
+[Sat Jul 11 22:57:49 2026] 127.0.0.1:35164 [200]: GET /views/roles.php
+[Sat Jul 11 22:57:49 2026] 127.0.0.1:35164 Closing
+[Sat Jul 11 22:57:49 2026] 127.0.0.1:35168 Accepted
+[Sat Jul 11 22:57:49 2026] 127.0.0.1:35168 [200]: GET /css/fa/all.min.css
+[Sat Jul 11 22:57:49 2026] 127.0.0.1:35168 Closing
+[Sat Jul 11 22:57:50 2026] 127.0.0.1:35176 Accepted
+[Sat Jul 11 22:57:50 2026] 127.0.0.1:35176 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sat Jul 11 22:57:50 2026] 127.0.0.1:35176 Closing
+[Sat Jul 11 22:57:58 2026] 127.0.0.1:46448 Accepted
+[Sat Jul 11 22:57:58 2026] 127.0.0.1:46448 [200]: GET /views/auditoria.php
+[Sat Jul 11 22:57:58 2026] 127.0.0.1:46448 Closing
+[Sat Jul 11 22:57:58 2026] 127.0.0.1:46450 Accepted
+[Sat Jul 11 22:57:58 2026] 127.0.0.1:46450 [200]: GET /css/fa/all.min.css
+[Sat Jul 11 22:57:58 2026] 127.0.0.1:46450 Closing
+[Sat Jul 11 22:57:59 2026] 127.0.0.1:46462 Accepted
+[Sat Jul 11 22:57:59 2026] 127.0.0.1:46462 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sat Jul 11 22:57:59 2026] 127.0.0.1:46462 Closing
+[Sat Jul 11 22:58:14 2026] 127.0.0.1:58190 Accepted
+[Sat Jul 11 22:58:14 2026] 127.0.0.1:58190 [200]: GET /views/cbos.php
+[Sat Jul 11 22:58:14 2026] 127.0.0.1:58190 Closing
+[Sat Jul 11 22:58:14 2026] 127.0.0.1:58200 Accepted
+[Sat Jul 11 22:58:14 2026] 127.0.0.1:58200 [200]: GET /css/fa/all.min.css
+[Sat Jul 11 22:58:14 2026] 127.0.0.1:58200 Closing
+[Sat Jul 11 22:58:15 2026] 127.0.0.1:58202 Accepted
+[Sat Jul 11 22:58:15 2026] 127.0.0.1:58202 [200]: GET /scripts/cbos.js?v=1783810694
+[Sat Jul 11 22:58:15 2026] 127.0.0.1:58202 Closing
+[Sat Jul 11 22:58:15 2026] 127.0.0.1:58216 Accepted
+[Sat Jul 11 22:58:15 2026] 127.0.0.1:58216 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sat Jul 11 22:58:15 2026] 127.0.0.1:58216 Closing
+[Sat Jul 11 23:00:32 2026] 127.0.0.1:39856 Accepted
+[Sat Jul 11 23:00:32 2026] 127.0.0.1:39856 [200]: GET /views/cbos.php
+[Sat Jul 11 23:00:32 2026] 127.0.0.1:39856 Closing
+[Sat Jul 11 23:00:32 2026] 127.0.0.1:39872 Accepted
+[Sat Jul 11 23:00:32 2026] 127.0.0.1:39872 [200]: GET /css/fa/all.min.css
+[Sat Jul 11 23:00:32 2026] 127.0.0.1:39872 Closing
+[Sat Jul 11 23:00:32 2026] 127.0.0.1:39884 Accepted
+[Sat Jul 11 23:00:32 2026] 127.0.0.1:39884 [200]: GET /scripts/cbos.js?v=1783810832
+[Sat Jul 11 23:00:32 2026] 127.0.0.1:39884 Closing
+[Sat Jul 11 23:00:33 2026] 127.0.0.1:39892 Accepted
+[Sat Jul 11 23:00:33 2026] 127.0.0.1:39892 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sat Jul 11 23:00:33 2026] 127.0.0.1:39892 Closing
+[Sat Jul 11 23:00:40 2026] 127.0.0.1:43216 Accepted
+[Sat Jul 11 23:00:41 2026] 127.0.0.1:43216 [200]: GET /views/cbos.php?term=&sort_col=c.cboId&sort_dir=ASC&page=2&limit=10
+[Sat Jul 11 23:00:41 2026] 127.0.0.1:43216 Closing
+[Sat Jul 11 23:00:41 2026] 127.0.0.1:43226 Accepted
+[Sat Jul 11 23:00:41 2026] 127.0.0.1:43226 [200]: GET /css/fa/all.min.css
+[Sat Jul 11 23:00:41 2026] 127.0.0.1:43226 Closing
+[Sat Jul 11 23:00:41 2026] 127.0.0.1:43228 Accepted
+[Sat Jul 11 23:00:41 2026] 127.0.0.1:43228 [200]: GET /scripts/cbos.js?v=1783810841
+[Sat Jul 11 23:00:41 2026] 127.0.0.1:43228 Closing
+[Sat Jul 11 23:00:42 2026] 127.0.0.1:43230 Accepted
+[Sat Jul 11 23:00:42 2026] 127.0.0.1:43230 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sat Jul 11 23:00:42 2026] 127.0.0.1:43230 Closing
+[Sat Jul 11 23:00:46 2026] 127.0.0.1:43244 Accepted
+[Sat Jul 11 23:00:46 2026] 127.0.0.1:43244 [200]: GET /views/cbos.php?term=&sort_col=c.cboTituloOficial&sort_dir=ASC&limit=10
+[Sat Jul 11 23:00:46 2026] 127.0.0.1:43244 Closing
+[Sat Jul 11 23:00:46 2026] 127.0.0.1:43252 Accepted
+[Sat Jul 11 23:00:46 2026] 127.0.0.1:43252 [200]: GET /css/fa/all.min.css
+[Sat Jul 11 23:00:46 2026] 127.0.0.1:43252 Closing
+[Sat Jul 11 23:00:46 2026] 127.0.0.1:43256 Accepted
+[Sat Jul 11 23:00:46 2026] 127.0.0.1:43256 [200]: GET /scripts/cbos.js?v=1783810846
+[Sat Jul 11 23:00:46 2026] 127.0.0.1:43256 Closing
+[Sat Jul 11 23:00:47 2026] 127.0.0.1:37320 Accepted
+[Sat Jul 11 23:00:47 2026] 127.0.0.1:37320 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sat Jul 11 23:00:47 2026] 127.0.0.1:37320 Closing
+[Sat Jul 11 23:00:48 2026] 127.0.0.1:37334 Accepted
+[Sat Jul 11 23:00:48 2026] 127.0.0.1:37334 [200]: GET /views/cbos.php?term=&sort_col=c.cboTituloOficial&sort_dir=DESC&limit=10
+[Sat Jul 11 23:00:48 2026] 127.0.0.1:37334 Closing
+[Sat Jul 11 23:00:49 2026] 127.0.0.1:37348 Accepted
+[Sat Jul 11 23:00:49 2026] 127.0.0.1:37348 [200]: GET /css/fa/all.min.css
+[Sat Jul 11 23:00:49 2026] 127.0.0.1:37348 Closing
+[Sat Jul 11 23:00:49 2026] 127.0.0.1:37364 Accepted
+[Sat Jul 11 23:00:49 2026] 127.0.0.1:37364 [200]: GET /scripts/cbos.js?v=1783810848
+[Sat Jul 11 23:00:49 2026] 127.0.0.1:37364 Closing
+[Sat Jul 11 23:00:49 2026] 127.0.0.1:37378 Accepted
+[Sat Jul 11 23:00:49 2026] 127.0.0.1:37378 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sat Jul 11 23:00:49 2026] 127.0.0.1:37378 Closing
+[Sat Jul 11 23:00:51 2026] 127.0.0.1:37394 Accepted
+[Sat Jul 11 23:00:51 2026] 127.0.0.1:37394 [200]: GET /views/cbos.php?term=&sort_col=c.cboTituloOficial&sort_dir=ASC&limit=10
+[Sat Jul 11 23:00:51 2026] 127.0.0.1:37394 Closing
+[Sat Jul 11 23:00:52 2026] 127.0.0.1:37396 Accepted
+[Sat Jul 11 23:00:52 2026] 127.0.0.1:37396 [200]: GET /css/fa/all.min.css
+[Sat Jul 11 23:00:52 2026] 127.0.0.1:37396 Closing
+[Sat Jul 11 23:00:52 2026] 127.0.0.1:37404 Accepted
+[Sat Jul 11 23:00:52 2026] 127.0.0.1:37404 [200]: GET /scripts/cbos.js?v=1783810851
+[Sat Jul 11 23:00:52 2026] 127.0.0.1:37404 Closing
+[Sat Jul 11 23:00:52 2026] 127.0.0.1:37414 Accepted
+[Sat Jul 11 23:00:52 2026] 127.0.0.1:37414 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sat Jul 11 23:00:52 2026] 127.0.0.1:37414 Closing
+[Sat Jul 11 23:00:55 2026] 127.0.0.1:37418 Accepted
+[Sat Jul 11 23:00:55 2026] 127.0.0.1:37418 [200]: GET /views/habilidades.php
+[Sat Jul 11 23:00:55 2026] 127.0.0.1:37418 Closing
+[Sat Jul 11 23:00:55 2026] 127.0.0.1:37420 Accepted
+[Sat Jul 11 23:00:55 2026] 127.0.0.1:37420 [200]: GET /css/fa/all.min.css
+[Sat Jul 11 23:00:55 2026] 127.0.0.1:37420 Closing
+[Sat Jul 11 23:00:55 2026] 127.0.0.1:37434 Accepted
+[Sat Jul 11 23:00:55 2026] 127.0.0.1:37434 [200]: GET /scripts/habilidades.js?v=1783810855
+[Sat Jul 11 23:00:55 2026] 127.0.0.1:37434 Closing
+[Sat Jul 11 23:00:56 2026] 127.0.0.1:37436 Accepted
+[Sat Jul 11 23:00:56 2026] 127.0.0.1:37436 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sat Jul 11 23:00:56 2026] 127.0.0.1:37436 Closing
+[Sat Jul 11 23:01:00 2026] 127.0.0.1:53738 Accepted
+[Sat Jul 11 23:01:00 2026] 127.0.0.1:53738 [200]: GET /views/habilidades.php?term=risco&sort_col=habilidadeId&sort_dir=ASC
+[Sat Jul 11 23:01:00 2026] 127.0.0.1:53738 Closing
+[Sat Jul 11 23:01:00 2026] 127.0.0.1:53754 Accepted
+[Sat Jul 11 23:01:00 2026] 127.0.0.1:53754 [200]: GET /css/fa/all.min.css
+[Sat Jul 11 23:01:00 2026] 127.0.0.1:53754 Closing
+[Sat Jul 11 23:01:00 2026] 127.0.0.1:53758 Accepted
+[Sat Jul 11 23:01:00 2026] 127.0.0.1:53758 [200]: GET /scripts/habilidades.js?v=1783810860
+[Sat Jul 11 23:01:00 2026] 127.0.0.1:53758 Closing
+[Sat Jul 11 23:01:01 2026] 127.0.0.1:53760 Accepted
+[Sat Jul 11 23:01:01 2026] 127.0.0.1:53760 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sat Jul 11 23:01:01 2026] 127.0.0.1:53760 Closing
+[Sat Jul 11 23:01:05 2026] 127.0.0.1:53768 Accepted
+[Sat Jul 11 23:01:05 2026] 127.0.0.1:53768 [200]: GET /views/caracteristicas.php
+[Sat Jul 11 23:01:05 2026] 127.0.0.1:53768 Closing
+[Sat Jul 11 23:01:05 2026] 127.0.0.1:53774 Accepted
+[Sat Jul 11 23:01:05 2026] 127.0.0.1:53774 [200]: GET /css/fa/all.min.css
+[Sat Jul 11 23:01:05 2026] 127.0.0.1:53774 Closing
+[Sat Jul 11 23:01:05 2026] 127.0.0.1:53776 Accepted
+[Sat Jul 11 23:01:05 2026] 127.0.0.1:53776 [200]: GET /scripts/caracteristicas.js?v=1783810865
+[Sat Jul 11 23:01:05 2026] 127.0.0.1:53776 Closing
+[Sat Jul 11 23:01:06 2026] 127.0.0.1:53778 Accepted
+[Sat Jul 11 23:01:06 2026] 127.0.0.1:53778 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sat Jul 11 23:01:06 2026] 127.0.0.1:53778 Closing
+[Sun Jul 12 00:11:32 2026] 127.0.0.1:50662 Accepted
+[Sun Jul 12 00:11:32 2026] 127.0.0.1:50662 [200]: GET /
+[Sun Jul 12 00:11:32 2026] 127.0.0.1:50662 Closing
+[Sun Jul 12 00:11:32 2026] 127.0.0.1:50672 Accepted
+[Sun Jul 12 00:11:32 2026] 127.0.0.1:50672 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:11:32 2026] 127.0.0.1:50672 Closing
+[Sun Jul 12 00:11:33 2026] 127.0.0.1:50676 Accepted
+[Sun Jul 12 00:11:33 2026] 127.0.0.1:50676 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:11:33 2026] 127.0.0.1:50676 Closing
+[Sun Jul 12 00:11:43 2026] 127.0.0.1:53974 Accepted
+[Sun Jul 12 00:11:43 2026] 127.0.0.1:53974 [200]: GET /views/tipo_hierarquia.php
+[Sun Jul 12 00:11:43 2026] 127.0.0.1:53974 Closing
+[Sun Jul 12 00:11:43 2026] 127.0.0.1:53990 Accepted
+[Sun Jul 12 00:11:43 2026] 127.0.0.1:53990 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:11:43 2026] 127.0.0.1:53990 Closing
+[Sun Jul 12 00:11:43 2026] 127.0.0.1:54002 Accepted
+[Sun Jul 12 00:11:43 2026] 127.0.0.1:54002 [200]: GET /scripts/tipo_hierarquia.js?v=1783815103
+[Sun Jul 12 00:11:43 2026] 127.0.0.1:54002 Closing
+[Sun Jul 12 00:11:44 2026] 127.0.0.1:54012 Accepted
+[Sun Jul 12 00:11:44 2026] 127.0.0.1:54012 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:11:44 2026] 127.0.0.1:54012 Closing
+[Sun Jul 12 00:22:09 2026] 127.0.0.1:45550 Accepted
+[Sun Jul 12 00:22:10 2026] 127.0.0.1:45550 [200]: GET /views/usuarios.php
+[Sun Jul 12 00:22:10 2026] 127.0.0.1:45550 Closing
+[Sun Jul 12 00:22:10 2026] 127.0.0.1:45564 Accepted
+[Sun Jul 12 00:22:10 2026] 127.0.0.1:45564 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:22:10 2026] 127.0.0.1:45564 Closing
+[Sun Jul 12 00:22:10 2026] 127.0.0.1:45574 Accepted
+[Sun Jul 12 00:22:10 2026] 127.0.0.1:45574 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:22:10 2026] 127.0.0.1:45574 Closing
+[Sun Jul 12 00:22:16 2026] 127.0.0.1:44882 Accepted
+[Sun Jul 12 00:22:17 2026] 127.0.0.1:44882 [200]: GET /views/habilidades.php
+[Sun Jul 12 00:22:17 2026] 127.0.0.1:44882 Closing
+[Sun Jul 12 00:22:17 2026] 127.0.0.1:44886 Accepted
+[Sun Jul 12 00:22:17 2026] 127.0.0.1:44886 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:22:17 2026] 127.0.0.1:44886 Closing
+[Sun Jul 12 00:22:17 2026] 127.0.0.1:44900 Accepted
+[Sun Jul 12 00:22:17 2026] 127.0.0.1:44900 [200]: GET /scripts/habilidades.js?v=1783815737
+[Sun Jul 12 00:22:17 2026] 127.0.0.1:44900 Closing
+[Sun Jul 12 00:22:17 2026] 127.0.0.1:44914 Accepted
+[Sun Jul 12 00:22:17 2026] 127.0.0.1:44914 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:22:17 2026] 127.0.0.1:44914 Closing
+[Sun Jul 12 00:22:23 2026] 127.0.0.1:44920 Accepted
+[Sun Jul 12 00:22:23 2026] 127.0.0.1:44920 [200]: GET /views/cargos.php
+[Sun Jul 12 00:22:23 2026] 127.0.0.1:44920 Closing
+[Sun Jul 12 00:22:23 2026] 127.0.0.1:44924 Accepted
+[Sun Jul 12 00:22:23 2026] 127.0.0.1:44924 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:22:23 2026] 127.0.0.1:44924 Closing
+[Sun Jul 12 00:22:24 2026] 127.0.0.1:44930 Accepted
+[Sun Jul 12 00:22:24 2026] 127.0.0.1:44930 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:22:24 2026] 127.0.0.1:44930 Closing
+[Sun Jul 12 00:22:26 2026] 127.0.0.1:44946 Accepted
+[Sun Jul 12 00:22:26 2026] 127.0.0.1:44946 [200]: GET /views/cargos_form.php?id=1
+[Sun Jul 12 00:22:26 2026] 127.0.0.1:44946 Closing
+[Sun Jul 12 00:22:26 2026] 127.0.0.1:38388 Accepted
+[Sun Jul 12 00:22:26 2026] 127.0.0.1:38388 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:22:26 2026] 127.0.0.1:38388 Closing
+[Sun Jul 12 00:22:27 2026] 127.0.0.1:38394 Accepted
+[Sun Jul 12 00:22:27 2026] 127.0.0.1:38394 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:22:27 2026] 127.0.0.1:38394 Closing
+[Sun Jul 12 00:22:27 2026] 127.0.0.1:38404 Accepted
+[Sun Jul 12 00:22:27 2026] 127.0.0.1:38404 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:22:27 2026] 127.0.0.1:38404 Closing
+[Sun Jul 12 00:22:58 2026] 127.0.0.1:55102 Accepted
+[Sun Jul 12 00:22:58 2026] 127.0.0.1:55102 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:22:58 2026] 127.0.0.1:55102 Closing
+[Sun Jul 12 00:22:58 2026] 127.0.0.1:55110 Accepted
+[Sun Jul 12 00:22:58 2026] 127.0.0.1:55110 [200]: GET /views/cargos_form.php?id=1&message=Cargo+salvo+com+sucesso%21+ID%3A+1&type=success
+[Sun Jul 12 00:22:58 2026] 127.0.0.1:55110 Closing
+[Sun Jul 12 00:22:58 2026] 127.0.0.1:55124 Accepted
+[Sun Jul 12 00:22:58 2026] 127.0.0.1:55124 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:22:58 2026] 127.0.0.1:55124 Closing
+[Sun Jul 12 00:22:59 2026] 127.0.0.1:55140 Accepted
+[Sun Jul 12 00:22:59 2026] 127.0.0.1:55140 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:22:59 2026] 127.0.0.1:55140 Closing
+[Sun Jul 12 00:22:59 2026] 127.0.0.1:55148 Accepted
+[Sun Jul 12 00:22:59 2026] 127.0.0.1:55148 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:22:59 2026] 127.0.0.1:55148 Closing
+[Sun Jul 12 00:23:17 2026] 127.0.0.1:41916 Accepted
+[Sun Jul 12 00:23:17 2026] 127.0.0.1:41916 [200]: GET /views/cargos_form.php?id=2
+[Sun Jul 12 00:23:17 2026] 127.0.0.1:41916 Closing
+[Sun Jul 12 00:23:17 2026] 127.0.0.1:41918 Accepted
+[Sun Jul 12 00:23:17 2026] 127.0.0.1:41918 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:23:17 2026] 127.0.0.1:41918 Closing
+[Sun Jul 12 00:23:18 2026] 127.0.0.1:41924 Accepted
+[Sun Jul 12 00:23:18 2026] 127.0.0.1:41924 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:23:18 2026] 127.0.0.1:41924 Closing
+[Sun Jul 12 00:23:18 2026] 127.0.0.1:41932 Accepted
+[Sun Jul 12 00:23:18 2026] 127.0.0.1:41932 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:23:18 2026] 127.0.0.1:41932 Closing
+[Sun Jul 12 00:23:29 2026] 127.0.0.1:36054 Accepted
+[Sun Jul 12 00:23:29 2026] 127.0.0.1:36054 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:23:29 2026] 127.0.0.1:36054 Closing
+[Sun Jul 12 00:23:29 2026] 127.0.0.1:36064 Accepted
+[Sun Jul 12 00:23:29 2026] 127.0.0.1:36064 [200]: GET /views/cargos_form.php?id=2&message=Cargo+salvo+com+sucesso%21+ID%3A+2&type=success
+[Sun Jul 12 00:23:29 2026] 127.0.0.1:36064 Closing
+[Sun Jul 12 00:23:29 2026] 127.0.0.1:36076 Accepted
+[Sun Jul 12 00:23:29 2026] 127.0.0.1:36076 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:23:29 2026] 127.0.0.1:36076 Closing
+[Sun Jul 12 00:23:30 2026] 127.0.0.1:36092 Accepted
+[Sun Jul 12 00:23:30 2026] 127.0.0.1:36092 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:23:30 2026] 127.0.0.1:36092 Closing
+[Sun Jul 12 00:23:30 2026] 127.0.0.1:36102 Accepted
+[Sun Jul 12 00:23:30 2026] 127.0.0.1:36102 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:23:30 2026] 127.0.0.1:36102 Closing
+[Sun Jul 12 00:23:32 2026] 127.0.0.1:36116 Accepted
+[Sun Jul 12 00:23:32 2026] 127.0.0.1:36116 [200]: GET /views/cargos_form.php?id=3
+[Sun Jul 12 00:23:32 2026] 127.0.0.1:36116 Closing
+[Sun Jul 12 00:23:32 2026] 127.0.0.1:36120 Accepted
+[Sun Jul 12 00:23:32 2026] 127.0.0.1:36120 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:23:32 2026] 127.0.0.1:36120 Closing
+[Sun Jul 12 00:23:32 2026] 127.0.0.1:36126 Accepted
+[Sun Jul 12 00:23:32 2026] 127.0.0.1:36126 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:23:32 2026] 127.0.0.1:36126 Closing
+[Sun Jul 12 00:23:32 2026] 127.0.0.1:36142 Accepted
+[Sun Jul 12 00:23:32 2026] 127.0.0.1:36142 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:23:32 2026] 127.0.0.1:36142 Closing
+[Sun Jul 12 00:23:38 2026] 127.0.0.1:46228 Accepted
+[Sun Jul 12 00:23:38 2026] 127.0.0.1:46228 [200]: GET /views/cargos_form.php?id=4
+[Sun Jul 12 00:23:38 2026] 127.0.0.1:46228 Closing
+[Sun Jul 12 00:23:38 2026] 127.0.0.1:46244 Accepted
+[Sun Jul 12 00:23:38 2026] 127.0.0.1:46244 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:23:38 2026] 127.0.0.1:46244 Closing
+[Sun Jul 12 00:23:39 2026] 127.0.0.1:46260 Accepted
+[Sun Jul 12 00:23:39 2026] 127.0.0.1:46260 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:23:39 2026] 127.0.0.1:46260 Closing
+[Sun Jul 12 00:23:39 2026] 127.0.0.1:46272 Accepted
+[Sun Jul 12 00:23:39 2026] 127.0.0.1:46272 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:23:39 2026] 127.0.0.1:46272 Closing
+[Sun Jul 12 00:23:51 2026] 127.0.0.1:54042 Accepted
+[Sun Jul 12 00:23:51 2026] 127.0.0.1:54042 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:23:51 2026] 127.0.0.1:54042 Closing
+[Sun Jul 12 00:23:51 2026] 127.0.0.1:54048 Accepted
+[Sun Jul 12 00:23:51 2026] 127.0.0.1:54048 [200]: GET /views/cargos_form.php?id=4&message=Cargo+salvo+com+sucesso%21+ID%3A+4&type=success
+[Sun Jul 12 00:23:51 2026] 127.0.0.1:54048 Closing
+[Sun Jul 12 00:23:52 2026] 127.0.0.1:54060 Accepted
+[Sun Jul 12 00:23:52 2026] 127.0.0.1:54060 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:23:52 2026] 127.0.0.1:54060 Closing
+[Sun Jul 12 00:23:52 2026] 127.0.0.1:54076 Accepted
+[Sun Jul 12 00:23:52 2026] 127.0.0.1:54076 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:23:52 2026] 127.0.0.1:54076 Closing
+[Sun Jul 12 00:23:52 2026] 127.0.0.1:54078 Accepted
+[Sun Jul 12 00:23:52 2026] 127.0.0.1:54078 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:23:52 2026] 127.0.0.1:54078 Closing
+[Sun Jul 12 00:23:55 2026] 127.0.0.1:54088 Accepted
+[Sun Jul 12 00:23:55 2026] 127.0.0.1:54088 [200]: GET /views/cargos_form.php?id=5
+[Sun Jul 12 00:23:55 2026] 127.0.0.1:54088 Closing
+[Sun Jul 12 00:23:55 2026] 127.0.0.1:54090 Accepted
+[Sun Jul 12 00:23:55 2026] 127.0.0.1:54090 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:23:55 2026] 127.0.0.1:54090 Closing
+[Sun Jul 12 00:23:56 2026] 127.0.0.1:54106 Accepted
+[Sun Jul 12 00:23:56 2026] 127.0.0.1:54106 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:23:56 2026] 127.0.0.1:54106 Closing
+[Sun Jul 12 00:23:56 2026] 127.0.0.1:54108 Accepted
+[Sun Jul 12 00:23:56 2026] 127.0.0.1:54108 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:23:56 2026] 127.0.0.1:54108 Closing
+[Sun Jul 12 00:24:30 2026] 127.0.0.1:37876 Accepted
+[Sun Jul 12 00:24:30 2026] 127.0.0.1:37876 [200]: GET /views/cargos_form.php?id=6
+[Sun Jul 12 00:24:30 2026] 127.0.0.1:37876 Closing
+[Sun Jul 12 00:24:30 2026] 127.0.0.1:37888 Accepted
+[Sun Jul 12 00:24:30 2026] 127.0.0.1:37888 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:24:30 2026] 127.0.0.1:37888 Closing
+[Sun Jul 12 00:24:30 2026] 127.0.0.1:37894 Accepted
+[Sun Jul 12 00:24:30 2026] 127.0.0.1:37894 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:24:30 2026] 127.0.0.1:37894 Closing
+[Sun Jul 12 00:24:31 2026] 127.0.0.1:37904 Accepted
+[Sun Jul 12 00:24:31 2026] 127.0.0.1:37904 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:24:31 2026] 127.0.0.1:37904 Closing
+[Sun Jul 12 00:24:41 2026] 127.0.0.1:56066 Accepted
+[Sun Jul 12 00:24:42 2026] 127.0.0.1:56066 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:24:42 2026] 127.0.0.1:56066 Closing
+[Sun Jul 12 00:24:42 2026] 127.0.0.1:56068 Accepted
+[Sun Jul 12 00:24:42 2026] 127.0.0.1:56068 [200]: GET /views/cargos_form.php?id=6&message=Cargo+salvo+com+sucesso%21+ID%3A+6&type=success
+[Sun Jul 12 00:24:42 2026] 127.0.0.1:56068 Closing
+[Sun Jul 12 00:24:42 2026] 127.0.0.1:56076 Accepted
+[Sun Jul 12 00:24:42 2026] 127.0.0.1:56076 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:24:42 2026] 127.0.0.1:56076 Closing
+[Sun Jul 12 00:24:42 2026] 127.0.0.1:56090 Accepted
+[Sun Jul 12 00:24:42 2026] 127.0.0.1:56090 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:24:42 2026] 127.0.0.1:56090 Closing
+[Sun Jul 12 00:24:43 2026] 127.0.0.1:56102 Accepted
+[Sun Jul 12 00:24:43 2026] 127.0.0.1:56102 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:24:43 2026] 127.0.0.1:56102 Closing
+[Sun Jul 12 00:24:44 2026] 127.0.0.1:56116 Accepted
+[Sun Jul 12 00:24:44 2026] 127.0.0.1:56116 [200]: GET /views/cargos_form.php?id=7
+[Sun Jul 12 00:24:44 2026] 127.0.0.1:56116 Closing
+[Sun Jul 12 00:24:44 2026] 127.0.0.1:56118 Accepted
+[Sun Jul 12 00:24:44 2026] 127.0.0.1:56118 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:24:44 2026] 127.0.0.1:56118 Closing
+[Sun Jul 12 00:24:45 2026] 127.0.0.1:56124 Accepted
+[Sun Jul 12 00:24:45 2026] 127.0.0.1:56124 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:24:45 2026] 127.0.0.1:56124 Closing
+[Sun Jul 12 00:24:45 2026] 127.0.0.1:56126 Accepted
+[Sun Jul 12 00:24:45 2026] 127.0.0.1:56126 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:24:45 2026] 127.0.0.1:56126 Closing
+[Sun Jul 12 00:24:51 2026] 127.0.0.1:43156 Accepted
+[Sun Jul 12 00:24:51 2026] 127.0.0.1:43156 [200]: GET /views/cargos_form.php?id=8
+[Sun Jul 12 00:24:51 2026] 127.0.0.1:43156 Closing
+[Sun Jul 12 00:24:52 2026] 127.0.0.1:43166 Accepted
+[Sun Jul 12 00:24:52 2026] 127.0.0.1:43166 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:24:52 2026] 127.0.0.1:43166 Closing
+[Sun Jul 12 00:24:52 2026] 127.0.0.1:43178 Accepted
+[Sun Jul 12 00:24:52 2026] 127.0.0.1:43178 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:24:52 2026] 127.0.0.1:43178 Closing
+[Sun Jul 12 00:24:52 2026] 127.0.0.1:43186 Accepted
+[Sun Jul 12 00:24:52 2026] 127.0.0.1:43186 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:24:52 2026] 127.0.0.1:43186 Closing
+[Sun Jul 12 00:25:00 2026] 127.0.0.1:51704 Accepted
+[Sun Jul 12 00:25:00 2026] 127.0.0.1:51704 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:25:00 2026] 127.0.0.1:51704 Closing
+[Sun Jul 12 00:25:00 2026] 127.0.0.1:51720 Accepted
+[Sun Jul 12 00:25:00 2026] 127.0.0.1:51720 [200]: GET /views/cargos_form.php?id=8&message=Cargo+salvo+com+sucesso%21+ID%3A+8&type=success
+[Sun Jul 12 00:25:00 2026] 127.0.0.1:51720 Closing
+[Sun Jul 12 00:25:00 2026] 127.0.0.1:51732 Accepted
+[Sun Jul 12 00:25:00 2026] 127.0.0.1:51732 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:25:00 2026] 127.0.0.1:51732 Closing
+[Sun Jul 12 00:25:01 2026] 127.0.0.1:51734 Accepted
+[Sun Jul 12 00:25:01 2026] 127.0.0.1:51734 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:25:01 2026] 127.0.0.1:51734 Closing
+[Sun Jul 12 00:25:01 2026] 127.0.0.1:51746 Accepted
+[Sun Jul 12 00:25:01 2026] 127.0.0.1:51746 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:25:01 2026] 127.0.0.1:51746 Closing
+[Sun Jul 12 00:25:02 2026] 127.0.0.1:51750 Accepted
+[Sun Jul 12 00:25:02 2026] 127.0.0.1:51750 [200]: GET /views/cargos_form.php?id=9
+[Sun Jul 12 00:25:02 2026] 127.0.0.1:51750 Closing
+[Sun Jul 12 00:25:03 2026] 127.0.0.1:51760 Accepted
+[Sun Jul 12 00:25:03 2026] 127.0.0.1:51760 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:25:03 2026] 127.0.0.1:51760 Closing
+[Sun Jul 12 00:25:03 2026] 127.0.0.1:51764 Accepted
+[Sun Jul 12 00:25:03 2026] 127.0.0.1:51764 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:25:03 2026] 127.0.0.1:51764 Closing
+[Sun Jul 12 00:25:03 2026] 127.0.0.1:51772 Accepted
+[Sun Jul 12 00:25:03 2026] 127.0.0.1:51772 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:25:03 2026] 127.0.0.1:51772 Closing
+[Sun Jul 12 00:25:15 2026] 127.0.0.1:51680 Accepted
+[Sun Jul 12 00:25:15 2026] 127.0.0.1:51680 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:25:15 2026] 127.0.0.1:51680 Closing
+[Sun Jul 12 00:25:15 2026] 127.0.0.1:51684 Accepted
+[Sun Jul 12 00:25:15 2026] 127.0.0.1:51684 [200]: GET /views/cargos_form.php?id=9&message=Cargo+salvo+com+sucesso%21+ID%3A+9&type=success
+[Sun Jul 12 00:25:15 2026] 127.0.0.1:51684 Closing
+[Sun Jul 12 00:25:15 2026] 127.0.0.1:51698 Accepted
+[Sun Jul 12 00:25:15 2026] 127.0.0.1:51698 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:25:15 2026] 127.0.0.1:51698 Closing
+[Sun Jul 12 00:25:16 2026] 127.0.0.1:51702 Accepted
+[Sun Jul 12 00:25:16 2026] 127.0.0.1:51702 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:25:16 2026] 127.0.0.1:51702 Closing
+[Sun Jul 12 00:25:16 2026] 127.0.0.1:51712 Accepted
+[Sun Jul 12 00:25:16 2026] 127.0.0.1:51712 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:25:16 2026] 127.0.0.1:51712 Closing
+[Sun Jul 12 00:25:18 2026] 127.0.0.1:44220 Accepted
+[Sun Jul 12 00:25:18 2026] 127.0.0.1:44220 [200]: GET /views/cargos_form.php?id=10
+[Sun Jul 12 00:25:18 2026] 127.0.0.1:44220 Closing
+[Sun Jul 12 00:25:18 2026] 127.0.0.1:44230 Accepted
+[Sun Jul 12 00:25:18 2026] 127.0.0.1:44230 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:25:18 2026] 127.0.0.1:44230 Closing
+[Sun Jul 12 00:25:18 2026] 127.0.0.1:44238 Accepted
+[Sun Jul 12 00:25:18 2026] 127.0.0.1:44238 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:25:18 2026] 127.0.0.1:44238 Closing
+[Sun Jul 12 00:25:19 2026] 127.0.0.1:44252 Accepted
+[Sun Jul 12 00:25:19 2026] 127.0.0.1:44252 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:25:19 2026] 127.0.0.1:44252 Closing
+[Sun Jul 12 00:25:57 2026] 127.0.0.1:49570 Accepted
+[Sun Jul 12 00:25:58 2026] 127.0.0.1:49570 [200]: GET /views/areas_atuacao.php - Uncaught Error: Call to undefined method App\Repository\AreaRepository::findAllPaginated() in /home/runner/workspace/views/areas_atuacao.php:109
+Stack trace:
+#0 {main}
+  thrown in /home/runner/workspace/views/areas_atuacao.php on line 109
+[Sun Jul 12 00:25:58 2026] 127.0.0.1:49570 Closing
+[Sun Jul 12 00:25:58 2026] 127.0.0.1:49578 Accepted
+[Sun Jul 12 00:25:58 2026] 127.0.0.1:49578 [404]: GET /favicon.ico - No such file or directory
+[Sun Jul 12 00:25:58 2026] 127.0.0.1:49578 Closing
+[Sun Jul 12 00:26:48 2026] 127.0.0.1:57050 Accepted
+[Sun Jul 12 00:26:48 2026] 127.0.0.1:57050 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:26:48 2026] 127.0.0.1:57050 Closing
+[Sun Jul 12 00:26:48 2026] 127.0.0.1:57062 Accepted
+[Sun Jul 12 00:26:48 2026] 127.0.0.1:57062 [200]: GET /views/cargos_form.php?id=10&message=Cargo+salvo+com+sucesso%21+ID%3A+10&type=success
+[Sun Jul 12 00:26:48 2026] 127.0.0.1:57062 Closing
+[Sun Jul 12 00:26:48 2026] 127.0.0.1:57068 Accepted
+[Sun Jul 12 00:26:48 2026] 127.0.0.1:57068 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:26:48 2026] 127.0.0.1:57068 Closing
+[Sun Jul 12 00:26:49 2026] 127.0.0.1:57076 Accepted
+[Sun Jul 12 00:26:49 2026] 127.0.0.1:57076 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:26:49 2026] 127.0.0.1:57076 Closing
+[Sun Jul 12 00:26:49 2026] 127.0.0.1:57090 Accepted
+[Sun Jul 12 00:26:49 2026] 127.0.0.1:57090 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:26:49 2026] 127.0.0.1:57090 Closing
+[Sun Jul 12 00:27:16 2026] 127.0.0.1:55612 Accepted
+[Sun Jul 12 00:27:16 2026] 127.0.0.1:55612 [200]: GET /views/cargos_form.php?id=11
+[Sun Jul 12 00:27:16 2026] 127.0.0.1:55612 Closing
+[Sun Jul 12 00:27:16 2026] 127.0.0.1:55626 Accepted
+[Sun Jul 12 00:27:16 2026] 127.0.0.1:55626 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:27:16 2026] 127.0.0.1:55626 Closing
+[Sun Jul 12 00:27:16 2026] 127.0.0.1:58138 Accepted
+[Sun Jul 12 00:27:16 2026] 127.0.0.1:58138 [302]: GET /views/areas_atuacao.php
+[Sun Jul 12 00:27:16 2026] 127.0.0.1:58138 Closing
+[Sun Jul 12 00:27:16 2026] 127.0.0.1:58148 Accepted
+[Sun Jul 12 00:27:16 2026] 127.0.0.1:58148 [200]: GET /login.php
+[Sun Jul 12 00:27:16 2026] 127.0.0.1:58148 Closing
+[Sun Jul 12 00:27:17 2026] 127.0.0.1:58162 Accepted
+[Sun Jul 12 00:27:17 2026] 127.0.0.1:58162 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:27:17 2026] 127.0.0.1:58162 Closing
+[Sun Jul 12 00:27:17 2026] 127.0.0.1:58178 Accepted
+[Sun Jul 12 00:27:17 2026] 127.0.0.1:58178 [404]: GET /favicon.ico - No such file or directory
+[Sun Jul 12 00:27:17 2026] 127.0.0.1:58178 Closing
+[Sun Jul 12 00:27:17 2026] 127.0.0.1:58182 Accepted
+[Sun Jul 12 00:27:17 2026] 127.0.0.1:58182 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:27:17 2026] 127.0.0.1:58182 Closing
+[Sun Jul 12 00:27:35 2026] 127.0.0.1:43964 Accepted
+[Sun Jul 12 00:27:36 2026] 127.0.0.1:43964 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:27:36 2026] 127.0.0.1:43964 Closing
+[Sun Jul 12 00:27:36 2026] 127.0.0.1:43980 Accepted
+[Sun Jul 12 00:27:36 2026] 127.0.0.1:43980 [200]: GET /views/cargos_form.php?id=11&message=Cargo+salvo+com+sucesso%21+ID%3A+11&type=success
+[Sun Jul 12 00:27:36 2026] 127.0.0.1:43980 Closing
+[Sun Jul 12 00:27:36 2026] 127.0.0.1:43984 Accepted
+[Sun Jul 12 00:27:36 2026] 127.0.0.1:43984 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:27:36 2026] 127.0.0.1:43984 Closing
+[Sun Jul 12 00:27:37 2026] 127.0.0.1:44074 Accepted
+[Sun Jul 12 00:27:37 2026] 127.0.0.1:44074 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:27:37 2026] 127.0.0.1:44074 Closing
+[Sun Jul 12 00:27:37 2026] 127.0.0.1:44080 Accepted
+[Sun Jul 12 00:27:37 2026] 127.0.0.1:44080 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:27:37 2026] 127.0.0.1:44080 Closing
+[Sun Jul 12 00:27:39 2026] 127.0.0.1:44086 Accepted
+[Sun Jul 12 00:27:39 2026] 127.0.0.1:44086 [200]: GET /views/cargos_form.php?id=12
+[Sun Jul 12 00:27:39 2026] 127.0.0.1:44086 Closing
+[Sun Jul 12 00:27:39 2026] 127.0.0.1:44102 Accepted
+[Sun Jul 12 00:27:39 2026] 127.0.0.1:44102 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:27:39 2026] 127.0.0.1:44102 Closing
+[Sun Jul 12 00:27:39 2026] 127.0.0.1:44118 Accepted
+[Sun Jul 12 00:27:39 2026] 127.0.0.1:44118 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:27:39 2026] 127.0.0.1:44118 Closing
+[Sun Jul 12 00:27:40 2026] 127.0.0.1:44132 Accepted
+[Sun Jul 12 00:27:40 2026] 127.0.0.1:44132 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:27:40 2026] 127.0.0.1:44132 Closing
+[Sun Jul 12 00:27:49 2026] 127.0.0.1:44824 Accepted
+[Sun Jul 12 00:27:49 2026] 127.0.0.1:44824 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:27:49 2026] 127.0.0.1:44824 Closing
+[Sun Jul 12 00:27:49 2026] 127.0.0.1:44830 Accepted
+[Sun Jul 12 00:27:49 2026] 127.0.0.1:44830 [200]: GET /views/cargos_form.php?id=12&message=Cargo+salvo+com+sucesso%21+ID%3A+12&type=success
+[Sun Jul 12 00:27:49 2026] 127.0.0.1:44830 Closing
+[Sun Jul 12 00:27:50 2026] 127.0.0.1:44832 Accepted
+[Sun Jul 12 00:27:50 2026] 127.0.0.1:44832 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:27:50 2026] 127.0.0.1:44832 Closing
+[Sun Jul 12 00:27:50 2026] 127.0.0.1:44848 Accepted
+[Sun Jul 12 00:27:50 2026] 127.0.0.1:44848 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:27:50 2026] 127.0.0.1:44848 Closing
+[Sun Jul 12 00:27:50 2026] 127.0.0.1:44862 Accepted
+[Sun Jul 12 00:27:50 2026] 127.0.0.1:44862 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:27:50 2026] 127.0.0.1:44862 Closing
+[Sun Jul 12 00:27:52 2026] 127.0.0.1:44874 Accepted
+[Sun Jul 12 00:27:52 2026] 127.0.0.1:44874 [200]: GET /views/cargos_form.php?id=13
+[Sun Jul 12 00:27:52 2026] 127.0.0.1:44874 Closing
+[Sun Jul 12 00:27:52 2026] 127.0.0.1:44882 Accepted
+[Sun Jul 12 00:27:52 2026] 127.0.0.1:44882 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:27:52 2026] 127.0.0.1:44882 Closing
+[Sun Jul 12 00:27:53 2026] 127.0.0.1:44890 Accepted
+[Sun Jul 12 00:27:53 2026] 127.0.0.1:44890 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:27:53 2026] 127.0.0.1:44890 Closing
+[Sun Jul 12 00:27:53 2026] 127.0.0.1:44904 Accepted
+[Sun Jul 12 00:27:53 2026] 127.0.0.1:44904 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:27:53 2026] 127.0.0.1:44904 Closing
+[Sun Jul 12 00:27:55 2026] 127.0.0.1:44918 Accepted
+[Sun Jul 12 00:27:55 2026] 127.0.0.1:44918 [200]: GET /views/cargos_form.php?id=14
+[Sun Jul 12 00:27:55 2026] 127.0.0.1:44918 Closing
+[Sun Jul 12 00:27:56 2026] 127.0.0.1:44930 Accepted
+[Sun Jul 12 00:27:56 2026] 127.0.0.1:44930 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:27:56 2026] 127.0.0.1:44930 Closing
+[Sun Jul 12 00:27:56 2026] 127.0.0.1:44940 Accepted
+[Sun Jul 12 00:27:56 2026] 127.0.0.1:44940 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:27:56 2026] 127.0.0.1:44940 Closing
+[Sun Jul 12 00:27:56 2026] 127.0.0.1:55988 Accepted
+[Sun Jul 12 00:27:56 2026] 127.0.0.1:55988 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:27:56 2026] 127.0.0.1:55988 Closing
+[Sun Jul 12 00:28:02 2026] 127.0.0.1:55990 Accepted
+[Sun Jul 12 00:28:02 2026] 127.0.0.1:55990 [200]: GET /views/cargos_form.php?id=15
+[Sun Jul 12 00:28:02 2026] 127.0.0.1:55990 Closing
+[Sun Jul 12 00:28:02 2026] 127.0.0.1:56006 Accepted
+[Sun Jul 12 00:28:02 2026] 127.0.0.1:56006 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:28:02 2026] 127.0.0.1:56006 Closing
+[Sun Jul 12 00:28:02 2026] 127.0.0.1:56014 Accepted
+[Sun Jul 12 00:28:02 2026] 127.0.0.1:56014 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:28:02 2026] 127.0.0.1:56014 Closing
+[Sun Jul 12 00:28:03 2026] 127.0.0.1:56018 Accepted
+[Sun Jul 12 00:28:03 2026] 127.0.0.1:56018 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:28:03 2026] 127.0.0.1:56018 Closing
+[Sun Jul 12 00:28:08 2026] 127.0.0.1:54194 Accepted
+[Sun Jul 12 00:28:08 2026] 127.0.0.1:54194 [200]: GET /views/cargos_form.php?id=16
+[Sun Jul 12 00:28:08 2026] 127.0.0.1:54194 Closing
+[Sun Jul 12 00:28:08 2026] 127.0.0.1:54196 Accepted
+[Sun Jul 12 00:28:08 2026] 127.0.0.1:54196 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:28:08 2026] 127.0.0.1:54196 Closing
+[Sun Jul 12 00:28:09 2026] 127.0.0.1:54212 Accepted
+[Sun Jul 12 00:28:09 2026] 127.0.0.1:54212 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:28:09 2026] 127.0.0.1:54212 Closing
+[Sun Jul 12 00:28:09 2026] 127.0.0.1:54228 Accepted
+[Sun Jul 12 00:28:09 2026] 127.0.0.1:54228 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:28:09 2026] 127.0.0.1:54228 Closing
+[Sun Jul 12 00:28:24 2026] 127.0.0.1:40904 Accepted
+[Sun Jul 12 00:28:24 2026] 127.0.0.1:40904 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:28:24 2026] 127.0.0.1:40904 Closing
+[Sun Jul 12 00:28:24 2026] 127.0.0.1:40910 Accepted
+[Sun Jul 12 00:28:25 2026] 127.0.0.1:40910 [200]: GET /views/cargos_form.php?id=16&message=Cargo+salvo+com+sucesso%21+ID%3A+16&type=success
+[Sun Jul 12 00:28:25 2026] 127.0.0.1:40910 Closing
+[Sun Jul 12 00:28:25 2026] 127.0.0.1:40918 Accepted
+[Sun Jul 12 00:28:25 2026] 127.0.0.1:40918 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:28:25 2026] 127.0.0.1:40918 Closing
+[Sun Jul 12 00:28:25 2026] 127.0.0.1:40920 Accepted
+[Sun Jul 12 00:28:25 2026] 127.0.0.1:40920 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:28:25 2026] 127.0.0.1:40920 Closing
+[Sun Jul 12 00:28:25 2026] 127.0.0.1:40932 Accepted
+[Sun Jul 12 00:28:25 2026] 127.0.0.1:40932 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:28:25 2026] 127.0.0.1:40932 Closing
+[Sun Jul 12 00:28:27 2026] 127.0.0.1:47232 Accepted
+[Sun Jul 12 00:28:27 2026] 127.0.0.1:47232 [200]: GET /views/cargos_form.php?id=17
+[Sun Jul 12 00:28:27 2026] 127.0.0.1:47232 Closing
+[Sun Jul 12 00:28:27 2026] 127.0.0.1:47234 Accepted
+[Sun Jul 12 00:28:27 2026] 127.0.0.1:47234 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:28:27 2026] 127.0.0.1:47234 Closing
+[Sun Jul 12 00:28:28 2026] 127.0.0.1:47238 Accepted
+[Sun Jul 12 00:28:28 2026] 127.0.0.1:47238 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:28:28 2026] 127.0.0.1:47238 Closing
+[Sun Jul 12 00:28:28 2026] 127.0.0.1:47248 Accepted
+[Sun Jul 12 00:28:28 2026] 127.0.0.1:47248 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:28:28 2026] 127.0.0.1:47248 Closing
+[Sun Jul 12 00:28:46 2026] 127.0.0.1:45806 Accepted
+[Sun Jul 12 00:28:46 2026] 127.0.0.1:45806 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:28:46 2026] 127.0.0.1:45806 Closing
+[Sun Jul 12 00:28:46 2026] 127.0.0.1:45812 Accepted
+[Sun Jul 12 00:28:46 2026] 127.0.0.1:45812 [200]: GET /views/cargos_form.php?id=17&message=Cargo+salvo+com+sucesso%21+ID%3A+17&type=success
+[Sun Jul 12 00:28:46 2026] 127.0.0.1:45812 Closing
+[Sun Jul 12 00:28:46 2026] 127.0.0.1:45822 Accepted
+[Sun Jul 12 00:28:46 2026] 127.0.0.1:45822 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:28:46 2026] 127.0.0.1:45822 Closing
+[Sun Jul 12 00:28:47 2026] 127.0.0.1:36506 Accepted
+[Sun Jul 12 00:28:47 2026] 127.0.0.1:36506 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:28:47 2026] 127.0.0.1:36506 Closing
+[Sun Jul 12 00:28:47 2026] 127.0.0.1:36516 Accepted
+[Sun Jul 12 00:28:47 2026] 127.0.0.1:36516 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:28:47 2026] 127.0.0.1:36516 Closing
+[Sun Jul 12 00:29:27 2026] 127.0.0.1:54204 Accepted
+[Sun Jul 12 00:29:27 2026] 127.0.0.1:54204 [200]: GET /views/cargos_form.php?id=18
+[Sun Jul 12 00:29:27 2026] 127.0.0.1:54204 Closing
+[Sun Jul 12 00:29:27 2026] 127.0.0.1:54216 Accepted
+[Sun Jul 12 00:29:27 2026] 127.0.0.1:54216 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:29:27 2026] 127.0.0.1:54216 Closing
+[Sun Jul 12 00:29:27 2026] 127.0.0.1:54222 Accepted
+[Sun Jul 12 00:29:27 2026] 127.0.0.1:54222 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:29:27 2026] 127.0.0.1:54222 Closing
+[Sun Jul 12 00:29:28 2026] 127.0.0.1:54224 Accepted
+[Sun Jul 12 00:29:28 2026] 127.0.0.1:54224 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:29:28 2026] 127.0.0.1:54224 Closing
+[Sun Jul 12 00:29:49 2026] 127.0.0.1:55786 Accepted
+[Sun Jul 12 00:29:49 2026] 127.0.0.1:55786 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:29:49 2026] 127.0.0.1:55786 Closing
+[Sun Jul 12 00:29:49 2026] 127.0.0.1:55800 Accepted
+[Sun Jul 12 00:29:49 2026] 127.0.0.1:55800 [200]: GET /views/cargos_form.php?id=18&message=Cargo+salvo+com+sucesso%21+ID%3A+18&type=success
+[Sun Jul 12 00:29:49 2026] 127.0.0.1:55800 Closing
+[Sun Jul 12 00:29:49 2026] 127.0.0.1:55806 Accepted
+[Sun Jul 12 00:29:49 2026] 127.0.0.1:55806 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:29:49 2026] 127.0.0.1:55806 Closing
+[Sun Jul 12 00:29:50 2026] 127.0.0.1:55818 Accepted
+[Sun Jul 12 00:29:50 2026] 127.0.0.1:55818 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:29:50 2026] 127.0.0.1:55818 Closing
+[Sun Jul 12 00:29:50 2026] 127.0.0.1:55832 Accepted
+[Sun Jul 12 00:29:50 2026] 127.0.0.1:55832 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:29:50 2026] 127.0.0.1:55832 Closing
+[Sun Jul 12 00:29:52 2026] 127.0.0.1:55848 Accepted
+[Sun Jul 12 00:29:52 2026] 127.0.0.1:55848 [200]: GET /views/cargos_form.php?id=19
+[Sun Jul 12 00:29:52 2026] 127.0.0.1:55848 Closing
+[Sun Jul 12 00:29:52 2026] 127.0.0.1:55854 Accepted
+[Sun Jul 12 00:29:52 2026] 127.0.0.1:55854 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:29:52 2026] 127.0.0.1:55854 Closing
+[Sun Jul 12 00:29:52 2026] 127.0.0.1:55864 Accepted
+[Sun Jul 12 00:29:52 2026] 127.0.0.1:55864 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:29:52 2026] 127.0.0.1:55864 Closing
+[Sun Jul 12 00:29:53 2026] 127.0.0.1:55874 Accepted
+[Sun Jul 12 00:29:53 2026] 127.0.0.1:55874 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:29:53 2026] 127.0.0.1:55874 Closing
+[Sun Jul 12 00:29:59 2026] 127.0.0.1:58150 Accepted
+[Sun Jul 12 00:29:59 2026] 127.0.0.1:58150 [200]: GET /views/cargos_form.php?id=20
+[Sun Jul 12 00:29:59 2026] 127.0.0.1:58150 Closing
+[Sun Jul 12 00:29:59 2026] 127.0.0.1:58154 Accepted
+[Sun Jul 12 00:29:59 2026] 127.0.0.1:58154 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:29:59 2026] 127.0.0.1:58154 Closing
+[Sun Jul 12 00:30:00 2026] 127.0.0.1:58160 Accepted
+[Sun Jul 12 00:30:00 2026] 127.0.0.1:58160 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:30:00 2026] 127.0.0.1:58160 Closing
+[Sun Jul 12 00:30:00 2026] 127.0.0.1:58166 Accepted
+[Sun Jul 12 00:30:00 2026] 127.0.0.1:58166 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:30:00 2026] 127.0.0.1:58166 Closing
+[Sun Jul 12 00:30:11 2026] 127.0.0.1:50398 Accepted
+[Sun Jul 12 00:30:11 2026] 127.0.0.1:50398 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:30:11 2026] 127.0.0.1:50398 Closing
+[Sun Jul 12 00:30:11 2026] 127.0.0.1:50410 Accepted
+[Sun Jul 12 00:30:11 2026] 127.0.0.1:50410 [200]: GET /views/cargos_form.php?id=20&message=Cargo+salvo+com+sucesso%21+ID%3A+20&type=success
+[Sun Jul 12 00:30:11 2026] 127.0.0.1:50410 Closing
+[Sun Jul 12 00:30:12 2026] 127.0.0.1:50424 Accepted
+[Sun Jul 12 00:30:12 2026] 127.0.0.1:50424 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:30:12 2026] 127.0.0.1:50424 Closing
+[Sun Jul 12 00:30:12 2026] 127.0.0.1:50436 Accepted
+[Sun Jul 12 00:30:12 2026] 127.0.0.1:50436 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:30:12 2026] 127.0.0.1:50436 Closing
+[Sun Jul 12 00:30:12 2026] 127.0.0.1:50448 Accepted
+[Sun Jul 12 00:30:12 2026] 127.0.0.1:50448 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:30:12 2026] 127.0.0.1:50448 Closing
+[Sun Jul 12 00:30:14 2026] 127.0.0.1:50462 Accepted
+[Sun Jul 12 00:30:14 2026] 127.0.0.1:50462 [200]: GET /views/cargos_form.php?id=21
+[Sun Jul 12 00:30:14 2026] 127.0.0.1:50462 Closing
+[Sun Jul 12 00:30:14 2026] 127.0.0.1:50468 Accepted
+[Sun Jul 12 00:30:14 2026] 127.0.0.1:50468 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:30:14 2026] 127.0.0.1:50468 Closing
+[Sun Jul 12 00:30:14 2026] 127.0.0.1:50472 Accepted
+[Sun Jul 12 00:30:14 2026] 127.0.0.1:50472 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:30:14 2026] 127.0.0.1:50472 Closing
+[Sun Jul 12 00:30:15 2026] 127.0.0.1:50474 Accepted
+[Sun Jul 12 00:30:15 2026] 127.0.0.1:50474 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:30:15 2026] 127.0.0.1:50474 Closing
+[Sun Jul 12 00:30:29 2026] 127.0.0.1:53740 Accepted
+[Sun Jul 12 00:30:29 2026] 127.0.0.1:53740 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:30:29 2026] 127.0.0.1:53740 Closing
+[Sun Jul 12 00:30:29 2026] 127.0.0.1:53750 Accepted
+[Sun Jul 12 00:30:29 2026] 127.0.0.1:53750 [200]: GET /views/cargos_form.php?id=21&message=Cargo+salvo+com+sucesso%21+ID%3A+21&type=success
+[Sun Jul 12 00:30:29 2026] 127.0.0.1:53750 Closing
+[Sun Jul 12 00:30:30 2026] 127.0.0.1:53762 Accepted
+[Sun Jul 12 00:30:30 2026] 127.0.0.1:53762 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:30:30 2026] 127.0.0.1:53762 Closing
+[Sun Jul 12 00:30:30 2026] 127.0.0.1:53774 Accepted
+[Sun Jul 12 00:30:30 2026] 127.0.0.1:53774 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:30:30 2026] 127.0.0.1:53774 Closing
+[Sun Jul 12 00:30:30 2026] 127.0.0.1:53776 Accepted
+[Sun Jul 12 00:30:30 2026] 127.0.0.1:53776 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:30:30 2026] 127.0.0.1:53776 Closing
+[Sun Jul 12 00:30:32 2026] 127.0.0.1:53786 Accepted
+[Sun Jul 12 00:30:32 2026] 127.0.0.1:53786 [200]: GET /views/cargos_form.php?id=22
+[Sun Jul 12 00:30:32 2026] 127.0.0.1:53786 Closing
+[Sun Jul 12 00:30:32 2026] 127.0.0.1:53798 Accepted
+[Sun Jul 12 00:30:32 2026] 127.0.0.1:53798 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:30:32 2026] 127.0.0.1:53798 Closing
+[Sun Jul 12 00:30:32 2026] 127.0.0.1:53804 Accepted
+[Sun Jul 12 00:30:32 2026] 127.0.0.1:53804 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:30:32 2026] 127.0.0.1:53804 Closing
+[Sun Jul 12 00:30:33 2026] 127.0.0.1:53816 Accepted
+[Sun Jul 12 00:30:33 2026] 127.0.0.1:53816 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:30:33 2026] 127.0.0.1:53816 Closing
+[Sun Jul 12 00:30:44 2026] 127.0.0.1:50332 Accepted
+[Sun Jul 12 00:30:45 2026] 127.0.0.1:50332 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:30:45 2026] 127.0.0.1:50332 Closing
+[Sun Jul 12 00:30:45 2026] 127.0.0.1:50348 Accepted
+[Sun Jul 12 00:30:45 2026] 127.0.0.1:50348 [200]: GET /views/cargos_form.php?id=22&message=Cargo+salvo+com+sucesso%21+ID%3A+22&type=success
+[Sun Jul 12 00:30:45 2026] 127.0.0.1:50348 Closing
+[Sun Jul 12 00:30:45 2026] 127.0.0.1:50364 Accepted
+[Sun Jul 12 00:30:45 2026] 127.0.0.1:50364 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:30:45 2026] 127.0.0.1:50364 Closing
+[Sun Jul 12 00:30:46 2026] 127.0.0.1:50366 Accepted
+[Sun Jul 12 00:30:46 2026] 127.0.0.1:50366 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:30:46 2026] 127.0.0.1:50366 Closing
+[Sun Jul 12 00:30:46 2026] 127.0.0.1:50376 Accepted
+[Sun Jul 12 00:30:46 2026] 127.0.0.1:50376 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:30:46 2026] 127.0.0.1:50376 Closing
+[Sun Jul 12 00:30:48 2026] 127.0.0.1:38714 Accepted
+[Sun Jul 12 00:30:48 2026] 127.0.0.1:38714 [200]: GET /views/cargos_form.php?id=23
+[Sun Jul 12 00:30:48 2026] 127.0.0.1:38714 Closing
+[Sun Jul 12 00:30:48 2026] 127.0.0.1:38722 Accepted
+[Sun Jul 12 00:30:48 2026] 127.0.0.1:38722 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:30:48 2026] 127.0.0.1:38722 Closing
+[Sun Jul 12 00:30:49 2026] 127.0.0.1:38736 Accepted
+[Sun Jul 12 00:30:49 2026] 127.0.0.1:38736 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:30:49 2026] 127.0.0.1:38736 Closing
+[Sun Jul 12 00:30:49 2026] 127.0.0.1:38738 Accepted
+[Sun Jul 12 00:30:49 2026] 127.0.0.1:38738 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:30:49 2026] 127.0.0.1:38738 Closing
+[Sun Jul 12 00:30:51 2026] 127.0.0.1:38744 Accepted
+[Sun Jul 12 00:30:52 2026] 127.0.0.1:38744 [200]: GET /views/cargos_form.php?id=24
+[Sun Jul 12 00:30:52 2026] 127.0.0.1:38744 Closing
+[Sun Jul 12 00:30:52 2026] 127.0.0.1:38754 Accepted
+[Sun Jul 12 00:30:52 2026] 127.0.0.1:38754 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:30:52 2026] 127.0.0.1:38754 Closing
+[Sun Jul 12 00:30:52 2026] 127.0.0.1:38758 Accepted
+[Sun Jul 12 00:30:52 2026] 127.0.0.1:38758 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:30:52 2026] 127.0.0.1:38758 Closing
+[Sun Jul 12 00:30:52 2026] 127.0.0.1:38766 Accepted
+[Sun Jul 12 00:30:52 2026] 127.0.0.1:38766 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:30:52 2026] 127.0.0.1:38766 Closing
+[Sun Jul 12 00:31:43 2026] 127.0.0.1:38296 Accepted
+[Sun Jul 12 00:31:43 2026] 127.0.0.1:38296 [200]: GET /views/cargos_form.php?id=25
+[Sun Jul 12 00:31:43 2026] 127.0.0.1:38296 Closing
+[Sun Jul 12 00:31:43 2026] 127.0.0.1:38310 Accepted
+[Sun Jul 12 00:31:43 2026] 127.0.0.1:38310 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:31:43 2026] 127.0.0.1:38310 Closing
+[Sun Jul 12 00:31:44 2026] 127.0.0.1:38326 Accepted
+[Sun Jul 12 00:31:44 2026] 127.0.0.1:38326 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:31:44 2026] 127.0.0.1:38326 Closing
+[Sun Jul 12 00:31:44 2026] 127.0.0.1:38338 Accepted
+[Sun Jul 12 00:31:44 2026] 127.0.0.1:38338 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:31:44 2026] 127.0.0.1:38338 Closing
+[Sun Jul 12 00:31:52 2026] 127.0.0.1:55972 Accepted
+[Sun Jul 12 00:31:52 2026] 127.0.0.1:55972 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:31:52 2026] 127.0.0.1:55972 Closing
+[Sun Jul 12 00:31:52 2026] 127.0.0.1:55976 Accepted
+[Sun Jul 12 00:31:52 2026] 127.0.0.1:55976 [200]: GET /views/cargos_form.php?id=25&message=Cargo+salvo+com+sucesso%21+ID%3A+25&type=success
+[Sun Jul 12 00:31:52 2026] 127.0.0.1:55976 Closing
+[Sun Jul 12 00:31:52 2026] 127.0.0.1:55986 Accepted
+[Sun Jul 12 00:31:52 2026] 127.0.0.1:55986 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:31:52 2026] 127.0.0.1:55986 Closing
+[Sun Jul 12 00:31:53 2026] 127.0.0.1:55988 Accepted
+[Sun Jul 12 00:31:53 2026] 127.0.0.1:55988 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:31:53 2026] 127.0.0.1:55988 Closing
+[Sun Jul 12 00:31:53 2026] 127.0.0.1:55996 Accepted
+[Sun Jul 12 00:31:53 2026] 127.0.0.1:55996 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:31:53 2026] 127.0.0.1:55996 Closing
+[Sun Jul 12 00:32:07 2026] 127.0.0.1:44670 Accepted
+[Sun Jul 12 00:32:07 2026] 127.0.0.1:44670 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:32:07 2026] 127.0.0.1:44670 Closing
+[Sun Jul 12 00:32:07 2026] 127.0.0.1:44676 Accepted
+[Sun Jul 12 00:32:07 2026] 127.0.0.1:44676 [200]: GET /views/cargos_form.php?id=25&message=Cargo+salvo+com+sucesso%21+ID%3A+25&type=success
+[Sun Jul 12 00:32:07 2026] 127.0.0.1:44676 Closing
+[Sun Jul 12 00:32:07 2026] 127.0.0.1:44688 Accepted
+[Sun Jul 12 00:32:07 2026] 127.0.0.1:44688 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:32:07 2026] 127.0.0.1:44688 Closing
+[Sun Jul 12 00:32:08 2026] 127.0.0.1:44702 Accepted
+[Sun Jul 12 00:32:08 2026] 127.0.0.1:44702 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:32:08 2026] 127.0.0.1:44702 Closing
+[Sun Jul 12 00:32:08 2026] 127.0.0.1:44708 Accepted
+[Sun Jul 12 00:32:08 2026] 127.0.0.1:44708 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:32:08 2026] 127.0.0.1:44708 Closing
+[Sun Jul 12 00:32:11 2026] 127.0.0.1:44722 Accepted
+[Sun Jul 12 00:32:11 2026] 127.0.0.1:44722 [200]: GET /views/cargos_form.php?id=24
+[Sun Jul 12 00:32:11 2026] 127.0.0.1:44722 Closing
+[Sun Jul 12 00:32:11 2026] 127.0.0.1:44730 Accepted
+[Sun Jul 12 00:32:11 2026] 127.0.0.1:44730 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:32:11 2026] 127.0.0.1:44730 Closing
+[Sun Jul 12 00:32:12 2026] 127.0.0.1:44744 Accepted
+[Sun Jul 12 00:32:12 2026] 127.0.0.1:44744 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:32:12 2026] 127.0.0.1:44744 Closing
+[Sun Jul 12 00:32:12 2026] 127.0.0.1:44758 Accepted
+[Sun Jul 12 00:32:12 2026] 127.0.0.1:44758 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:32:12 2026] 127.0.0.1:44758 Closing
+[Sun Jul 12 00:32:21 2026] 127.0.0.1:46982 Accepted
+[Sun Jul 12 00:32:21 2026] 127.0.0.1:46982 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:32:21 2026] 127.0.0.1:46982 Closing
+[Sun Jul 12 00:32:21 2026] 127.0.0.1:46990 Accepted
+[Sun Jul 12 00:32:21 2026] 127.0.0.1:46990 [200]: GET /views/cargos_form.php?id=24&message=Cargo+salvo+com+sucesso%21+ID%3A+24&type=success
+[Sun Jul 12 00:32:21 2026] 127.0.0.1:46990 Closing
+[Sun Jul 12 00:32:21 2026] 127.0.0.1:47006 Accepted
+[Sun Jul 12 00:32:21 2026] 127.0.0.1:47006 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:32:21 2026] 127.0.0.1:47006 Closing
+[Sun Jul 12 00:32:22 2026] 127.0.0.1:47012 Accepted
+[Sun Jul 12 00:32:22 2026] 127.0.0.1:47012 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:32:22 2026] 127.0.0.1:47012 Closing
+[Sun Jul 12 00:32:22 2026] 127.0.0.1:47024 Accepted
+[Sun Jul 12 00:32:22 2026] 127.0.0.1:47024 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:32:22 2026] 127.0.0.1:47024 Closing
+[Sun Jul 12 00:32:23 2026] 127.0.0.1:47040 Accepted
+[Sun Jul 12 00:32:23 2026] 127.0.0.1:47040 [200]: GET /views/cargos_form.php?id=25
+[Sun Jul 12 00:32:23 2026] 127.0.0.1:47040 Closing
+[Sun Jul 12 00:32:23 2026] 127.0.0.1:47054 Accepted
+[Sun Jul 12 00:32:23 2026] 127.0.0.1:47054 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:32:23 2026] 127.0.0.1:47054 Closing
+[Sun Jul 12 00:32:24 2026] 127.0.0.1:47062 Accepted
+[Sun Jul 12 00:32:24 2026] 127.0.0.1:47062 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:32:24 2026] 127.0.0.1:47062 Closing
+[Sun Jul 12 00:32:24 2026] 127.0.0.1:47076 Accepted
+[Sun Jul 12 00:32:24 2026] 127.0.0.1:47076 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:32:24 2026] 127.0.0.1:47076 Closing
+[Sun Jul 12 00:32:30 2026] 127.0.0.1:38110 Accepted
+[Sun Jul 12 00:32:30 2026] 127.0.0.1:38110 [200]: GET /views/cargos_form.php?id=26
+[Sun Jul 12 00:32:30 2026] 127.0.0.1:38110 Closing
+[Sun Jul 12 00:32:30 2026] 127.0.0.1:38112 Accepted
+[Sun Jul 12 00:32:30 2026] 127.0.0.1:38112 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:32:30 2026] 127.0.0.1:38112 Closing
+[Sun Jul 12 00:32:31 2026] 127.0.0.1:38114 Accepted
+[Sun Jul 12 00:32:31 2026] 127.0.0.1:38114 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:32:31 2026] 127.0.0.1:38114 Closing
+[Sun Jul 12 00:32:31 2026] 127.0.0.1:38126 Accepted
+[Sun Jul 12 00:32:31 2026] 127.0.0.1:38126 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:32:31 2026] 127.0.0.1:38126 Closing
+[Sun Jul 12 00:32:35 2026] 127.0.0.1:38130 Accepted
+[Sun Jul 12 00:32:35 2026] 127.0.0.1:38130 [200]: GET /views/cargos_form.php?id=27
+[Sun Jul 12 00:32:35 2026] 127.0.0.1:38130 Closing
+[Sun Jul 12 00:32:35 2026] 127.0.0.1:38144 Accepted
+[Sun Jul 12 00:32:35 2026] 127.0.0.1:38144 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:32:35 2026] 127.0.0.1:38144 Closing
+[Sun Jul 12 00:32:36 2026] 127.0.0.1:38154 Accepted
+[Sun Jul 12 00:32:36 2026] 127.0.0.1:38154 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:32:36 2026] 127.0.0.1:38154 Closing
+[Sun Jul 12 00:32:36 2026] 127.0.0.1:34344 Accepted
+[Sun Jul 12 00:32:36 2026] 127.0.0.1:34344 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:32:36 2026] 127.0.0.1:34344 Closing
+[Sun Jul 12 00:32:39 2026] 127.0.0.1:34354 Accepted
+[Sun Jul 12 00:32:39 2026] 127.0.0.1:34354 [200]: GET /views/cargos_form.php?id=28
+[Sun Jul 12 00:32:39 2026] 127.0.0.1:34354 Closing
+[Sun Jul 12 00:32:40 2026] 127.0.0.1:34364 Accepted
+[Sun Jul 12 00:32:40 2026] 127.0.0.1:34364 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:32:40 2026] 127.0.0.1:34364 Closing
+[Sun Jul 12 00:32:40 2026] 127.0.0.1:34372 Accepted
+[Sun Jul 12 00:32:40 2026] 127.0.0.1:34372 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:32:40 2026] 127.0.0.1:34372 Closing
+[Sun Jul 12 00:32:40 2026] 127.0.0.1:34382 Accepted
+[Sun Jul 12 00:32:40 2026] 127.0.0.1:34382 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:32:40 2026] 127.0.0.1:34382 Closing
+[Sun Jul 12 00:32:43 2026] 127.0.0.1:34388 Accepted
+[Sun Jul 12 00:32:43 2026] 127.0.0.1:34388 [200]: GET /views/cargos_form.php?id=27
+[Sun Jul 12 00:32:43 2026] 127.0.0.1:34388 Closing
+[Sun Jul 12 00:32:43 2026] 127.0.0.1:34390 Accepted
+[Sun Jul 12 00:32:43 2026] 127.0.0.1:34390 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:32:43 2026] 127.0.0.1:34390 Closing
+[Sun Jul 12 00:32:44 2026] 127.0.0.1:34404 Accepted
+[Sun Jul 12 00:32:44 2026] 127.0.0.1:34404 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:32:44 2026] 127.0.0.1:34404 Closing
+[Sun Jul 12 00:32:44 2026] 127.0.0.1:34416 Accepted
+[Sun Jul 12 00:32:44 2026] 127.0.0.1:34416 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:32:44 2026] 127.0.0.1:34416 Closing
+[Sun Jul 12 00:32:52 2026] 127.0.0.1:59702 Accepted
+[Sun Jul 12 00:32:52 2026] 127.0.0.1:59702 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:32:52 2026] 127.0.0.1:59702 Closing
+[Sun Jul 12 00:32:52 2026] 127.0.0.1:59710 Accepted
+[Sun Jul 12 00:32:52 2026] 127.0.0.1:59710 [200]: GET /views/cargos_form.php?id=27&message=Cargo+salvo+com+sucesso%21+ID%3A+27&type=success
+[Sun Jul 12 00:32:52 2026] 127.0.0.1:59710 Closing
+[Sun Jul 12 00:32:53 2026] 127.0.0.1:59718 Accepted
+[Sun Jul 12 00:32:53 2026] 127.0.0.1:59718 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:32:53 2026] 127.0.0.1:59718 Closing
+[Sun Jul 12 00:32:53 2026] 127.0.0.1:59730 Accepted
+[Sun Jul 12 00:32:53 2026] 127.0.0.1:59730 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:32:53 2026] 127.0.0.1:59730 Closing
+[Sun Jul 12 00:32:53 2026] 127.0.0.1:59744 Accepted
+[Sun Jul 12 00:32:53 2026] 127.0.0.1:59744 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:32:53 2026] 127.0.0.1:59744 Closing
+[Sun Jul 12 00:32:54 2026] 127.0.0.1:59760 Accepted
+[Sun Jul 12 00:32:54 2026] 127.0.0.1:59760 [200]: GET /views/cargos_form.php?id=28
+[Sun Jul 12 00:32:54 2026] 127.0.0.1:59760 Closing
+[Sun Jul 12 00:32:55 2026] 127.0.0.1:59770 Accepted
+[Sun Jul 12 00:32:55 2026] 127.0.0.1:59770 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:32:55 2026] 127.0.0.1:59770 Closing
+[Sun Jul 12 00:32:55 2026] 127.0.0.1:59780 Accepted
+[Sun Jul 12 00:32:55 2026] 127.0.0.1:59780 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:32:55 2026] 127.0.0.1:59780 Closing
+[Sun Jul 12 00:32:55 2026] 127.0.0.1:59792 Accepted
+[Sun Jul 12 00:32:55 2026] 127.0.0.1:59792 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:32:55 2026] 127.0.0.1:59792 Closing
+[Sun Jul 12 00:33:26 2026] 127.0.0.1:48710 Accepted
+[Sun Jul 12 00:33:26 2026] 127.0.0.1:48710 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:33:26 2026] 127.0.0.1:48710 Closing
+[Sun Jul 12 00:33:26 2026] 127.0.0.1:47654 Accepted
+[Sun Jul 12 00:33:26 2026] 127.0.0.1:47654 [200]: GET /views/cargos_form.php?id=28&message=Cargo+salvo+com+sucesso%21+ID%3A+28&type=success
+[Sun Jul 12 00:33:26 2026] 127.0.0.1:47654 Closing
+[Sun Jul 12 00:33:27 2026] 127.0.0.1:47662 Accepted
+[Sun Jul 12 00:33:27 2026] 127.0.0.1:47662 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:33:27 2026] 127.0.0.1:47662 Closing
+[Sun Jul 12 00:33:27 2026] 127.0.0.1:47670 Accepted
+[Sun Jul 12 00:33:27 2026] 127.0.0.1:47670 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:33:27 2026] 127.0.0.1:47670 Closing
+[Sun Jul 12 00:33:27 2026] 127.0.0.1:47680 Accepted
+[Sun Jul 12 00:33:27 2026] 127.0.0.1:47680 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:33:27 2026] 127.0.0.1:47680 Closing
+[Sun Jul 12 00:33:29 2026] 127.0.0.1:47682 Accepted
+[Sun Jul 12 00:33:29 2026] 127.0.0.1:47682 [200]: GET /views/cargos_form.php?id=29
+[Sun Jul 12 00:33:29 2026] 127.0.0.1:47682 Closing
+[Sun Jul 12 00:33:29 2026] 127.0.0.1:47696 Accepted
+[Sun Jul 12 00:33:29 2026] 127.0.0.1:47696 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:33:29 2026] 127.0.0.1:47696 Closing
+[Sun Jul 12 00:33:29 2026] 127.0.0.1:47706 Accepted
+[Sun Jul 12 00:33:29 2026] 127.0.0.1:47706 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:33:29 2026] 127.0.0.1:47706 Closing
+[Sun Jul 12 00:33:30 2026] 127.0.0.1:47720 Accepted
+[Sun Jul 12 00:33:30 2026] 127.0.0.1:47720 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:33:30 2026] 127.0.0.1:47720 Closing
+[Sun Jul 12 00:33:39 2026] 127.0.0.1:44230 Accepted
+[Sun Jul 12 00:33:39 2026] 127.0.0.1:44230 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:33:39 2026] 127.0.0.1:44230 Closing
+[Sun Jul 12 00:33:39 2026] 127.0.0.1:44234 Accepted
+[Sun Jul 12 00:33:39 2026] 127.0.0.1:44234 [200]: GET /views/cargos_form.php?id=29&message=Cargo+salvo+com+sucesso%21+ID%3A+29&type=success
+[Sun Jul 12 00:33:39 2026] 127.0.0.1:44234 Closing
+[Sun Jul 12 00:33:39 2026] 127.0.0.1:44250 Accepted
+[Sun Jul 12 00:33:39 2026] 127.0.0.1:44250 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:33:39 2026] 127.0.0.1:44250 Closing
+[Sun Jul 12 00:33:40 2026] 127.0.0.1:44266 Accepted
+[Sun Jul 12 00:33:40 2026] 127.0.0.1:44266 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:33:40 2026] 127.0.0.1:44266 Closing
+[Sun Jul 12 00:33:40 2026] 127.0.0.1:44270 Accepted
+[Sun Jul 12 00:33:40 2026] 127.0.0.1:44270 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:33:40 2026] 127.0.0.1:44270 Closing
+[Sun Jul 12 00:33:41 2026] 127.0.0.1:44272 Accepted
+[Sun Jul 12 00:33:41 2026] 127.0.0.1:44272 [200]: GET /views/cargos_form.php?id=30
+[Sun Jul 12 00:33:41 2026] 127.0.0.1:44272 Closing
+[Sun Jul 12 00:33:42 2026] 127.0.0.1:44280 Accepted
+[Sun Jul 12 00:33:42 2026] 127.0.0.1:44280 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:33:42 2026] 127.0.0.1:44280 Closing
+[Sun Jul 12 00:33:42 2026] 127.0.0.1:44288 Accepted
+[Sun Jul 12 00:33:42 2026] 127.0.0.1:44288 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:33:42 2026] 127.0.0.1:44288 Closing
+[Sun Jul 12 00:33:42 2026] 127.0.0.1:44294 Accepted
+[Sun Jul 12 00:33:42 2026] 127.0.0.1:44294 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:33:42 2026] 127.0.0.1:44294 Closing
+[Sun Jul 12 00:33:52 2026] 127.0.0.1:54410 Accepted
+[Sun Jul 12 00:33:52 2026] 127.0.0.1:54410 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:33:52 2026] 127.0.0.1:54410 Closing
+[Sun Jul 12 00:33:52 2026] 127.0.0.1:54422 Accepted
+[Sun Jul 12 00:33:52 2026] 127.0.0.1:54422 [200]: GET /views/cargos_form.php?id=30&message=Cargo+salvo+com+sucesso%21+ID%3A+30&type=success
+[Sun Jul 12 00:33:52 2026] 127.0.0.1:54422 Closing
+[Sun Jul 12 00:33:52 2026] 127.0.0.1:54436 Accepted
+[Sun Jul 12 00:33:52 2026] 127.0.0.1:54436 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:33:52 2026] 127.0.0.1:54436 Closing
+[Sun Jul 12 00:33:53 2026] 127.0.0.1:54438 Accepted
+[Sun Jul 12 00:33:53 2026] 127.0.0.1:54438 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:33:53 2026] 127.0.0.1:54438 Closing
+[Sun Jul 12 00:33:53 2026] 127.0.0.1:54440 Accepted
+[Sun Jul 12 00:33:53 2026] 127.0.0.1:54440 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:33:53 2026] 127.0.0.1:54440 Closing
+[Sun Jul 12 00:33:54 2026] 127.0.0.1:54442 Accepted
+[Sun Jul 12 00:33:54 2026] 127.0.0.1:54442 [200]: GET /views/cargos_form.php?id=31
+[Sun Jul 12 00:33:54 2026] 127.0.0.1:54442 Closing
+[Sun Jul 12 00:33:54 2026] 127.0.0.1:54448 Accepted
+[Sun Jul 12 00:33:54 2026] 127.0.0.1:54448 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:33:54 2026] 127.0.0.1:54448 Closing
+[Sun Jul 12 00:33:55 2026] 127.0.0.1:54452 Accepted
+[Sun Jul 12 00:33:55 2026] 127.0.0.1:54452 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:33:55 2026] 127.0.0.1:54452 Closing
+[Sun Jul 12 00:33:55 2026] 127.0.0.1:54462 Accepted
+[Sun Jul 12 00:33:55 2026] 127.0.0.1:54462 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:33:55 2026] 127.0.0.1:54462 Closing
+[Sun Jul 12 00:34:08 2026] 127.0.0.1:49106 Accepted
+[Sun Jul 12 00:34:08 2026] 127.0.0.1:49106 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:34:08 2026] 127.0.0.1:49106 Closing
+[Sun Jul 12 00:34:08 2026] 127.0.0.1:49108 Accepted
+[Sun Jul 12 00:34:08 2026] 127.0.0.1:49108 [200]: GET /views/cargos_form.php?id=31&message=Cargo+salvo+com+sucesso%21+ID%3A+31&type=success
+[Sun Jul 12 00:34:08 2026] 127.0.0.1:49108 Closing
+[Sun Jul 12 00:34:08 2026] 127.0.0.1:49110 Accepted
+[Sun Jul 12 00:34:08 2026] 127.0.0.1:49110 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:34:08 2026] 127.0.0.1:49110 Closing
+[Sun Jul 12 00:34:09 2026] 127.0.0.1:49122 Accepted
+[Sun Jul 12 00:34:09 2026] 127.0.0.1:49122 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:34:09 2026] 127.0.0.1:49122 Closing
+[Sun Jul 12 00:34:09 2026] 127.0.0.1:49126 Accepted
+[Sun Jul 12 00:34:09 2026] 127.0.0.1:49126 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:34:09 2026] 127.0.0.1:49126 Closing
+[Sun Jul 12 00:34:15 2026] 127.0.0.1:49140 Accepted
+[Sun Jul 12 00:34:15 2026] 127.0.0.1:49140 [200]: GET /views/cargos_form.php?id=32
+[Sun Jul 12 00:34:15 2026] 127.0.0.1:49140 Closing
+[Sun Jul 12 00:34:15 2026] 127.0.0.1:49142 Accepted
+[Sun Jul 12 00:34:15 2026] 127.0.0.1:49142 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:34:15 2026] 127.0.0.1:49142 Closing
+[Sun Jul 12 00:34:15 2026] 127.0.0.1:49148 Accepted
+[Sun Jul 12 00:34:15 2026] 127.0.0.1:49148 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:34:15 2026] 127.0.0.1:49148 Closing
+[Sun Jul 12 00:34:16 2026] 127.0.0.1:49158 Accepted
+[Sun Jul 12 00:34:16 2026] 127.0.0.1:49158 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:34:16 2026] 127.0.0.1:49158 Closing
+[Sun Jul 12 00:34:22 2026] 127.0.0.1:53096 Accepted
+[Sun Jul 12 00:34:22 2026] 127.0.0.1:53096 [200]: GET /views/cargos_form.php?id=33
+[Sun Jul 12 00:34:22 2026] 127.0.0.1:53096 Closing
+[Sun Jul 12 00:34:22 2026] 127.0.0.1:53112 Accepted
+[Sun Jul 12 00:34:22 2026] 127.0.0.1:53112 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:34:22 2026] 127.0.0.1:53112 Closing
+[Sun Jul 12 00:34:23 2026] 127.0.0.1:53126 Accepted
+[Sun Jul 12 00:34:23 2026] 127.0.0.1:53126 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:34:23 2026] 127.0.0.1:53126 Closing
+[Sun Jul 12 00:34:23 2026] 127.0.0.1:53136 Accepted
+[Sun Jul 12 00:34:23 2026] 127.0.0.1:53136 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:34:23 2026] 127.0.0.1:53136 Closing
+[Sun Jul 12 00:34:41 2026] 127.0.0.1:41322 Accepted
+[Sun Jul 12 00:34:41 2026] 127.0.0.1:41322 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:34:41 2026] 127.0.0.1:41322 Closing
+[Sun Jul 12 00:34:41 2026] 127.0.0.1:41326 Accepted
+[Sun Jul 12 00:34:41 2026] 127.0.0.1:41326 [200]: GET /views/cargos_form.php?id=33&message=Cargo+salvo+com+sucesso%21+ID%3A+33&type=success
+[Sun Jul 12 00:34:41 2026] 127.0.0.1:41326 Closing
+[Sun Jul 12 00:34:41 2026] 127.0.0.1:41340 Accepted
+[Sun Jul 12 00:34:41 2026] 127.0.0.1:41340 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:34:41 2026] 127.0.0.1:41340 Closing
+[Sun Jul 12 00:34:42 2026] 127.0.0.1:41356 Accepted
+[Sun Jul 12 00:34:42 2026] 127.0.0.1:41356 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:34:42 2026] 127.0.0.1:41356 Closing
+[Sun Jul 12 00:34:42 2026] 127.0.0.1:41358 Accepted
+[Sun Jul 12 00:34:42 2026] 127.0.0.1:41358 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:34:42 2026] 127.0.0.1:41358 Closing
+[Sun Jul 12 00:34:43 2026] 127.0.0.1:41374 Accepted
+[Sun Jul 12 00:34:43 2026] 127.0.0.1:41374 [200]: GET /views/cargos_form.php?id=34
+[Sun Jul 12 00:34:43 2026] 127.0.0.1:41374 Closing
+[Sun Jul 12 00:34:44 2026] 127.0.0.1:41386 Accepted
+[Sun Jul 12 00:34:44 2026] 127.0.0.1:41386 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:34:44 2026] 127.0.0.1:41386 Closing
+[Sun Jul 12 00:34:44 2026] 127.0.0.1:41394 Accepted
+[Sun Jul 12 00:34:44 2026] 127.0.0.1:41394 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:34:44 2026] 127.0.0.1:41394 Closing
+[Sun Jul 12 00:34:44 2026] 127.0.0.1:41404 Accepted
+[Sun Jul 12 00:34:44 2026] 127.0.0.1:41404 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:34:44 2026] 127.0.0.1:41404 Closing
+[Sun Jul 12 00:34:51 2026] 127.0.0.1:38620 Accepted
+[Sun Jul 12 00:34:51 2026] 127.0.0.1:38620 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:34:51 2026] 127.0.0.1:38620 Closing
+[Sun Jul 12 00:34:51 2026] 127.0.0.1:38632 Accepted
+[Sun Jul 12 00:34:51 2026] 127.0.0.1:38632 [200]: GET /views/cargos_form.php?id=34&message=Cargo+salvo+com+sucesso%21+ID%3A+34&type=success
+[Sun Jul 12 00:34:51 2026] 127.0.0.1:38632 Closing
+[Sun Jul 12 00:34:52 2026] 127.0.0.1:38642 Accepted
+[Sun Jul 12 00:34:52 2026] 127.0.0.1:38642 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:34:52 2026] 127.0.0.1:38642 Closing
+[Sun Jul 12 00:34:52 2026] 127.0.0.1:38652 Accepted
+[Sun Jul 12 00:34:52 2026] 127.0.0.1:38652 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:34:52 2026] 127.0.0.1:38652 Closing
+[Sun Jul 12 00:34:52 2026] 127.0.0.1:38666 Accepted
+[Sun Jul 12 00:34:52 2026] 127.0.0.1:38666 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:34:52 2026] 127.0.0.1:38666 Closing
+[Sun Jul 12 00:34:54 2026] 127.0.0.1:38668 Accepted
+[Sun Jul 12 00:34:54 2026] 127.0.0.1:38668 [200]: GET /views/cargos_form.php?id=35
+[Sun Jul 12 00:34:54 2026] 127.0.0.1:38668 Closing
+[Sun Jul 12 00:34:54 2026] 127.0.0.1:38674 Accepted
+[Sun Jul 12 00:34:54 2026] 127.0.0.1:38674 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:34:54 2026] 127.0.0.1:38674 Closing
+[Sun Jul 12 00:34:55 2026] 127.0.0.1:38684 Accepted
+[Sun Jul 12 00:34:55 2026] 127.0.0.1:38684 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:34:55 2026] 127.0.0.1:38684 Closing
+[Sun Jul 12 00:34:55 2026] 127.0.0.1:38688 Accepted
+[Sun Jul 12 00:34:55 2026] 127.0.0.1:38688 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:34:55 2026] 127.0.0.1:38688 Closing
+[Sun Jul 12 00:35:39 2026] 127.0.0.1:54106 Accepted
+[Sun Jul 12 00:35:39 2026] 127.0.0.1:54106 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:35:39 2026] 127.0.0.1:54106 Closing
+[Sun Jul 12 00:35:40 2026] 127.0.0.1:54114 Accepted
+[Sun Jul 12 00:35:40 2026] 127.0.0.1:54114 [200]: GET /views/cargos_form.php?id=35&message=Cargo+salvo+com+sucesso%21+ID%3A+35&type=success
+[Sun Jul 12 00:35:40 2026] 127.0.0.1:54114 Closing
+[Sun Jul 12 00:35:40 2026] 127.0.0.1:54126 Accepted
+[Sun Jul 12 00:35:40 2026] 127.0.0.1:54126 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:35:40 2026] 127.0.0.1:54126 Closing
+[Sun Jul 12 00:35:40 2026] 127.0.0.1:54132 Accepted
+[Sun Jul 12 00:35:40 2026] 127.0.0.1:54132 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:35:40 2026] 127.0.0.1:54132 Closing
+[Sun Jul 12 00:35:41 2026] 127.0.0.1:54142 Accepted
+[Sun Jul 12 00:35:41 2026] 127.0.0.1:54142 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:35:41 2026] 127.0.0.1:54142 Closing
+[Sun Jul 12 00:35:42 2026] 127.0.0.1:54154 Accepted
+[Sun Jul 12 00:35:42 2026] 127.0.0.1:54154 [200]: GET /views/cargos_form.php?id=36
+[Sun Jul 12 00:35:42 2026] 127.0.0.1:54154 Closing
+[Sun Jul 12 00:35:42 2026] 127.0.0.1:54160 Accepted
+[Sun Jul 12 00:35:42 2026] 127.0.0.1:54160 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:35:42 2026] 127.0.0.1:54160 Closing
+[Sun Jul 12 00:35:43 2026] 127.0.0.1:54166 Accepted
+[Sun Jul 12 00:35:43 2026] 127.0.0.1:54166 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:35:43 2026] 127.0.0.1:54166 Closing
+[Sun Jul 12 00:35:43 2026] 127.0.0.1:54168 Accepted
+[Sun Jul 12 00:35:43 2026] 127.0.0.1:54168 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:35:43 2026] 127.0.0.1:54168 Closing
+[Sun Jul 12 00:35:49 2026] 127.0.0.1:47666 Accepted
+[Sun Jul 12 00:35:49 2026] 127.0.0.1:47666 [200]: GET /views/cargos_form.php?id=37
+[Sun Jul 12 00:35:49 2026] 127.0.0.1:47666 Closing
+[Sun Jul 12 00:35:50 2026] 127.0.0.1:47676 Accepted
+[Sun Jul 12 00:35:50 2026] 127.0.0.1:47676 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:35:50 2026] 127.0.0.1:47676 Closing
+[Sun Jul 12 00:35:50 2026] 127.0.0.1:47680 Accepted
+[Sun Jul 12 00:35:50 2026] 127.0.0.1:47680 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:35:50 2026] 127.0.0.1:47680 Closing
+[Sun Jul 12 00:35:50 2026] 127.0.0.1:47688 Accepted
+[Sun Jul 12 00:35:50 2026] 127.0.0.1:47688 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:35:50 2026] 127.0.0.1:47688 Closing
+[Sun Jul 12 00:36:02 2026] 127.0.0.1:44476 Accepted
+[Sun Jul 12 00:36:02 2026] 127.0.0.1:44476 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:36:02 2026] 127.0.0.1:44476 Closing
+[Sun Jul 12 00:36:03 2026] 127.0.0.1:44484 Accepted
+[Sun Jul 12 00:36:03 2026] 127.0.0.1:44484 [200]: GET /views/cargos_form.php?id=37&message=Cargo+salvo+com+sucesso%21+ID%3A+37&type=success
+[Sun Jul 12 00:36:03 2026] 127.0.0.1:44484 Closing
+[Sun Jul 12 00:36:03 2026] 127.0.0.1:44490 Accepted
+[Sun Jul 12 00:36:03 2026] 127.0.0.1:44490 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:36:03 2026] 127.0.0.1:44490 Closing
+[Sun Jul 12 00:36:03 2026] 127.0.0.1:44498 Accepted
+[Sun Jul 12 00:36:03 2026] 127.0.0.1:44498 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:36:03 2026] 127.0.0.1:44498 Closing
+[Sun Jul 12 00:36:04 2026] 127.0.0.1:44502 Accepted
+[Sun Jul 12 00:36:04 2026] 127.0.0.1:44502 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:36:04 2026] 127.0.0.1:44502 Closing
+[Sun Jul 12 00:36:05 2026] 127.0.0.1:44512 Accepted
+[Sun Jul 12 00:36:05 2026] 127.0.0.1:44512 [200]: GET /views/cargos_form.php?id=38
+[Sun Jul 12 00:36:05 2026] 127.0.0.1:44512 Closing
+[Sun Jul 12 00:36:05 2026] 127.0.0.1:44516 Accepted
+[Sun Jul 12 00:36:05 2026] 127.0.0.1:44516 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:36:05 2026] 127.0.0.1:44516 Closing
+[Sun Jul 12 00:36:05 2026] 127.0.0.1:44518 Accepted
+[Sun Jul 12 00:36:05 2026] 127.0.0.1:44518 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:36:05 2026] 127.0.0.1:44518 Closing
+[Sun Jul 12 00:36:06 2026] 127.0.0.1:44534 Accepted
+[Sun Jul 12 00:36:06 2026] 127.0.0.1:44534 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:36:06 2026] 127.0.0.1:44534 Closing
+[Sun Jul 12 00:36:17 2026] 127.0.0.1:42508 Accepted
+[Sun Jul 12 00:36:17 2026] 127.0.0.1:42508 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:36:17 2026] 127.0.0.1:42508 Closing
+[Sun Jul 12 00:36:18 2026] 127.0.0.1:42512 Accepted
+[Sun Jul 12 00:36:18 2026] 127.0.0.1:42512 [200]: GET /views/cargos_form.php?id=38&message=Cargo+salvo+com+sucesso%21+ID%3A+38&type=success
+[Sun Jul 12 00:36:18 2026] 127.0.0.1:42512 Closing
+[Sun Jul 12 00:36:18 2026] 127.0.0.1:42518 Accepted
+[Sun Jul 12 00:36:18 2026] 127.0.0.1:42518 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:36:18 2026] 127.0.0.1:42518 Closing
+[Sun Jul 12 00:36:18 2026] 127.0.0.1:42524 Accepted
+[Sun Jul 12 00:36:18 2026] 127.0.0.1:42524 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:36:18 2026] 127.0.0.1:42524 Closing
+[Sun Jul 12 00:36:19 2026] 127.0.0.1:42534 Accepted
+[Sun Jul 12 00:36:19 2026] 127.0.0.1:42534 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:36:19 2026] 127.0.0.1:42534 Closing
+[Sun Jul 12 00:36:20 2026] 127.0.0.1:42536 Accepted
+[Sun Jul 12 00:36:20 2026] 127.0.0.1:42536 [200]: GET /views/cargos_form.php?id=39
+[Sun Jul 12 00:36:20 2026] 127.0.0.1:42536 Closing
+[Sun Jul 12 00:36:20 2026] 127.0.0.1:42546 Accepted
+[Sun Jul 12 00:36:20 2026] 127.0.0.1:42546 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:36:20 2026] 127.0.0.1:42546 Closing
+[Sun Jul 12 00:36:21 2026] 127.0.0.1:42562 Accepted
+[Sun Jul 12 00:36:21 2026] 127.0.0.1:42562 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:36:21 2026] 127.0.0.1:42562 Closing
+[Sun Jul 12 00:36:21 2026] 127.0.0.1:42568 Accepted
+[Sun Jul 12 00:36:21 2026] 127.0.0.1:42568 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:36:21 2026] 127.0.0.1:42568 Closing
+[Sun Jul 12 00:36:29 2026] 127.0.0.1:56328 Accepted
+[Sun Jul 12 00:36:29 2026] 127.0.0.1:56328 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:36:29 2026] 127.0.0.1:56328 Closing
+[Sun Jul 12 00:36:30 2026] 127.0.0.1:56336 Accepted
+[Sun Jul 12 00:36:30 2026] 127.0.0.1:56336 [200]: GET /views/cargos_form.php?id=39&message=Cargo+salvo+com+sucesso%21+ID%3A+39&type=success
+[Sun Jul 12 00:36:30 2026] 127.0.0.1:56336 Closing
+[Sun Jul 12 00:36:30 2026] 127.0.0.1:56350 Accepted
+[Sun Jul 12 00:36:30 2026] 127.0.0.1:56350 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:36:30 2026] 127.0.0.1:56350 Closing
+[Sun Jul 12 00:36:30 2026] 127.0.0.1:56364 Accepted
+[Sun Jul 12 00:36:30 2026] 127.0.0.1:56364 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:36:30 2026] 127.0.0.1:56364 Closing
+[Sun Jul 12 00:36:30 2026] 127.0.0.1:56380 Accepted
+[Sun Jul 12 00:36:30 2026] 127.0.0.1:56380 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:36:30 2026] 127.0.0.1:56380 Closing
+[Sun Jul 12 00:36:32 2026] 127.0.0.1:56394 Accepted
+[Sun Jul 12 00:36:32 2026] 127.0.0.1:56394 [200]: GET /views/cargos_form.php?id=40
+[Sun Jul 12 00:36:32 2026] 127.0.0.1:56394 Closing
+[Sun Jul 12 00:36:32 2026] 127.0.0.1:56406 Accepted
+[Sun Jul 12 00:36:32 2026] 127.0.0.1:56406 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:36:32 2026] 127.0.0.1:56406 Closing
+[Sun Jul 12 00:36:33 2026] 127.0.0.1:56420 Accepted
+[Sun Jul 12 00:36:33 2026] 127.0.0.1:56420 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:36:33 2026] 127.0.0.1:56420 Closing
+[Sun Jul 12 00:36:33 2026] 127.0.0.1:56436 Accepted
+[Sun Jul 12 00:36:33 2026] 127.0.0.1:56436 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:36:33 2026] 127.0.0.1:56436 Closing
+[Sun Jul 12 00:36:56 2026] 127.0.0.1:51824 Accepted
+[Sun Jul 12 00:36:56 2026] 127.0.0.1:51824 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:36:56 2026] 127.0.0.1:51824 Closing
+[Sun Jul 12 00:36:56 2026] 127.0.0.1:52738 Accepted
+[Sun Jul 12 00:36:56 2026] 127.0.0.1:52738 [200]: GET /views/cargos_form.php?id=40&message=Cargo+salvo+com+sucesso%21+ID%3A+40&type=success
+[Sun Jul 12 00:36:56 2026] 127.0.0.1:52738 Closing
+[Sun Jul 12 00:36:57 2026] 127.0.0.1:52740 Accepted
+[Sun Jul 12 00:36:57 2026] 127.0.0.1:52740 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:36:57 2026] 127.0.0.1:52740 Closing
+[Sun Jul 12 00:36:57 2026] 127.0.0.1:52750 Accepted
+[Sun Jul 12 00:36:57 2026] 127.0.0.1:52750 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:36:57 2026] 127.0.0.1:52750 Closing
+[Sun Jul 12 00:36:57 2026] 127.0.0.1:52752 Accepted
+[Sun Jul 12 00:36:57 2026] 127.0.0.1:52752 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:36:57 2026] 127.0.0.1:52752 Closing
+[Sun Jul 12 00:36:59 2026] 127.0.0.1:52760 Accepted
+[Sun Jul 12 00:36:59 2026] 127.0.0.1:52760 [200]: GET /views/cargos_form.php?id=41
+[Sun Jul 12 00:36:59 2026] 127.0.0.1:52760 Closing
+[Sun Jul 12 00:36:59 2026] 127.0.0.1:52772 Accepted
+[Sun Jul 12 00:36:59 2026] 127.0.0.1:52772 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:36:59 2026] 127.0.0.1:52772 Closing
+[Sun Jul 12 00:36:59 2026] 127.0.0.1:52780 Accepted
+[Sun Jul 12 00:36:59 2026] 127.0.0.1:52780 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:36:59 2026] 127.0.0.1:52780 Closing
+[Sun Jul 12 00:37:00 2026] 127.0.0.1:52792 Accepted
+[Sun Jul 12 00:37:00 2026] 127.0.0.1:52792 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:37:00 2026] 127.0.0.1:52792 Closing
+[Sun Jul 12 00:37:50 2026] 127.0.0.1:45278 Accepted
+[Sun Jul 12 00:37:50 2026] 127.0.0.1:45278 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:37:50 2026] 127.0.0.1:45278 Closing
+[Sun Jul 12 00:37:50 2026] 127.0.0.1:45280 Accepted
+[Sun Jul 12 00:37:50 2026] 127.0.0.1:45280 [200]: GET /views/cargos_form.php?id=41&message=Cargo+salvo+com+sucesso%21+ID%3A+41&type=success
+[Sun Jul 12 00:37:50 2026] 127.0.0.1:45280 Closing
+[Sun Jul 12 00:37:50 2026] 127.0.0.1:45296 Accepted
+[Sun Jul 12 00:37:50 2026] 127.0.0.1:45296 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:37:50 2026] 127.0.0.1:45296 Closing
+[Sun Jul 12 00:37:51 2026] 127.0.0.1:45308 Accepted
+[Sun Jul 12 00:37:51 2026] 127.0.0.1:45308 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:37:51 2026] 127.0.0.1:45308 Closing
+[Sun Jul 12 00:37:51 2026] 127.0.0.1:45318 Accepted
+[Sun Jul 12 00:37:51 2026] 127.0.0.1:45318 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:37:51 2026] 127.0.0.1:45318 Closing
+[Sun Jul 12 00:37:54 2026] 127.0.0.1:45326 Accepted
+[Sun Jul 12 00:37:54 2026] 127.0.0.1:45326 [200]: GET /views/cargos_form.php?id=42
+[Sun Jul 12 00:37:54 2026] 127.0.0.1:45326 Closing
+[Sun Jul 12 00:37:54 2026] 127.0.0.1:45340 Accepted
+[Sun Jul 12 00:37:54 2026] 127.0.0.1:45340 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:37:54 2026] 127.0.0.1:45340 Closing
+[Sun Jul 12 00:37:55 2026] 127.0.0.1:45348 Accepted
+[Sun Jul 12 00:37:55 2026] 127.0.0.1:45348 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:37:55 2026] 127.0.0.1:45348 Closing
+[Sun Jul 12 00:37:55 2026] 127.0.0.1:45362 Accepted
+[Sun Jul 12 00:37:55 2026] 127.0.0.1:45362 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:37:55 2026] 127.0.0.1:45362 Closing
+[Sun Jul 12 00:38:03 2026] 127.0.0.1:52978 Accepted
+[Sun Jul 12 00:38:03 2026] 127.0.0.1:52978 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:38:03 2026] 127.0.0.1:52978 Closing
+[Sun Jul 12 00:38:03 2026] 127.0.0.1:52994 Accepted
+[Sun Jul 12 00:38:03 2026] 127.0.0.1:52994 [200]: GET /views/cargos_form.php?id=42&message=Cargo+salvo+com+sucesso%21+ID%3A+42&type=success
+[Sun Jul 12 00:38:03 2026] 127.0.0.1:52994 Closing
+[Sun Jul 12 00:38:03 2026] 127.0.0.1:53008 Accepted
+[Sun Jul 12 00:38:03 2026] 127.0.0.1:53008 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:38:03 2026] 127.0.0.1:53008 Closing
+[Sun Jul 12 00:38:04 2026] 127.0.0.1:53024 Accepted
+[Sun Jul 12 00:38:04 2026] 127.0.0.1:53024 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:38:04 2026] 127.0.0.1:53024 Closing
+[Sun Jul 12 00:38:04 2026] 127.0.0.1:53028 Accepted
+[Sun Jul 12 00:38:04 2026] 127.0.0.1:53028 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:38:04 2026] 127.0.0.1:53028 Closing
+[Sun Jul 12 00:38:05 2026] 127.0.0.1:53032 Accepted
+[Sun Jul 12 00:38:05 2026] 127.0.0.1:53032 [200]: GET /views/cargos_form.php?id=43
+[Sun Jul 12 00:38:05 2026] 127.0.0.1:53032 Closing
+[Sun Jul 12 00:38:05 2026] 127.0.0.1:53044 Accepted
+[Sun Jul 12 00:38:05 2026] 127.0.0.1:53044 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:38:05 2026] 127.0.0.1:53044 Closing
+[Sun Jul 12 00:38:06 2026] 127.0.0.1:53048 Accepted
+[Sun Jul 12 00:38:06 2026] 127.0.0.1:53048 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:38:06 2026] 127.0.0.1:53048 Closing
+[Sun Jul 12 00:38:06 2026] 127.0.0.1:53064 Accepted
+[Sun Jul 12 00:38:06 2026] 127.0.0.1:53064 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:38:06 2026] 127.0.0.1:53064 Closing
+[Sun Jul 12 00:38:14 2026] 127.0.0.1:49514 Accepted
+[Sun Jul 12 00:38:14 2026] 127.0.0.1:49514 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:38:14 2026] 127.0.0.1:49514 Closing
+[Sun Jul 12 00:38:14 2026] 127.0.0.1:49516 Accepted
+[Sun Jul 12 00:38:14 2026] 127.0.0.1:49516 [200]: GET /views/cargos_form.php?id=43&message=Cargo+salvo+com+sucesso%21+ID%3A+43&type=success
+[Sun Jul 12 00:38:14 2026] 127.0.0.1:49516 Closing
+[Sun Jul 12 00:38:14 2026] 127.0.0.1:49530 Accepted
+[Sun Jul 12 00:38:14 2026] 127.0.0.1:49530 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:38:14 2026] 127.0.0.1:49530 Closing
+[Sun Jul 12 00:38:15 2026] 127.0.0.1:49532 Accepted
+[Sun Jul 12 00:38:15 2026] 127.0.0.1:49532 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:38:15 2026] 127.0.0.1:49532 Closing
+[Sun Jul 12 00:38:15 2026] 127.0.0.1:49548 Accepted
+[Sun Jul 12 00:38:15 2026] 127.0.0.1:49548 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:38:15 2026] 127.0.0.1:49548 Closing
+[Sun Jul 12 00:38:19 2026] 127.0.0.1:57230 Accepted
+[Sun Jul 12 00:38:19 2026] 127.0.0.1:57230 [200]: GET /views/cargos_form.php?id=44
+[Sun Jul 12 00:38:19 2026] 127.0.0.1:57230 Closing
+[Sun Jul 12 00:38:19 2026] 127.0.0.1:57234 Accepted
+[Sun Jul 12 00:38:19 2026] 127.0.0.1:57234 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:38:19 2026] 127.0.0.1:57234 Closing
+[Sun Jul 12 00:38:19 2026] 127.0.0.1:57250 Accepted
+[Sun Jul 12 00:38:19 2026] 127.0.0.1:57250 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:38:19 2026] 127.0.0.1:57250 Closing
+[Sun Jul 12 00:38:20 2026] 127.0.0.1:57252 Accepted
+[Sun Jul 12 00:38:20 2026] 127.0.0.1:57252 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:38:20 2026] 127.0.0.1:57252 Closing
+[Sun Jul 12 00:38:26 2026] 127.0.0.1:57256 Accepted
+[Sun Jul 12 00:38:26 2026] 127.0.0.1:57256 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:38:26 2026] 127.0.0.1:57256 Closing
+[Sun Jul 12 00:38:26 2026] 127.0.0.1:57266 Accepted
+[Sun Jul 12 00:38:26 2026] 127.0.0.1:57266 [200]: GET /views/cargos_form.php?id=44&message=Cargo+salvo+com+sucesso%21+ID%3A+44&type=success
+[Sun Jul 12 00:38:26 2026] 127.0.0.1:57266 Closing
+[Sun Jul 12 00:38:26 2026] 127.0.0.1:53850 Accepted
+[Sun Jul 12 00:38:26 2026] 127.0.0.1:53850 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:38:26 2026] 127.0.0.1:53850 Closing
+[Sun Jul 12 00:38:27 2026] 127.0.0.1:53864 Accepted
+[Sun Jul 12 00:38:27 2026] 127.0.0.1:53864 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:38:27 2026] 127.0.0.1:53864 Closing
+[Sun Jul 12 00:38:27 2026] 127.0.0.1:53868 Accepted
+[Sun Jul 12 00:38:27 2026] 127.0.0.1:53868 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:38:27 2026] 127.0.0.1:53868 Closing
+[Sun Jul 12 00:38:29 2026] 127.0.0.1:53884 Accepted
+[Sun Jul 12 00:38:29 2026] 127.0.0.1:53884 [200]: GET /views/cargos_form.php?id=45
+[Sun Jul 12 00:38:29 2026] 127.0.0.1:53884 Closing
+[Sun Jul 12 00:38:29 2026] 127.0.0.1:53892 Accepted
+[Sun Jul 12 00:38:29 2026] 127.0.0.1:53892 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:38:29 2026] 127.0.0.1:53892 Closing
+[Sun Jul 12 00:38:29 2026] 127.0.0.1:53906 Accepted
+[Sun Jul 12 00:38:29 2026] 127.0.0.1:53906 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:38:29 2026] 127.0.0.1:53906 Closing
+[Sun Jul 12 00:38:30 2026] 127.0.0.1:53922 Accepted
+[Sun Jul 12 00:38:30 2026] 127.0.0.1:53922 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:38:30 2026] 127.0.0.1:53922 Closing
+[Sun Jul 12 00:38:36 2026] 127.0.0.1:53936 Accepted
+[Sun Jul 12 00:38:36 2026] 127.0.0.1:53936 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:38:36 2026] 127.0.0.1:53936 Closing
+[Sun Jul 12 00:38:36 2026] 127.0.0.1:36846 Accepted
+[Sun Jul 12 00:38:36 2026] 127.0.0.1:36846 [200]: GET /views/cargos_form.php?id=45&message=Cargo+salvo+com+sucesso%21+ID%3A+45&type=success
+[Sun Jul 12 00:38:36 2026] 127.0.0.1:36846 Closing
+[Sun Jul 12 00:38:37 2026] 127.0.0.1:36860 Accepted
+[Sun Jul 12 00:38:37 2026] 127.0.0.1:36860 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:38:37 2026] 127.0.0.1:36860 Closing
+[Sun Jul 12 00:38:37 2026] 127.0.0.1:36874 Accepted
+[Sun Jul 12 00:38:37 2026] 127.0.0.1:36874 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:38:37 2026] 127.0.0.1:36874 Closing
+[Sun Jul 12 00:38:37 2026] 127.0.0.1:36886 Accepted
+[Sun Jul 12 00:38:37 2026] 127.0.0.1:36886 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:38:37 2026] 127.0.0.1:36886 Closing
+[Sun Jul 12 00:38:39 2026] 127.0.0.1:36900 Accepted
+[Sun Jul 12 00:38:39 2026] 127.0.0.1:36900 [200]: GET /views/cargos_form.php?id=46
+[Sun Jul 12 00:38:39 2026] 127.0.0.1:36900 Closing
+[Sun Jul 12 00:38:39 2026] 127.0.0.1:36910 Accepted
+[Sun Jul 12 00:38:39 2026] 127.0.0.1:36910 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:38:39 2026] 127.0.0.1:36910 Closing
+[Sun Jul 12 00:38:39 2026] 127.0.0.1:36912 Accepted
+[Sun Jul 12 00:38:39 2026] 127.0.0.1:36912 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:38:39 2026] 127.0.0.1:36912 Closing
+[Sun Jul 12 00:38:39 2026] 127.0.0.1:36920 Accepted
+[Sun Jul 12 00:38:39 2026] 127.0.0.1:36920 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:38:39 2026] 127.0.0.1:36920 Closing
+[Sun Jul 12 00:38:48 2026] 127.0.0.1:54090 Accepted
+[Sun Jul 12 00:38:48 2026] 127.0.0.1:54090 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:38:48 2026] 127.0.0.1:54090 Closing
+[Sun Jul 12 00:38:48 2026] 127.0.0.1:54092 Accepted
+[Sun Jul 12 00:38:48 2026] 127.0.0.1:54092 [200]: GET /views/cargos_form.php?id=46&message=Cargo+salvo+com+sucesso%21+ID%3A+46&type=success
+[Sun Jul 12 00:38:48 2026] 127.0.0.1:54092 Closing
+[Sun Jul 12 00:38:48 2026] 127.0.0.1:54100 Accepted
+[Sun Jul 12 00:38:48 2026] 127.0.0.1:54100 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:38:48 2026] 127.0.0.1:54100 Closing
+[Sun Jul 12 00:38:49 2026] 127.0.0.1:54112 Accepted
+[Sun Jul 12 00:38:49 2026] 127.0.0.1:54112 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:38:49 2026] 127.0.0.1:54112 Closing
+[Sun Jul 12 00:38:49 2026] 127.0.0.1:54120 Accepted
+[Sun Jul 12 00:38:49 2026] 127.0.0.1:54120 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:38:49 2026] 127.0.0.1:54120 Closing
+[Sun Jul 12 00:38:51 2026] 127.0.0.1:54132 Accepted
+[Sun Jul 12 00:38:51 2026] 127.0.0.1:54132 [200]: GET /views/cargos_form.php?id=47
+[Sun Jul 12 00:38:51 2026] 127.0.0.1:54132 Closing
+[Sun Jul 12 00:38:51 2026] 127.0.0.1:54134 Accepted
+[Sun Jul 12 00:38:51 2026] 127.0.0.1:54134 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:38:51 2026] 127.0.0.1:54134 Closing
+[Sun Jul 12 00:38:52 2026] 127.0.0.1:54144 Accepted
+[Sun Jul 12 00:38:52 2026] 127.0.0.1:54144 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:38:52 2026] 127.0.0.1:54144 Closing
+[Sun Jul 12 00:38:52 2026] 127.0.0.1:54146 Accepted
+[Sun Jul 12 00:38:52 2026] 127.0.0.1:54146 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:38:52 2026] 127.0.0.1:54146 Closing
+[Sun Jul 12 00:39:04 2026] 127.0.0.1:49300 Accepted
+[Sun Jul 12 00:39:04 2026] 127.0.0.1:49300 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:39:04 2026] 127.0.0.1:49300 Closing
+[Sun Jul 12 00:39:04 2026] 127.0.0.1:49308 Accepted
+[Sun Jul 12 00:39:04 2026] 127.0.0.1:49308 [200]: GET /views/cargos_form.php?id=47&message=Cargo+salvo+com+sucesso%21+ID%3A+47&type=success
+[Sun Jul 12 00:39:04 2026] 127.0.0.1:49308 Closing
+[Sun Jul 12 00:39:04 2026] 127.0.0.1:49324 Accepted
+[Sun Jul 12 00:39:04 2026] 127.0.0.1:49324 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:39:04 2026] 127.0.0.1:49324 Closing
+[Sun Jul 12 00:39:04 2026] 127.0.0.1:49340 Accepted
+[Sun Jul 12 00:39:04 2026] 127.0.0.1:49340 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:39:04 2026] 127.0.0.1:49340 Closing
+[Sun Jul 12 00:39:05 2026] 127.0.0.1:49342 Accepted
+[Sun Jul 12 00:39:05 2026] 127.0.0.1:49342 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:39:05 2026] 127.0.0.1:49342 Closing
+[Sun Jul 12 00:39:06 2026] 127.0.0.1:49358 Accepted
+[Sun Jul 12 00:39:06 2026] 127.0.0.1:49358 [200]: GET /views/cargos_form.php?id=48
+[Sun Jul 12 00:39:06 2026] 127.0.0.1:49358 Closing
+[Sun Jul 12 00:39:06 2026] 127.0.0.1:49372 Accepted
+[Sun Jul 12 00:39:06 2026] 127.0.0.1:49372 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:39:06 2026] 127.0.0.1:49372 Closing
+[Sun Jul 12 00:39:07 2026] 127.0.0.1:52406 Accepted
+[Sun Jul 12 00:39:07 2026] 127.0.0.1:52406 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:39:07 2026] 127.0.0.1:52406 Closing
+[Sun Jul 12 00:39:07 2026] 127.0.0.1:52412 Accepted
+[Sun Jul 12 00:39:07 2026] 127.0.0.1:52412 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:39:07 2026] 127.0.0.1:52412 Closing
+[Sun Jul 12 00:39:15 2026] 127.0.0.1:52416 Accepted
+[Sun Jul 12 00:39:15 2026] 127.0.0.1:52416 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:39:15 2026] 127.0.0.1:52416 Closing
+[Sun Jul 12 00:39:15 2026] 127.0.0.1:52430 Accepted
+[Sun Jul 12 00:39:15 2026] 127.0.0.1:52430 [200]: GET /views/cargos_form.php?id=48&message=Cargo+salvo+com+sucesso%21+ID%3A+48&type=success
+[Sun Jul 12 00:39:15 2026] 127.0.0.1:52430 Closing
+[Sun Jul 12 00:39:16 2026] 127.0.0.1:52436 Accepted
+[Sun Jul 12 00:39:16 2026] 127.0.0.1:52436 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:39:16 2026] 127.0.0.1:52436 Closing
+[Sun Jul 12 00:39:16 2026] 127.0.0.1:52450 Accepted
+[Sun Jul 12 00:39:16 2026] 127.0.0.1:52450 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:39:16 2026] 127.0.0.1:52450 Closing
+[Sun Jul 12 00:39:16 2026] 127.0.0.1:47404 Accepted
+[Sun Jul 12 00:39:16 2026] 127.0.0.1:47404 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:39:16 2026] 127.0.0.1:47404 Closing
+[Sun Jul 12 00:39:18 2026] 127.0.0.1:47418 Accepted
+[Sun Jul 12 00:39:18 2026] 127.0.0.1:47418 [200]: GET /views/cargos_form.php?id=49
+[Sun Jul 12 00:39:18 2026] 127.0.0.1:47418 Closing
+[Sun Jul 12 00:39:18 2026] 127.0.0.1:47430 Accepted
+[Sun Jul 12 00:39:18 2026] 127.0.0.1:47430 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:39:18 2026] 127.0.0.1:47430 Closing
+[Sun Jul 12 00:39:19 2026] 127.0.0.1:47446 Accepted
+[Sun Jul 12 00:39:19 2026] 127.0.0.1:47446 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:39:19 2026] 127.0.0.1:47446 Closing
+[Sun Jul 12 00:39:19 2026] 127.0.0.1:47450 Accepted
+[Sun Jul 12 00:39:19 2026] 127.0.0.1:47450 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:39:19 2026] 127.0.0.1:47450 Closing
+[Sun Jul 12 00:39:31 2026] 127.0.0.1:41312 Accepted
+[Sun Jul 12 00:39:31 2026] 127.0.0.1:41312 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:39:31 2026] 127.0.0.1:41312 Closing
+[Sun Jul 12 00:39:31 2026] 127.0.0.1:41318 Accepted
+[Sun Jul 12 00:39:31 2026] 127.0.0.1:41318 [200]: GET /views/cargos_form.php?id=49&message=Cargo+salvo+com+sucesso%21+ID%3A+49&type=success
+[Sun Jul 12 00:39:31 2026] 127.0.0.1:41318 Closing
+[Sun Jul 12 00:39:31 2026] 127.0.0.1:41334 Accepted
+[Sun Jul 12 00:39:31 2026] 127.0.0.1:41334 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:39:31 2026] 127.0.0.1:41334 Closing
+[Sun Jul 12 00:39:32 2026] 127.0.0.1:41338 Accepted
+[Sun Jul 12 00:39:32 2026] 127.0.0.1:41338 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:39:32 2026] 127.0.0.1:41338 Closing
+[Sun Jul 12 00:39:32 2026] 127.0.0.1:41350 Accepted
+[Sun Jul 12 00:39:32 2026] 127.0.0.1:41350 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:39:32 2026] 127.0.0.1:41350 Closing
+[Sun Jul 12 00:39:34 2026] 127.0.0.1:41360 Accepted
+[Sun Jul 12 00:39:34 2026] 127.0.0.1:41360 [200]: GET /views/cargos_form.php?id=50
+[Sun Jul 12 00:39:34 2026] 127.0.0.1:41360 Closing
+[Sun Jul 12 00:39:34 2026] 127.0.0.1:41372 Accepted
+[Sun Jul 12 00:39:34 2026] 127.0.0.1:41372 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:39:34 2026] 127.0.0.1:41372 Closing
+[Sun Jul 12 00:39:34 2026] 127.0.0.1:41378 Accepted
+[Sun Jul 12 00:39:34 2026] 127.0.0.1:41378 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:39:34 2026] 127.0.0.1:41378 Closing
+[Sun Jul 12 00:39:35 2026] 127.0.0.1:41392 Accepted
+[Sun Jul 12 00:39:35 2026] 127.0.0.1:41392 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:39:35 2026] 127.0.0.1:41392 Closing
+[Sun Jul 12 00:39:42 2026] 127.0.0.1:39602 Accepted
+[Sun Jul 12 00:39:43 2026] 127.0.0.1:39602 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:39:43 2026] 127.0.0.1:39602 Closing
+[Sun Jul 12 00:39:43 2026] 127.0.0.1:39612 Accepted
+[Sun Jul 12 00:39:43 2026] 127.0.0.1:39612 [200]: GET /views/cargos_form.php?id=50&message=Cargo+salvo+com+sucesso%21+ID%3A+50&type=success
+[Sun Jul 12 00:39:43 2026] 127.0.0.1:39612 Closing
+[Sun Jul 12 00:39:43 2026] 127.0.0.1:39628 Accepted
+[Sun Jul 12 00:39:43 2026] 127.0.0.1:39628 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:39:43 2026] 127.0.0.1:39628 Closing
+[Sun Jul 12 00:39:43 2026] 127.0.0.1:39638 Accepted
+[Sun Jul 12 00:39:43 2026] 127.0.0.1:39638 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:39:43 2026] 127.0.0.1:39638 Closing
+[Sun Jul 12 00:39:44 2026] 127.0.0.1:39648 Accepted
+[Sun Jul 12 00:39:44 2026] 127.0.0.1:39648 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:39:44 2026] 127.0.0.1:39648 Closing
+[Sun Jul 12 00:39:45 2026] 127.0.0.1:39652 Accepted
+[Sun Jul 12 00:39:45 2026] 127.0.0.1:39652 [200]: GET /views/cargos_form.php?id=51
+[Sun Jul 12 00:39:45 2026] 127.0.0.1:39652 Closing
+[Sun Jul 12 00:39:45 2026] 127.0.0.1:39664 Accepted
+[Sun Jul 12 00:39:45 2026] 127.0.0.1:39664 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:39:45 2026] 127.0.0.1:39664 Closing
+[Sun Jul 12 00:39:45 2026] 127.0.0.1:39680 Accepted
+[Sun Jul 12 00:39:45 2026] 127.0.0.1:39680 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:39:45 2026] 127.0.0.1:39680 Closing
+[Sun Jul 12 00:39:46 2026] 127.0.0.1:39686 Accepted
+[Sun Jul 12 00:39:46 2026] 127.0.0.1:39686 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:39:46 2026] 127.0.0.1:39686 Closing
+[Sun Jul 12 00:39:53 2026] 127.0.0.1:55990 Accepted
+[Sun Jul 12 00:39:53 2026] 127.0.0.1:55990 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:39:53 2026] 127.0.0.1:55990 Closing
+[Sun Jul 12 00:39:53 2026] 127.0.0.1:55996 Accepted
+[Sun Jul 12 00:39:53 2026] 127.0.0.1:55996 [200]: GET /views/cargos_form.php?id=51&message=Cargo+salvo+com+sucesso%21+ID%3A+51&type=success
+[Sun Jul 12 00:39:53 2026] 127.0.0.1:55996 Closing
+[Sun Jul 12 00:39:54 2026] 127.0.0.1:56004 Accepted
+[Sun Jul 12 00:39:54 2026] 127.0.0.1:56004 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:39:54 2026] 127.0.0.1:56004 Closing
+[Sun Jul 12 00:39:54 2026] 127.0.0.1:56016 Accepted
+[Sun Jul 12 00:39:54 2026] 127.0.0.1:56016 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:39:54 2026] 127.0.0.1:56016 Closing
+[Sun Jul 12 00:39:54 2026] 127.0.0.1:56026 Accepted
+[Sun Jul 12 00:39:54 2026] 127.0.0.1:56026 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:39:54 2026] 127.0.0.1:56026 Closing
+[Sun Jul 12 00:39:55 2026] 127.0.0.1:56040 Accepted
+[Sun Jul 12 00:39:55 2026] 127.0.0.1:56040 [200]: GET /views/cargos_form.php?id=52
+[Sun Jul 12 00:39:55 2026] 127.0.0.1:56040 Closing
+[Sun Jul 12 00:39:56 2026] 127.0.0.1:56042 Accepted
+[Sun Jul 12 00:39:56 2026] 127.0.0.1:56042 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:39:56 2026] 127.0.0.1:56042 Closing
+[Sun Jul 12 00:39:56 2026] 127.0.0.1:56056 Accepted
+[Sun Jul 12 00:39:56 2026] 127.0.0.1:56056 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:39:56 2026] 127.0.0.1:56056 Closing
+[Sun Jul 12 00:39:56 2026] 127.0.0.1:40664 Accepted
+[Sun Jul 12 00:39:56 2026] 127.0.0.1:40664 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:39:56 2026] 127.0.0.1:40664 Closing
+[Sun Jul 12 00:40:02 2026] 127.0.0.1:40672 Accepted
+[Sun Jul 12 00:40:02 2026] 127.0.0.1:40672 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:40:02 2026] 127.0.0.1:40672 Closing
+[Sun Jul 12 00:40:03 2026] 127.0.0.1:40680 Accepted
+[Sun Jul 12 00:40:03 2026] 127.0.0.1:40680 [200]: GET /views/cargos_form.php?id=52&message=Cargo+salvo+com+sucesso%21+ID%3A+52&type=success
+[Sun Jul 12 00:40:03 2026] 127.0.0.1:40680 Closing
+[Sun Jul 12 00:40:03 2026] 127.0.0.1:40690 Accepted
+[Sun Jul 12 00:40:03 2026] 127.0.0.1:40690 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:40:03 2026] 127.0.0.1:40690 Closing
+[Sun Jul 12 00:40:03 2026] 127.0.0.1:40696 Accepted
+[Sun Jul 12 00:40:03 2026] 127.0.0.1:40696 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:40:03 2026] 127.0.0.1:40696 Closing
+[Sun Jul 12 00:40:04 2026] 127.0.0.1:40702 Accepted
+[Sun Jul 12 00:40:04 2026] 127.0.0.1:40702 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:40:04 2026] 127.0.0.1:40702 Closing
+[Sun Jul 12 00:40:05 2026] 127.0.0.1:40704 Accepted
+[Sun Jul 12 00:40:05 2026] 127.0.0.1:40704 [200]: GET /views/cargos_form.php?id=53
+[Sun Jul 12 00:40:05 2026] 127.0.0.1:40704 Closing
+[Sun Jul 12 00:40:05 2026] 127.0.0.1:40712 Accepted
+[Sun Jul 12 00:40:05 2026] 127.0.0.1:40712 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:40:05 2026] 127.0.0.1:40712 Closing
+[Sun Jul 12 00:40:06 2026] 127.0.0.1:40728 Accepted
+[Sun Jul 12 00:40:06 2026] 127.0.0.1:40728 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:40:06 2026] 127.0.0.1:40728 Closing
+[Sun Jul 12 00:40:06 2026] 127.0.0.1:40732 Accepted
+[Sun Jul 12 00:40:06 2026] 127.0.0.1:40732 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:40:06 2026] 127.0.0.1:40732 Closing
+[Sun Jul 12 00:40:19 2026] 127.0.0.1:58206 Accepted
+[Sun Jul 12 00:40:19 2026] 127.0.0.1:58206 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:40:19 2026] 127.0.0.1:58206 Closing
+[Sun Jul 12 00:40:19 2026] 127.0.0.1:58214 Accepted
+[Sun Jul 12 00:40:19 2026] 127.0.0.1:58214 [200]: GET /views/cargos_form.php?id=53&message=Cargo+salvo+com+sucesso%21+ID%3A+53&type=success
+[Sun Jul 12 00:40:19 2026] 127.0.0.1:58214 Closing
+[Sun Jul 12 00:40:20 2026] 127.0.0.1:58230 Accepted
+[Sun Jul 12 00:40:20 2026] 127.0.0.1:58230 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:40:20 2026] 127.0.0.1:58230 Closing
+[Sun Jul 12 00:40:20 2026] 127.0.0.1:58244 Accepted
+[Sun Jul 12 00:40:20 2026] 127.0.0.1:58244 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:40:20 2026] 127.0.0.1:58244 Closing
+[Sun Jul 12 00:40:20 2026] 127.0.0.1:58248 Accepted
+[Sun Jul 12 00:40:20 2026] 127.0.0.1:58248 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:40:20 2026] 127.0.0.1:58248 Closing
+[Sun Jul 12 00:40:22 2026] 127.0.0.1:58252 Accepted
+[Sun Jul 12 00:40:22 2026] 127.0.0.1:58252 [200]: GET /views/cargos_form.php?id=54
+[Sun Jul 12 00:40:22 2026] 127.0.0.1:58252 Closing
+[Sun Jul 12 00:40:22 2026] 127.0.0.1:58262 Accepted
+[Sun Jul 12 00:40:22 2026] 127.0.0.1:58262 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:40:22 2026] 127.0.0.1:58262 Closing
+[Sun Jul 12 00:40:23 2026] 127.0.0.1:58264 Accepted
+[Sun Jul 12 00:40:23 2026] 127.0.0.1:58264 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:40:23 2026] 127.0.0.1:58264 Closing
+[Sun Jul 12 00:40:23 2026] 127.0.0.1:58270 Accepted
+[Sun Jul 12 00:40:23 2026] 127.0.0.1:58270 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:40:23 2026] 127.0.0.1:58270 Closing
+[Sun Jul 12 00:40:31 2026] 127.0.0.1:38668 Accepted
+[Sun Jul 12 00:40:31 2026] 127.0.0.1:38668 [302]: POST /views/cargos_form.php
+[Sun Jul 12 00:40:31 2026] 127.0.0.1:38668 Closing
+[Sun Jul 12 00:40:31 2026] 127.0.0.1:38680 Accepted
+[Sun Jul 12 00:40:31 2026] 127.0.0.1:38680 [200]: GET /views/cargos_form.php?id=54&message=Cargo+salvo+com+sucesso%21+ID%3A+54&type=success
+[Sun Jul 12 00:40:31 2026] 127.0.0.1:38680 Closing
+[Sun Jul 12 00:40:31 2026] 127.0.0.1:38696 Accepted
+[Sun Jul 12 00:40:31 2026] 127.0.0.1:38696 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:40:31 2026] 127.0.0.1:38696 Closing
+[Sun Jul 12 00:40:32 2026] 127.0.0.1:38702 Accepted
+[Sun Jul 12 00:40:32 2026] 127.0.0.1:38702 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:40:32 2026] 127.0.0.1:38702 Closing
+[Sun Jul 12 00:40:32 2026] 127.0.0.1:38718 Accepted
+[Sun Jul 12 00:40:32 2026] 127.0.0.1:38718 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:40:32 2026] 127.0.0.1:38718 Closing
+[Sun Jul 12 00:40:33 2026] 127.0.0.1:38722 Accepted
+[Sun Jul 12 00:40:33 2026] 127.0.0.1:38722 [200]: GET /views/cargos_form.php?id=55
+[Sun Jul 12 00:40:33 2026] 127.0.0.1:38722 Closing
+[Sun Jul 12 00:40:34 2026] 127.0.0.1:38736 Accepted
+[Sun Jul 12 00:40:34 2026] 127.0.0.1:38736 [200]: GET /css/fa/all.min.css
+[Sun Jul 12 00:40:34 2026] 127.0.0.1:38736 Closing
+[Sun Jul 12 00:40:34 2026] 127.0.0.1:38750 Accepted
+[Sun Jul 12 00:40:34 2026] 127.0.0.1:38750 [200]: GET /scripts/cargos_form.js?v=6
+[Sun Jul 12 00:40:34 2026] 127.0.0.1:38750 Closing
+[Sun Jul 12 00:40:34 2026] 127.0.0.1:38764 Accepted
+[Sun Jul 12 00:40:34 2026] 127.0.0.1:38764 [200]: GET /css/webfonts/fa-solid-900.woff2
+[Sun Jul 12 00:40:34 2026] 127.0.0.1:38764 Closing

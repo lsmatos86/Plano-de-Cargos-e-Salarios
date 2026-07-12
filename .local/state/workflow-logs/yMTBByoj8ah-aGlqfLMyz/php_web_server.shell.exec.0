@@ -1,0 +1,25 @@
+[Sat Jul 11 22:32:17 2026] PHP 8.2.23 Development Server (http://0.0.0.0:5000) started
+[Sat Jul 11 22:32:19 2026] 127.0.0.1:44228 Accepted
+[Sat Jul 11 22:32:19 2026] 127.0.0.1:44228 [200]: GET /views/cargos_form.php?id=2
+[Sat Jul 11 22:32:19 2026] 127.0.0.1:44228 Closing
+[Sat Jul 11 22:32:20 2026] 127.0.0.1:44232 Accepted
+[Sat Jul 11 22:32:20 2026] 127.0.0.1:44232 [200]: GET /css/fa/all.min.css
+[Sat Jul 11 22:32:20 2026] 127.0.0.1:44232 Closing
+[Sat Jul 11 22:32:20 2026] 127.0.0.1:44234 Accepted
+[Sat Jul 11 22:32:20 2026] 127.0.0.1:44234 [200]: GET /scripts/cargos_form.js?v=6
+[Sat Jul 11 22:32:20 2026] 127.0.0.1:44234 Closing
+[Sat Jul 11 22:32:20 2026] 127.0.0.1:44238 Accepted
+[Sat Jul 11 22:32:20 2026] 127.0.0.1:44238 [404]: GET /css/webfonts/fa-solid-900.woff2 - No such file or directory
+[Sat Jul 11 22:32:20 2026] 127.0.0.1:44238 Closing
+[Sat Jul 11 22:32:21 2026] 127.0.0.1:44248 Accepted
+[Sat Jul 11 22:32:21 2026] 127.0.0.1:44248 [404]: GET /css/webfonts/fa-solid-900.ttf - No such file or directory
+[Sat Jul 11 22:32:21 2026] 127.0.0.1:44248 Closing
+[Sat Jul 11 22:32:21 2026] 127.0.0.1:44254 Accepted
+[Sat Jul 11 22:32:21 2026] 127.0.0.1:44254 [302]: GET /views/cargos_form.php?id=2
+[Sat Jul 11 22:32:21 2026] 127.0.0.1:44254 Closing
+[Sat Jul 11 22:32:21 2026] 127.0.0.1:44262 Accepted
+[Sat Jul 11 22:32:21 2026] 127.0.0.1:44262 [200]: GET /login.php
+[Sat Jul 11 22:32:21 2026] 127.0.0.1:44262 Closing
+[Sat Jul 11 22:32:57 2026] 127.0.0.1:44108 Accepted
+[Sat Jul 11 22:32:57 2026] 127.0.0.1:44108 [200]: GET /login.php
+[Sat Jul 11 22:32:57 2026] 127.0.0.1:44108 Closing
