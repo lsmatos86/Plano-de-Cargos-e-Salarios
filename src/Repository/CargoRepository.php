@@ -87,17 +87,17 @@ class CargoRepository
         }
 
         // 3. Captura dos Dados de Relacionamento
-        $habilidadeIds = array_map('intval', (array)($postData['habilidadeId'] ?? []));
+        $habilidadeIds = array_values(array_unique(array_map('intval', (array)($postData['habilidadeId'] ?? []))));
         $baseSoftskills = $this->getBaseSoftskillsForNivel((int)($data['nivelHierarquicoId'] ?? 0));
         if (!empty($baseSoftskills)) {
             $habilidadeIds = array_values(array_unique(array_merge($habilidadeIds, $baseSoftskills)));
         }
 
         $relacionamentosSimples = [
-            'cargos_area' => ['coluna' => 'areaId', 'valores' => (array)($postData['areaId'] ?? [])],
+            'cargos_area' => ['coluna' => 'areaId', 'valores' => array_values(array_unique(array_map('intval', (array)($postData['areaId'] ?? []))))],
             'habilidades_cargo' => ['coluna' => 'habilidadeId', 'valores' => $habilidadeIds],
-            'caracteristicas_cargo' => ['coluna' => 'caracteristicaId', 'valores' => (array)($postData['caracteristicaId'] ?? [])],
-            'recursos_grupos_cargo' => ['coluna' => 'recursoGrupoId', 'valores' => (array)($postData['recursoGrupoId'] ?? [])],
+            'caracteristicas_cargo' => ['coluna' => 'caracteristicaId', 'valores' => array_values(array_unique(array_map('intval', (array)($postData['caracteristicaId'] ?? []))))],
+            'recursos_grupos_cargo' => ['coluna' => 'recursoGrupoId', 'valores' => array_values(array_unique(array_map('intval', (array)($postData['recursoGrupoId'] ?? []))))],
         ];
 
         $riscosInput = [
