@@ -46,6 +46,32 @@ class LookupRepository
     // ====================================================================
 
     /**
+     * Busca genérica de lookup: retorna id => nome de qualquer tabela.
+     *
+     * @param string $tableName   Nome da tabela (validado contra SQL injection)
+     * @param string $idColumn    Coluna que representa o ID
+     * @param string $nameColumn  Coluna que representa o nome/descrição
+     * @return array              Array associativo com os registros
+     */
+    public function getLookup(string $tableName, string $idColumn, string $nameColumn): array
+    {
+        if (!preg_match('/^[a-zA-Z0-9_]+$/', $tableName)
+            || !preg_match('/^[a-zA-Z0-9_]+$/', $idColumn)
+            || !preg_match('/^[a-zA-Z0-9_]+$/', $nameColumn)) {
+            error_log("getLookup: parâmetros inválidos ({$tableName}, {$idColumn}, {$nameColumn})");
+            return [];
+        }
+        try {
+            $sql = "SELECT \"{$idColumn}\", \"{$nameColumn}\" FROM {$tableName} ORDER BY \"{$nameColumn}\" ASC";
+            $stmt = $this->pdo->query($sql);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\PDOException $e) {
+            error_log("Erro no getLookup({$tableName}): " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
      * Busca CBOs, formatando para exibição (Código - Título).
      */
     public function findCbos(): array
