@@ -153,9 +153,17 @@ if ($isEditing || $isDuplicating) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cargoNome'])) {
     
     try {
-        $novoCargoId = $cargoRepo->save($_POST);
+        $resultado = $cargoRepo->save($_POST);
+        $novoCargoId = $resultado['cargoId'];
+        $novasSoftskills = $resultado['novasSoftskillsLideranca'] ?? [];
         $message = "Cargo salvo com sucesso! ID: {$novoCargoId}";
         $message_type = 'success';
+        if (!empty($novasSoftskills)) {
+            $count = count($novasSoftskills);
+            $nomes = implode(', ', $novasSoftskills);
+            $plural = $count > 1 ? 's' : '';
+            $message .= " — {$count} softskill{$plural} de liderança adicionada{$plural} automaticamente: {$nomes}.";
+        }
         // Redireciona para o formulário no modo de edição do item recém-salvo
         header("Location: cargos_form.php?id={$novoCargoId}&message=" . urlencode($message) . "&type={$message_type}");
         exit;

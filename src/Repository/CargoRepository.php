@@ -52,10 +52,10 @@ class CargoRepository
      * (Criado no Passo 11 - Usado por cargos_form.php)
      *
      * @param array $postData Os dados vindo diretamente do $_POST.
-     * @return int O ID do cargo salvo.
+     * @return array{cargoId: int, novasSoftskillsLideranca: string[]} O ID do cargo salvo e os nomes das softskills de liderança adicionadas automaticamente.
      * @throws Exception Se a validação falhar ou o salvamento falhar.
      */
-    public function save(array $postData): int
+    public function save(array $postData): array
     {
         $cargoIdSubmissao = (int)($postData['cargoId'] ?? 0);
         $isUpdating = $cargoIdSubmissao > 0;
@@ -87,11 +87,15 @@ class CargoRepository
         }
 
         // 3. Captura dos Dados de Relacionamento
-        $habilidadeIds = array_values(array_unique(array_map('intval', (array)($postData['habilidadeId'] ?? []))));
+        $habilidadeIdsOriginais = array_values(array_unique(array_map('intval', (array)($postData['habilidadeId'] ?? []))));
         $baseSoftskills = $this->getBaseSoftskillsForNivel((int)($data['nivelHierarquicoId'] ?? 0));
+        $novasSoftskillsIds = [];
         if (!empty($baseSoftskills)) {
-            $habilidadeIds = array_values(array_unique(array_merge($habilidadeIds, $baseSoftskills)));
+            $novasSoftskillsIds = array_values(array_diff($baseSoftskills, $habilidadeIdsOriginais));
         }
+        $habilidadeIds = !empty($baseSoftskills)
+            ? array_values(array_unique(array_merge($habilidadeIdsOriginais, $baseSoftskills)))
+            : $habilidadeIdsOriginais;
 
         $relacionamentosSimples = [
             'cargos_area' => ['coluna' => 'areaId', 'valores' => array_values(array_unique(array_map('intval', (array)($postData['areaId'] ?? []))))],
@@ -197,9 +201,23 @@ class CargoRepository
                 }
             }
 
-            // 10. Commita a Transação
+            // 10. Busca os nomes das softskills de liderança recém-adicionadas
+            $novasSoftskillsNomes = [];
+            if (!empty($novasSoftskillsIds)) {
+                $placeholders = implode(', ', array_fill(0, count($novasSoftskillsIds), '?'));
+                $stmt_names = $this->pdo->prepare(
+                    "SELECT \"habilidadeNome\" FROM habilidades WHERE \"habilidadeId\" IN ({$placeholders}) ORDER BY \"habilidadeNome\" ASC"
+                );
+                $stmt_names->execute($novasSoftskillsIds);
+                $novasSoftskillsNomes = $stmt_names->fetchAll(PDO::FETCH_COLUMN);
+            }
+
+            // 11. Commita a Transação
             $this->pdo->commit();
-            return $novoCargoId;
+            return [
+                'cargoId' => $novoCargoId,
+                'novasSoftskillsLideranca' => $novasSoftskillsNomes,
+            ];
 
         } catch (Exception $e) {
             $this->pdo->rollBack();
