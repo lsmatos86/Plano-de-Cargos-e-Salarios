@@ -176,6 +176,7 @@ CREATE TABLE habilidades_cargo (
   "habilidadeCargoId" SERIAL PRIMARY KEY,
   "cargoId"           INTEGER NOT NULL,
   "habilidadeId"      INTEGER NOT NULL,
+  CONSTRAINT uq_habilidades_cargo            UNIQUE ("cargoId", "habilidadeId"),
   CONSTRAINT fk_habilidades_cargo_cargo      FOREIGN KEY ("cargoId")      REFERENCES cargos ("cargoId"),
   CONSTRAINT fk_habilidades_cargo_habilidade FOREIGN KEY ("habilidadeId") REFERENCES habilidades ("habilidadeId")
 );

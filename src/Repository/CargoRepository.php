@@ -505,7 +505,7 @@ class CargoRepository
             // 2. BUSCA DE RELACIONAMENTOS N:M
             
             // 2.1. HABILIDADES
-            $stmt_hab = $this->pdo->prepare("SELECT h.\"habilidadeNome\", h.\"habilidadeTipo\", h.\"habilidadeDescricao\" FROM habilidades_cargo hc JOIN habilidades h ON h.\"habilidadeId\" = hc.\"habilidadeId\" WHERE hc.\"cargoId\" = ? ORDER BY h.\"habilidadeTipo\" DESC, h.\"habilidadeNome\" ASC");
+            $stmt_hab = $this->pdo->prepare("SELECT DISTINCT h.\"habilidadeNome\", h.\"habilidadeTipo\", h.\"habilidadeDescricao\" FROM habilidades_cargo hc JOIN habilidades h ON h.\"habilidadeId\" = hc.\"habilidadeId\" WHERE hc.\"cargoId\" = ? ORDER BY h.\"habilidadeTipo\" DESC, h.\"habilidadeNome\" ASC");
             $stmt_hab->execute([$cargoId]);
             $data['habilidades'] = $stmt_hab->fetchAll(PDO::FETCH_ASSOC); // Modificado
 
