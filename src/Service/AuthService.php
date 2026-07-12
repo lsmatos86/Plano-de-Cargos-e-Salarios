@@ -6,131 +6,145 @@ namespace App\Service;
 use App\Core\Database;
 use PDO;
 
-<<<<<<< HEAD
-=======
 /**
  * Classe para gerenciar Autenticação e Autorização (Permissões).
  * (Versão corrigida com nomes de colunas em Português e lógica de URL)
  */
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
-class AuthService
-{
-    private ?PDO $db;
-    private ?array $userPermissions = null;
+class AuthService {
+    
+    private $db;
 
-    public function __construct()
-    {
-        $this->db = Database::getConnection();
-        
-        // ==================================================================
-        // CORREÇÃO 1: Garante que a sessão esteja sempre iniciada
-        // ==================================================================
+    public function __construct() {
+        $this->db = Database::getInstance()->getConnection();
+    }
+
+    /**
+     * Tenta realizar o login do usuário
+     * * @param string $email
+     * @param string $password
+     * @return array|bool Retorna os dados do usuário ou false se falhar
+     */
+    public function login(string $email, string $password) {
+        // Busca o usuário pelo e-mail principal ativo
+        $sql = "SELECT u.*, r.nome as role_nome 
+                FROM usuarios u 
+                LEFT JOIN roles r ON u.id_role = r.id_role 
+                WHERE u.email_principal = :email AND u.status = 'ativo' 
+                LIMIT 1";
+                
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':email' => $email]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Verifica a senha usando password_verify
+        if ($user && password_verify($password, $user['senha'])) {
+            // Remove a senha do array por segurança antes de salvar na sessão
+            unset($user['senha']);
+            return $user;
+        }
+
+        return false;
+    }
+
+    /**
+     * Inicia a sessão oficial do usuário no PHP
+     */
+    public function loginSession(array $user): void {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
+        $_SESSION['usuario_id'] = $user['id_usuario'];
+        $_SESSION['usuario_nome'] = $user['nome_completo'] ?? $user['login'];
+        $_SESSION['usuario_email'] = $user['email_principal'];
+        $_SESSION['usuario_role'] = $user['id_role'];
+        $_SESSION['usuario_role_nome'] = $user['role_nome'] ?? 'Usuário';
+        
+        // Regenera o ID da sessão para prevenir Session Fixation
+        session_regenerate_id(true);
     }
 
-    public function userCan(string $permissionName): bool
-    {
-        $usuarioId = $_SESSION['user_id'] ?? null;
-        if ($usuarioId === null) {
+    /**
+     * Verifica se o usuário está logado
+     */
+    public static function checkAuth(): bool {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        return isset($_SESSION['usuario_id']);
+    }
+
+    /**
+     * Exige que o usuário esteja logado para ver a página, caso contrário redireciona
+     */
+    public static function requireAuth(string $redirectUrl = 'login.php'): void {
+        if (!self::checkAuth()) {
+            header("Location: " . $redirectUrl);
+            exit;
+        }
+    }
+
+    /**
+     * Verifica se o usuário logado possui uma permissão (recurso) específica
+     * * @param string $recursoChave O slug ou chave do recurso (ex: 'usuarios_listar', 'cargos_criar')
+     */
+    public function temPermissao(string $recursoChave): bool {
+        if (!self::checkAuth()) {
             return false;
         }
 
-        if ($this->userPermissions === null) {
-            $this->loadUserPermissions($usuarioId);
+        $idRole = $_SESSION['usuario_role'] ?? null;
+        if (!$idRole) {
+            return false;
         }
 
-<<<<<<< HEAD
-=======
-        // 2. Verifica se a permissão existe no array (formato ['perm' => true])
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
-        return isset($this->userPermissions[$permissionName]);
-    }
-
-    private function loadUserPermissions(int $usuarioId): void
-    {
-        $this->userPermissions = [];
-        
-        $sql = 'SELECT DISTINCT p."permissionName"
-                FROM permissions p
-<<<<<<< HEAD
-                JOIN role_permissions rp ON p."permissionId" = rp."permissionId"
-                JOIN user_roles ur ON rp."roleId" = ur."roleId"
-                WHERE ur."usuarioId" = :usuarioId';
-        
-        try {
-            $stmt = $this->db->prepare($sql);
-            $stmt->bindParam(':usuarioId', $usuarioId, PDO::PARAM_INT);
-=======
-                JOIN role_permissions rp ON p.permissionId = rp.permissionId
-                JOIN user_roles ur ON rp.roleId = ur.roleId
-                WHERE ur.usuarioId = :usuarioId"; //
-        
-        try {
-            $stmt = $this->db->prepare($sql);
-            $stmt->bindParam(':usuarioId', $usuarioId, PDO::PARAM_INT); //
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
-            $stmt->execute();
-            
-            $permissions = $stmt->fetchAll(PDO::FETCH_COLUMN);
-            $this->userPermissions = array_flip($permissions);
-
-        } catch (\Exception $e) {
-            error_log('Falha ao carregar permissões: ' . $e->getMessage());
-            $this->userPermissions = [];
+        // Se for administrador master (id_role = 1), costuma ter acesso total
+        if ($idRole == 1) {
+            return true;
         }
+
+        // Consulta se a Role do usuário tem vínculo com a chave do recurso solicitado
+        $sql = "SELECT COUNT(*) FROM role_recursos rr
+                JOIN recursos r ON rr.id_recurso = r.id_recurso
+                WHERE rr.id_role = :id_role AND r.chave = :recurso_chave";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            ':id_role' => $idRole,
+            ':recurso_chave' => $recursoChave
+        ]);
+
+        return (int)$stmt->fetchColumn() > 0;
     }
 
-<<<<<<< HEAD
-=======
     /**
-     * Força o recarregamento das permissões (ex: após mudar o papel do usuário)
+     * Exige uma permissão específica. Se não tiver, bloqueia o acesso.
      */
-    // ==================================================================
-    // CORREÇÃO 2: Removido o "publicS public" duplicado
-    // ==================================================================
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
-    public function refreshPermissions(): void
-    {
-        $this->userPermissions = null;
-        $usuarioId = $_SESSION['user_id'] ?? null;
-        if ($usuarioId) {
-            $this->loadUserPermissions($usuarioId);
+    public function requirePermissao(string $recursoChave): void {
+        self::requireAuth();
+        
+        if (!$this->temPermissao($recursoChave)) {
+            http_response_code(403);
+            echo "<h1>403 - Acesso Negado</h1>";
+            echo "<p>Você não tem permissão para acessar este recurso ({$recursoChave}).</p>";
+            exit;
         }
     }
 
-    public function checkAndFail(string $permissionName, ?string $redirectUrl = null): void
-    {
-        if ($this->userCan($permissionName)) {
-            return;
+    /**
+     * Desloga o usuário limpando a sessão
+     */
+    public static function logout(): void {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
         }
-
-<<<<<<< HEAD
-=======
-        // ==================================================================
-        // CORREÇÃO 3: Lógica de redirecionamento corrigida
-        // ==================================================================
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
-        if ($redirectUrl) {
-            
-            // Mensagem de erro padrão que os Controllers esperam
-            $errorMessage = urlencode("Acesso negado. Você não tem permissão para esta ação.");
-            
-            // Limpa o 'error=Acesso+negado' antigo se ele existir na URL base
-            $redirectUrl = str_replace("?error=Acesso+negado", "", $redirectUrl);
-            $redirectUrl = str_replace("&error=Acesso+negado", "", $redirectUrl);
-            
-            // Determina o separador correto ('?' ou '&')
-            $separator = (strpos($redirectUrl, '?') === false) ? '?' : '&';
-            
-            // Constrói a URL final corretamente (usando message e type)
-            $location = "{$redirectUrl}{$separator}message={$errorMessage}&type=danger";
-            
-            header("Location: $location");
-            exit;
-        } else {
-            throw new \Exception('Acesso negado. Você não tem permissão para esta ação.');
+        $_SESSION = [];
+        if (ini_get("session.use_cookies")) {
+            $params = session_get_cookie_params();
+            setcookie(session_name(), '', time() - 42000,
+                $params["path"], $params["domain"],
+                $params["secure"], $params["httponly"]
+            );
         }
+        session_destroy();
     }
 }
