@@ -1,65 +1,63 @@
 <?php
 // Arquivo: src/Core/Database.php
 
-namespace App\Core; // O namespace que definimos no composer.json
+namespace App\Core;
 
 use PDO;
 use PDOException;
 
 /**
- * Gerencia a conexão com o banco de dados.
- * Utiliza as constantes definidas em config.php
+ * Classe para gerenciamento de conexões com o banco de dados.
  */
-class Database
-{
-    private static ?PDO $pdo = null; // Conexão estática (Singleton)
+class Database {
+    
+    private static $connection = null;
 
     /**
-     * Retorna uma instância única da conexão PDO.
+     * Retorna a conexão ativa com o banco de dados.
+     * Caso não exista, cria uma nova baseado nas configurações.
+     * 
+     * @return PDO
      */
-    public static function getConnection(): PDO
-    {
-        // Se a conexão ainda não foi criada, cria agora.
-        if (self::$pdo === null) {
-            // Suporte para PostgreSQL (Replit) ou MySQL (desenvolvimento local)
-            $dbType = defined('DB_TYPE') ? DB_TYPE : 'pgsql';
-            
-            if ($dbType === 'pgsql') {
-                $dsn = "pgsql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME;
-            } else {
-                $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
-            }
-            
-            $options = [
-                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_EMULATE_PREPARES   => false,
-            ];
-
+    public static function getConnection(): PDO {
+        if (self::$connection === null) {
             try {
-                self::$pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
+                // Carrega as configurações globais se as constantes não existirem
+                if (!defined('DB_HOST')) {
+                    $configFile = dirname(__DIR__, 2) . '/config.php';
+                    if (file_exists($configFile)) {
+                        require_once $configFile;
+                    }
+                }
+
+                $host = defined('DB_HOST') ? DB_HOST : 'localhost';
+                $port = defined('DB_PORT') ? DB_PORT : '5432';
+                $dbname = defined('DB_NAME') ? DB_NAME : 'ita';
+                $user = defined('DB_USER') ? DB_USER : 'postgres';
+                $pass = defined('DB_PASS') ? DB_PASS : '';
+
+                // Monta o DSN para o driver PostgreSQL (padrão do projeto)
+                $dsn = "pgsql:host={$host};port={$port};dbname={$dbname}";
+                
+                // Opções de segurança e tratamento de dados do PDO
+                $options = [
+                    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::ATTR_EMULATE_PREPARES   => false,
+                ];
+
+                self::$connection = new PDO($dsn, $user, $pass, $options);
+
             } catch (PDOException $e) {
-                // REPARO DE SEGURANÇA: Logar o erro completo e exibir uma mensagem genérica para o usuário.
-                error_log("Erro Crítico de Conexão com o Banco de Dados: " . $e->getMessage());
-                // Importante: Não expor a mensagem original $e->getMessage() para o usuário final.
-                die("Erro de Conexão com o Banco de Dados. Por favor, tente novamente mais tarde."); 
+                // EXIBIÇÃO EM MODO DEBUG ATIVADA: Mostra o erro real na tela para sabermos o que corrigir
+                $mensagemErro = "<h3>Falha Crítica na Conexão Local</h3>";
+                $mensagemErro .= "<p><strong>Erro Real do PHP:</strong> " . htmlspecialchars($e->getMessage()) . "</p>";
+                $mensagemErro .= "<p><em>Verifique se o PostgreSQL está rodando, se as extensões 'pdo_pgsql' estão ativas no php.ini ou se as credenciais no arquivo config.php estão corretas para o XAMPP.</em></p>";
+                
+                die($mensagemErro);
             }
         }
 
-        return self::$pdo;
-    }
-
-    /**
-     * Adiciona aspas duplas em um identificador SQL, suportando alias.tableName.
-     * Exemplo: "c.cargoNome" → 'c."cargoNome"'
-     *          "cargoNome"   → '"cargoNome"'
-     */
-    public static function quoteIdent(string $ident): string
-    {
-        if (str_contains($ident, '.')) {
-            [$alias, $col] = explode('.', $ident, 2);
-            return "{$alias}.\"{$col}\"";
-        }
-        return "\"{$ident}\"";
+        return self::$connection;
     }
 }

@@ -15,7 +15,8 @@ class AuthService {
     private $db;
 
     public function __construct() {
-        $this->db = Database::getInstance()->getConnection();
+        // Correção para o padrão correto da sua classe Database
+        $this->db = Database::getConnection();
     }
 
     /**
@@ -147,4 +148,11 @@ class AuthService {
         }
         session_destroy();
     }
+    catch (\PDOException $e) {
+    // Comente temporariamente a linha amigável que esconde o erro
+    // die("Erro de Conexão com o Banco de Dados. Por favor, tente novamente mais tarde.");
+    
+    // Adicione isto para imprimir o erro verdadeiro:
+    die("Erro Real: " . $e->getMessage());
+}
 }
