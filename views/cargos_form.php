@@ -96,8 +96,10 @@ $areasAtuacao = $areaRepo->getHierarchyLookup();
 // Níveis Hierárquicos
 $niveisHierarquicosData = $lookupRepo->findNivelHierarquico();
 $niveisOrdenados = [];
+$niveisTipoNome = [];
 foreach ($niveisHierarquicosData as $n) {
     $niveisOrdenados[$n['nivelId']] = $n['nivelOrdem'] . 'º - ' . $n['tipoHierarquiaNome'] . ' (' . $n['nivelNome'] . ')';
+    $niveisTipoNome[$n['nivelId']] = $n['tipoHierarquiaNome'];
 }
 
 // --- Variáveis de estado do Formulário ---
@@ -437,12 +439,18 @@ echo $extra_head_content;
                     <select class="form-select searchable-select" id="nivelHierarquicoId" name="nivelHierarquicoId">
                         <option value="">--- Selecione o Nível ---</option>
                         <?php foreach ($niveisOrdenados as $id => $nome): ?>
-                            <option value="<?php echo $id; ?>" <?php echo (int)($cargo['nivelHierarquicoId'] ?? 0) === (int)$id ? 'selected' : ''; ?>>
+                            <option value="<?php echo $id; ?>"
+                                data-tipo="<?php echo htmlspecialchars(mb_strtolower($niveisTipoNome[$id] ?? '')); ?>"
+                                <?php echo (int)($cargo['nivelHierarquicoId'] ?? 0) === (int)$id ? 'selected' : ''; ?>>
                                 <?php echo htmlspecialchars($nome); ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
                     <div class="form-text"><a href="nivel_hierarquico.php" target="_blank">Gerenciar Níveis</a></div>
+                    <div id="softskillsLiderancaNotice" class="alert alert-info py-1 px-2 mt-2 mb-0 d-none small">
+                        <i class="fas fa-magic me-1"></i>
+                        <span id="softskillsLiderancaText"></span>
+                    </div>
                 </div>
                 <div class="col-md-6 mb-3">
                     <label for="cargoSupervisorId" class="form-label">Reporta-se a (Supervisor)</label>

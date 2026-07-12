@@ -670,5 +670,33 @@ $(document).ready(function() {
         }
     });
 
+    // --- 8. AVISO DE SOFTSKILLS DE LIDERANÇA ---
+    const SUPERVISOR_SKILLS_LABEL = 'Softskills de liderança base (IDs 28, 134, 135) serão adicionadas automaticamente ao salvar.';
+    const COORD_GERENTE_SKILLS_LABEL = 'Softskills de liderança base (IDs 28, 134, 135) e softskills de gestão (IDs 5, 21) serão adicionadas automaticamente ao salvar.';
+
+    const updateSoftskillsNotice = () => {
+        const select = document.getElementById('nivelHierarquicoId');
+        const notice = document.getElementById('softskillsLiderancaNotice');
+        const noticeText = document.getElementById('softskillsLiderancaText');
+        if (!select || !notice || !noticeText) return;
+
+        const selectedOption = select.options[select.selectedIndex];
+        const tipo = (selectedOption ? (selectedOption.getAttribute('data-tipo') || '') : '').toLowerCase();
+
+        if (tipo.includes('gerente') || tipo.includes('coordenador')) {
+            noticeText.textContent = COORD_GERENTE_SKILLS_LABEL;
+            notice.classList.remove('d-none');
+        } else if (tipo.includes('supervisor')) {
+            noticeText.textContent = SUPERVISOR_SKILLS_LABEL;
+            notice.classList.remove('d-none');
+        } else {
+            notice.classList.add('d-none');
+            noticeText.textContent = '';
+        }
+    };
+
+    $('#nivelHierarquicoId').on('change', updateSoftskillsNotice);
+    updateSoftskillsNotice();
+
     console.log("cargos_form.js (VERSÃO FINAL) carregado e pronto.");
 });

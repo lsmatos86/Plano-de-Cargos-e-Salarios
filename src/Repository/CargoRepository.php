@@ -87,9 +87,15 @@ class CargoRepository
         }
 
         // 3. Captura dos Dados de Relacionamento
+        $habilidadeIds = array_map('intval', (array)($postData['habilidadeId'] ?? []));
+        $baseSoftskills = $this->getBaseSoftskillsForNivel((int)($data['nivelHierarquicoId'] ?? 0));
+        if (!empty($baseSoftskills)) {
+            $habilidadeIds = array_values(array_unique(array_merge($habilidadeIds, $baseSoftskills)));
+        }
+
         $relacionamentosSimples = [
             'cargos_area' => ['coluna' => 'areaId', 'valores' => (array)($postData['areaId'] ?? [])],
-            'habilidades_cargo' => ['coluna' => 'habilidadeId', 'valores' => (array)($postData['habilidadeId'] ?? [])],
+            'habilidades_cargo' => ['coluna' => 'habilidadeId', 'valores' => $habilidadeIds],
             'caracteristicas_cargo' => ['coluna' => 'caracteristicaId', 'valores' => (array)($postData['caracteristicaId'] ?? [])],
             'recursos_grupos_cargo' => ['coluna' => 'recursoGrupoId', 'valores' => (array)($postData['recursoGrupoId'] ?? [])],
         ];
@@ -671,5 +677,52 @@ class CargoRepository
             error_log("Erro ao buscar first/last IDs: " . $e->getMessage());
             return ['first_id' => null, 'last_id' => null];
         }
+    }
+
+    /**
+     * Retorna os IDs de softskills base que devem ser herdadas automaticamente
+     * com base no tipo hierárquico do nível selecionado.
+     *
+     * Regras:
+     *  - Supervisor              → softskills 28, 134, 135
+     *  - Coordenador ou Gerente  → softskills 28, 134, 135, 5, 21
+     *
+     * @param int $nivelHierarquicoId
+     * @return array IDs de habilidades a incluir (vazio se não aplicável)
+     */
+    private function getBaseSoftskillsForNivel(int $nivelHierarquicoId): array
+    {
+        if ($nivelHierarquicoId <= 0) {
+            return [];
+        }
+
+        try {
+            $stmt = $this->pdo->prepare(
+                'SELECT t."tipoNome"
+                 FROM nivel_hierarquico n
+                 JOIN tipo_hierarquia t ON t."tipoId" = n."tipoId"
+                 WHERE n."nivelId" = ?'
+            );
+            $stmt->execute([$nivelHierarquicoId]);
+            $tipoNome = (string)($stmt->fetchColumn() ?: '');
+        } catch (\PDOException $e) {
+            error_log("Erro ao buscar tipoNome para nivelId {$nivelHierarquicoId}: " . $e->getMessage());
+            return [];
+        }
+
+        $tipoNomeLower = mb_strtolower(trim($tipoNome));
+
+        $supervisorBase = [28, 134, 135];
+        $liderancaExtra = [5, 21];
+
+        if (str_contains($tipoNomeLower, 'gerente') || str_contains($tipoNomeLower, 'coordenador')) {
+            return array_merge($supervisorBase, $liderancaExtra);
+        }
+
+        if (str_contains($tipoNomeLower, 'supervisor')) {
+            return $supervisorBase;
+        }
+
+        return [];
     }
 }
