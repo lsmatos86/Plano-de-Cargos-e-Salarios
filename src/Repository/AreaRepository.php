@@ -40,6 +40,84 @@ class AreaRepository
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function findAllSimple(): array
+    {
+        $stmt = $this->pdo->query("SELECT \"areaId\", \"areaNome\" FROM areas_atuacao ORDER BY \"areaNome\" ASC");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function findAllPaginated(array $params = []): array
+    {
+        $itemsPerPage = (int)($params['limit'] ?? 10);
+        $currentPage  = max(1, (int)($params['page'] ?? 1));
+        $term         = $params['term'] ?? '';
+        $sqlTerm      = "%{$term}%";
+
+        $whereClause  = '';
+        $bindings     = [];
+
+        if (!empty($term)) {
+            $whereClause = ' WHERE a."areaNome" ILIKE :term';
+            $bindings[':term'] = $sqlTerm;
+        }
+
+        try {
+            $countStmt = $this->pdo->prepare(
+                "SELECT COUNT(*) FROM areas_atuacao a" . $whereClause
+            );
+            $countStmt->execute($bindings);
+            $totalRecords = (int)$countStmt->fetchColumn();
+        } catch (\PDOException $e) {
+            error_log("Erro ao contar áreas: " . $e->getMessage());
+            $totalRecords = 0;
+        }
+
+        $totalPages  = $totalRecords > 0 ? (int)ceil($totalRecords / $itemsPerPage) : 1;
+        $currentPage = min($currentPage, $totalPages);
+        $offset      = ($currentPage - 1) * $itemsPerPage;
+
+        $orderBy  = $params['order_by'] ?? 'areaId';
+        $sortDir  = in_array(strtoupper($params['sort_dir'] ?? 'ASC'), ['ASC', 'DESC'])
+                    ? strtoupper($params['sort_dir'] ?? 'ASC') : 'ASC';
+        $validCols = ['areaId', 'areaNome', 'areaPaiNome'];
+        if (!in_array($orderBy, $validCols)) $orderBy = 'areaId';
+
+        $orderSql = $orderBy === 'areaPaiNome'
+            ? "p.\"areaNome\" {$sortDir}"
+            : "a.\"{$orderBy}\" {$sortDir}";
+
+        $sql = "
+            SELECT a.\"areaId\", a.\"areaNome\", a.\"areaDescricao\", a.\"areaPaiId\",
+                   p.\"areaNome\" AS \"areaPaiNome\"
+            FROM areas_atuacao a
+            LEFT JOIN areas_atuacao p ON p.\"areaId\" = a.\"areaPaiId\"
+            {$whereClause}
+            ORDER BY {$orderSql}
+            LIMIT :limit OFFSET :offset
+        ";
+
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            if (!empty($term)) {
+                $stmt->bindParam(':term', $bindings[':term']);
+            }
+            $stmt->bindValue(':limit',  $itemsPerPage, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', $offset,       PDO::PARAM_INT);
+            $stmt->execute();
+            $registros = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\PDOException $e) {
+            error_log("Erro ao buscar áreas paginadas: " . $e->getMessage());
+            $registros = [];
+        }
+
+        return [
+            'data'        => $registros,
+            'total'       => $totalRecords,
+            'totalPages'  => $totalPages,
+            'currentPage' => $currentPage,
+        ];
+    }
+
     public function getHierarchyLookup(): array
     {
         $areas = $this->findAll();
