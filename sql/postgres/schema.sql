@@ -300,3 +300,15 @@ CREATE TABLE caracteristicas_cargo (
 -- Self-reference para areas_atuacao (área pai)
 ALTER TABLE areas_atuacao
   ADD CONSTRAINT fk_area_pai FOREIGN KEY ("areaPaiId") REFERENCES areas_atuacao ("areaId");
+
+-- Tabela: leadership_softskills_config
+-- Associa tipos hierárquicos às softskills que devem ser herdadas automaticamente.
+-- Administradores podem editar via interface sem alterar código.
+CREATE TABLE leadership_softskills_config (
+  "configId"     SERIAL PRIMARY KEY,
+  "tipoId"       INTEGER NOT NULL,
+  "habilidadeId" INTEGER NOT NULL,
+  UNIQUE ("tipoId", "habilidadeId"),
+  CONSTRAINT fk_lsc_tipo       FOREIGN KEY ("tipoId")       REFERENCES tipo_hierarquia ("tipoId") ON DELETE CASCADE,
+  CONSTRAINT fk_lsc_habilidade FOREIGN KEY ("habilidadeId") REFERENCES habilidades ("habilidadeId") ON DELETE CASCADE
+);

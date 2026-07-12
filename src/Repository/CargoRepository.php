@@ -701,9 +701,8 @@ class CargoRepository
      * Retorna os IDs de softskills base que devem ser herdadas automaticamente
      * com base no tipo hierárquico do nível selecionado.
      *
-     * Regras:
-     *  - Supervisor              → softskills 28, 134, 135
-     *  - Coordenador ou Gerente  → softskills 28, 134, 135, 5, 21
+     * Os IDs são lidos dinamicamente da tabela `leadership_softskills_config`,
+     * permitindo configuração via interface administrativa sem alterar código.
      *
      * @param int $nivelHierarquicoId
      * @return array IDs de habilidades a incluir (vazio se não aplicável)
@@ -716,31 +715,18 @@ class CargoRepository
 
         try {
             $stmt = $this->pdo->prepare(
-                'SELECT t."tipoNome"
+                'SELECT lsc."habilidadeId"
                  FROM nivel_hierarquico n
-                 JOIN tipo_hierarquia t ON t."tipoId" = n."tipoId"
-                 WHERE n."nivelId" = ?'
+                 JOIN leadership_softskills_config lsc ON lsc."tipoId" = n."tipoId"
+                 WHERE n."nivelId" = ?
+                 ORDER BY lsc."habilidadeId"'
             );
             $stmt->execute([$nivelHierarquicoId]);
-            $tipoNome = (string)($stmt->fetchColumn() ?: '');
+            $ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            return array_map('intval', $ids);
         } catch (\PDOException $e) {
-            error_log("Erro ao buscar tipoNome para nivelId {$nivelHierarquicoId}: " . $e->getMessage());
+            error_log("Erro ao buscar softskills de liderança para nivelId {$nivelHierarquicoId}: " . $e->getMessage());
             return [];
         }
-
-        $tipoNomeLower = mb_strtolower(trim($tipoNome));
-
-        $supervisorBase = [28, 134, 135];
-        $liderancaExtra = [5, 21];
-
-        if (str_contains($tipoNomeLower, 'gerente') || str_contains($tipoNomeLower, 'coordenador')) {
-            return array_merge($supervisorBase, $liderancaExtra);
-        }
-
-        if (str_contains($tipoNomeLower, 'supervisor')) {
-            return $supervisorBase;
-        }
-
-        return [];
     }
 }

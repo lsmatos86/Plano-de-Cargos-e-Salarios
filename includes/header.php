@@ -138,6 +138,7 @@ $is_dashboard = $is_dashboard ?? false;
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navCadastros">
                             <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>views/habilidades.php">Habilidades</a></li>
+                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>views/lideranca_softskills.php"><i class="fas fa-star me-1 text-warning"></i>Softskills de Liderança</a></li>
                             <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>views/cursos.php">Cursos</a></li>
                             <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>views/riscos.php">Riscos</a></li>
                             <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>views/caracteristicas.php">Características</a></li>
