@@ -8,6 +8,11 @@ require_once '../vendor/autoload.php';
 require_once '../config.php';
 require_once '../includes/functions.php';
 
+use App\Core\Database;
+use App\Repository\AreaRepository;
+use App\Repository\CargoRepository;
+use App\Repository\HabilidadeRepository;
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_action']) && $_POST['ajax_action'] === 'unlock') {
     header('Content-Type: application/json');
     try {
@@ -70,6 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_action']) && $_P
 // Inicializa variáveis
 $message = '';
 $message_type = '';
+$temPermissaoEdicao = possuiPermissao('cargos:edit') || possuiPermissao('cadastros:manage');
 
 // Variáveis de Controle
 $originalId = (int)($_GET['id'] ?? 0);
@@ -94,14 +100,14 @@ $breadcrumb_items = [
 // ----------------------------------------------------
 // 1. CARREGAMENTO DOS LOOKUPS MESTRES (MANTIDO)
 // ----------------------------------------------------
-$lookupRepo = new LookupRepository();
+$pdo = Database::getConnection();
 $habilidadeRepo = new HabilidadeRepository();
 $areaRepo = new AreaRepository();
 $cargoRepo = new CargoRepository(); 
 
 // Lookups
-$cbos = array_column($lookupRepo->findCbos(), 'display_name', 'cboId');
-$escolaridades = array_column($lookupRepo->findEscolaridades(), 'escolaridadeTitulo', 'escolaridadeId');
+$cbos = getLookupData($pdo, 'cbos', 'cboId', 'cboCod', 'cboTituloOficial');
+$escolaridades = getLookupData($pdo, 'escolaridades', 'escolaridadeId', 'escolaridadeTitulo');
 $habilidadesAgrupadas = $habilidadeRepo->getGroupedLookup();
 
 // Cria um mapa plano que inclui o 'tipo' para repopulamento pós-erro
@@ -115,20 +121,27 @@ foreach ($habilidadesAgrupadas as $grupoNome => $habilidadesGrupo) {
     }
 }
 
-$habilidades = array_column($lookupRepo->findHabilidades(), 'nome', 'id');
-$caracteristicas = array_column($lookupRepo->findCaracteristicas(), 'nome', 'id');
-$riscos = array_column($lookupRepo->findRiscos(), 'nome', 'id');
-$cursos = array_column($lookupRepo->findCursos(), 'nome', 'id');
-$recursosGrupos = array_column($lookupRepo->findRecursosGrupos(), 'nome', 'id');
-$faixasSalariais = array_column($lookupRepo->findFaixas(), 'faixaNivel', 'faixaId');
-$cargosSupervisor = array_column($lookupRepo->findCargosForSelect(), 'nome', 'id');
+$habilidades = getLookupData($pdo, 'habilidades', 'habilidadeId', 'habilidadeNome');
+$caracteristicas = getLookupData($pdo, 'caracteristicas', 'caracteristicaId', 'caracteristicaNome');
+$riscos = getLookupData($pdo, 'riscos', 'riscoId', 'riscoNome');
+$cursos = getLookupData($pdo, 'cursos', 'cursoId', 'cursoNome');
+$recursosGrupos = getLookupData($pdo, 'recursos_grupos', 'recursoGrupoId', 'recursoGrupoNome');
+$faixasSalariais = getLookupData($pdo, 'faixas_salariais', 'faixaId', 'faixaNivel');
+$cargosSupervisor = getLookupData($pdo, 'cargos', 'cargoId', 'cargoNome');
 $areasAtuacao = $areaRepo->getHierarchyLookup(); 
 
 // Níveis Hierárquicos
-$niveisHierarquicosData = $lookupRepo->findNivelHierarquico();
+$niveisHierarquicosData = $pdo->query(
+    'SELECT n."nivelId", n."nivelOrdem", n."nivelDescricao",
+            COALESCE(t."tipoNome", \'Sem tipo\') AS "tipoNome"
+       FROM nivel_hierarquico n
+  LEFT JOIN tipo_hierarquia t ON t."tipoId" = n."tipoId"
+   ORDER BY n."nivelOrdem" DESC, n."nivelDescricao" ASC'
+)->fetchAll(PDO::FETCH_ASSOC);
 $niveisOrdenados = [];
 foreach ($niveisHierarquicosData as $n) {
-    $niveisOrdenados[$n['nivelId']] = $n['nivelOrdem'] . 'º - ' . $n['tipoHierarquiaNome'] . ' (' . $n['nivelNome'] . ')';
+    $descricaoNivel = $n['nivelDescricao'] ?: 'Sem descrição';
+    $niveisOrdenados[(int)$n['nivelId']] = $n['nivelOrdem'] . 'º - ' . $n['tipoNome'] . ' (' . $descricaoNivel . ')';
 }
 
 // --- Variáveis de estado do Formulário ---
@@ -182,7 +195,8 @@ if ($isEditing || $isDuplicating) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cargoNome'])) {
     
     try {
-        $novoCargoId = $cargoRepo->save($_POST);
+        $saveResult = $cargoRepo->save($_POST);
+        $novoCargoId = (int)$saveResult['cargoId'];
         $message = "Cargo salvo com sucesso! ID: {$novoCargoId}";
         $message_type = 'success';
         // Redireciona para o formulário no modo de edição do item recém-salvo

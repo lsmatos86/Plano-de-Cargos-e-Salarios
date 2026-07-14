@@ -8,7 +8,7 @@
 // $breadcrumb_items: O array de breadcrumbs (Opcional)
 // $is_dashboard: (Novo) true se for o index.php, false ou nulo caso contrário
 
-$username = $_SESSION['username'] ?? 'Usuário';
+$username = $_SESSION['usuario_nome'] ?? $_SESSION['username'] ?? 'Usuário';
 
 if (!isset($page_title)) {
     $page_title = 'Sistema de Cargos';

@@ -71,6 +71,7 @@ class CargoRepository
             'cargoResponsabilidades' => trim($postData['cargoResponsabilidades'] ?? ''),
             'faixaId' => empty($postData['faixaId']) ? null : (int)$postData['faixaId'],
             'nivelHierarquicoId' => empty($postData['nivelHierarquicoId']) ? null : (int)$postData['nivelHierarquicoId'],
+            'cargoSupervisorId' => empty($postData['cargoSupervisorId']) ? null : (int)$postData['cargoSupervisorId'],
             'is_revisado' => $isRevisado,
             'data_revisao' => $isRevisado ? date('Y-m-d H:i:s') : null,
             
@@ -156,7 +157,7 @@ class CargoRepository
                 $this->auditService->log('CREATE', 'cargos', $novoCargoId, $dadosLog);
             }
 
-            // 6. Salva Relacionamentos N:M Simples (Agora salva múltiplos chefes na cargos_supervisores)
+            // 6. Salva os relacionamentos N:M simples.
             foreach ($relacionamentosSimples as $tableName => $rel) {
                 $column = $rel['coluna'];
                 $valores = $rel['valores'];
@@ -291,7 +292,12 @@ class CargoRepository
             $stmt->execute([$cargoId]);
             $data['recursos_grupos'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            $stmt = $this->pdo->prepare("SELECT cs.supervisorId AS id, c.cargoNome AS nome FROM cargos_supervisores cs JOIN cargos c ON c.cargoId = cs.supervisorId WHERE cs.cargoId = ?");
+            $stmt = $this->pdo->prepare(
+                'SELECT sup."cargoId" AS id, sup."cargoNome" AS nome
+                 FROM cargos c
+                 JOIN cargos sup ON sup."cargoId" = c."cargoSupervisorId"
+                 WHERE c."cargoId" = ?'
+            );
             $stmt->execute([$cargoId]);
             $data['supervisores'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -400,7 +406,7 @@ class CargoRepository
         $joinTables = [
             'habilidades_cargo', 'caracteristicas_cargo', 'riscos_cargo',
             'cargo_sinonimos', 'cursos_cargo', 'recursos_grupos_cargo',
-            'cargos_area', 'cargos_supervisores'
+            'cargos_area'
         ];
         $success = true;
 
@@ -509,7 +515,12 @@ class CargoRepository
             $stmt_areas->execute([$cargoId]);
             $data['areas_atuacao'] = $stmt_areas->fetchAll(PDO::FETCH_COLUMN);
 
-            $stmt_sup = $this->pdo->prepare("SELECT c.cargoNome FROM cargos_supervisores cs JOIN cargos c ON c.cargoId = cs.supervisorId WHERE cs.cargoId = ? ORDER BY c.cargoNome ASC");
+            $stmt_sup = $this->pdo->prepare(
+                'SELECT sup."cargoNome"
+                 FROM cargos c
+                 JOIN cargos sup ON sup."cargoId" = c."cargoSupervisorId"
+                 WHERE c."cargoId" = ?'
+            );
             $stmt_sup->execute([$cargoId]);
             $data['supervisores'] = $stmt_sup->fetchAll(PDO::FETCH_COLUMN);
 

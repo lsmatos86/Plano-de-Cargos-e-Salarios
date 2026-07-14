@@ -411,8 +411,10 @@ $(document).ready(function() {
     let isDragging = false;
     let dragMoved = false;
     let suppressNodeClick = false;
-    let lastPointerX = 0;
-    let lastPointerY = 0;
+    let pointerStartX = 0;
+    let pointerStartY = 0;
+    let panStartX = 0;
+    let panStartY = 0;
     const step = 0.12;
     const maxZoom = 2.5;
     const minZoom = 0.35;
@@ -456,21 +458,27 @@ $(document).ready(function() {
         if (event.button !== 0) return;
         isDragging = true;
         dragMoved = false;
-        lastPointerX = event.clientX;
-        lastPointerY = event.clientY;
-        wrapper.classList.add('is-dragging');
-        wrapper.setPointerCapture(event.pointerId);
+        pointerStartX = event.clientX;
+        pointerStartY = event.clientY;
+        panStartX = panX;
+        panStartY = panY;
     });
 
     wrapper.addEventListener('pointermove', function(event) {
         if (!isDragging) return;
-        const deltaX = event.clientX - lastPointerX;
-        const deltaY = event.clientY - lastPointerY;
-        if (Math.abs(deltaX) + Math.abs(deltaY) > 1) dragMoved = true;
-        panX += deltaX;
-        panY += deltaY;
-        lastPointerX = event.clientX;
-        lastPointerY = event.clientY;
+        const deltaX = event.clientX - pointerStartX;
+        const deltaY = event.clientY - pointerStartY;
+
+        if (!dragMoved && Math.hypot(deltaX, deltaY) < 5) return;
+
+        if (!dragMoved) {
+            dragMoved = true;
+            wrapper.classList.add('is-dragging');
+            wrapper.setPointerCapture(event.pointerId);
+        }
+
+        panX = panStartX + deltaX;
+        panY = panStartY + deltaY;
         applyTransform();
     });
 
