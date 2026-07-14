@@ -85,6 +85,12 @@ $is_dashboard = $is_dashboard ?? false;
             min-height: 48px;
         }
     </style>
+    <?php
+    // Recursos específicos definidos pela página antes da inclusão do cabeçalho.
+    if (!empty($extra_head_content)) {
+        echo $extra_head_content;
+    }
+    ?>
 </head>
 <body>
 
@@ -172,6 +178,7 @@ $is_dashboard = $is_dashboard ?? false;
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navRelatorios">
                             <li><a class="dropdown-item" href="<?php echo htmlspecialchars($appUrl, ENT_QUOTES, 'UTF-8'); ?>relatorios/cargo_total.php">Relatório Consolidado</a></li>
+                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($appUrl, ENT_QUOTES, 'UTF-8'); ?>views/relatorio_homologacoes.php"><i class="fas fa-shield-alt text-success me-1"></i> Homologações de Cargos</a></li>
                             <li><a class="dropdown-item fw-bold" href="<?php echo htmlspecialchars($appUrl, ENT_QUOTES, 'UTF-8'); ?>relatorios/tabela_salarial_gerencial.php"><i class="fas fa-file-excel text-success me-1"></i> Tabela Salarial (Excel)</a></li>
                             <li><a class="dropdown-item disabled" href="#">Organograma (em breve)</a></li>
                         </ul>

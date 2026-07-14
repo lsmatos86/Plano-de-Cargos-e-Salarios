@@ -39,14 +39,14 @@ class AuthService {
             unset($user['senha']);
             
             // Busca dinamicamente a Role/Perfil vinculada a este usuário na tabela de ligação (user_roles)
-            $sqlRole = "SELECT r.id_role, r.nome as role_nome 
+            $sqlRole = "SELECT r.\"roleId\" AS id_role, r.\"roleName\" AS role_nome
                         FROM user_roles ur
-                        JOIN roles r ON ur.id_role = r.id_role
-                        WHERE ur.id_usuario = :id_usuario 
+                        JOIN roles r ON ur.\"roleId\" = r.\"roleId\"
+                        WHERE ur.\"usuarioId\" = :id_usuario
                         LIMIT 1";
             
             $stmtRole = $this->db->prepare($sqlRole);
-            $stmtRole->execute([':id_usuario' => $user['id_usuario']]);
+            $stmtRole->execute([':id_usuario' => $user['usuarioId']]);
             $roleData = $stmtRole->fetch(PDO::FETCH_ASSOC);
 
             // Injeta os dados da Role recuperados de forma relacional dentro do array de usuário
@@ -133,9 +133,9 @@ class AuthService {
         }
 
         // Consulta se a Role mapeada na sessão possui vínculo com a chave do privilégio
-        $sql = "SELECT COUNT(*) FROM role_recursos rr
-                JOIN recursos r ON rr.id_recurso = r.id_recurso
-                WHERE rr.id_role = :id_role AND r.chave = :recurso_chave";
+        $sql = "SELECT COUNT(*) FROM role_permissions rp
+                JOIN permissions p ON rp.\"permissionId\" = p.\"permissionId\"
+                WHERE rp.\"roleId\" = :id_role AND p.\"permissionName\" = :recurso_chave";
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute([

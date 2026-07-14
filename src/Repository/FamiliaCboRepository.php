@@ -163,7 +163,7 @@ class FamiliaCboRepository
         $bindings = [];
 
         if (!empty($term)) {
-            $where = " WHERE \"familiaCboNome\" ILIKE :term";
+            $where = " WHERE unaccent(COALESCE(\"familiaCboNome\"::text, '')) ILIKE unaccent(:term)";
             $bindings[':term'] = $sqlTerm;
         }
         

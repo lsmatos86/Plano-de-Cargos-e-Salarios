@@ -19,14 +19,19 @@ $pdo = Database::getConnection();
 // --- BUSCAR DADOS COMPLETOS (CARGOS + FAIXAS + PISO + NÍVEIS) ---
 $sql = "
     SELECT 
-        c.cargoId, c.cargoNome, 
-        n.nivelDescricao, n.nivelOrdem,
-        f.faixaNivel, f.step_a, f.step_b, f.step_c, f.step_d, f.step_e,
+        c.\"cargoId\", c.\"cargoNome\",
+        n.\"nivelDescricao\", n.\"nivelOrdem\",
+        f.\"faixaNivel\",
+        f.\"faixaSalarioMinimo\" AS step_a,
+        (f.\"faixaSalarioMinimo\" + (f.\"faixaSalarioMaximo\" - f.\"faixaSalarioMinimo\") * 0.25) AS step_b,
+        (f.\"faixaSalarioMinimo\" + (f.\"faixaSalarioMaximo\" - f.\"faixaSalarioMinimo\") * 0.50) AS step_c,
+        (f.\"faixaSalarioMinimo\" + (f.\"faixaSalarioMaximo\" - f.\"faixaSalarioMinimo\") * 0.75) AS step_d,
+        f.\"faixaSalarioMaximo\" AS step_e,
         c.tem_piso_salarial, c.piso_valor, c.piso_lei_numero, c.piso_data_base
     FROM cargos c
-    LEFT JOIN faixas_salariais f ON c.faixaId = f.faixaId
-    LEFT JOIN nivel_hierarquico n ON c.nivelHierarquicoId = n.nivelId
-    ORDER BY n.nivelOrdem ASC, c.cargoNome ASC
+    LEFT JOIN faixas_salariais f ON c.\"faixaId\" = f.\"faixaId\"
+    LEFT JOIN nivel_hierarquico n ON c.\"nivelHierarquicoId\" = n.\"nivelId\"
+    ORDER BY n.\"nivelOrdem\" ASC, c.\"cargoNome\" ASC
 ";
 $stmt = $pdo->query($sql);
 $cargosLista = $stmt->fetchAll(PDO::FETCH_ASSOC);

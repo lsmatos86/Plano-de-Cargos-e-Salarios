@@ -109,7 +109,7 @@ class FaixaSalarialRepository
         $bindings = [];
 
         if (!empty($term)) {
-            $where = ' WHERE "faixaNivel" ILIKE :term';
+            $where = ' WHERE unaccent(COALESCE("faixaNivel"::text, \'\')) ILIKE unaccent(:term)';
             $bindings[':term'] = $sqlTerm;
         }
 

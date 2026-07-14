@@ -39,6 +39,7 @@ if (!$data) {
 $cargo = $data['cargo'];
 $soft_skills = array_filter($data['habilidades'], fn($h) => $h['habilidadeTipo'] == 'Softskill');
 $hard_skills = array_filter($data['habilidades'], fn($h) => $h['habilidadeTipo'] == 'Hardskill');
+$supervisores = $data['supervisores'] ?? [];
 
 // Prepara as variáveis para o rodapé
 $data_emissao = date('d/m/Y H:i:s');

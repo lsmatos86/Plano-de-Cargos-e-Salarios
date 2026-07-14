@@ -55,8 +55,52 @@ class CargoRepository
         // Lança uma exceção se o usuário não tiver permissão
         $this->authService->checkAndFail($permissionNeeded); 
 
-        // Captura da checagem de Revisão
-        $isRevisado = isset($postData['is_revisado']) && $postData['is_revisado'] == '1' ? 1 : 0;
+        $cargoAtual = null;
+        if ($isUpdating) {
+            $stmtAtual = $this->pdo->prepare(
+                'SELECT "is_revisado", "data_revisao", is_aprovado, data_aprovacao,
+                        revisado_por_usuario_id, aprovado_por_usuario_id
+                   FROM cargos WHERE "cargoId" = ?'
+            );
+            $stmtAtual->execute([$cargoIdSubmissao]);
+            $cargoAtual = $stmtAtual->fetch(PDO::FETCH_ASSOC);
+            if (!$cargoAtual) {
+                throw new Exception('Cargo não encontrado para edição.');
+            }
+        }
+
+        $eraRevisado = !empty($cargoAtual['is_revisado']);
+        $eraAprovado = !empty($cargoAtual['is_aprovado']);
+        $solicitouRevisao = isset($postData['is_revisado']) && $postData['is_revisado'] == '1';
+        $solicitouAprovacao = isset($postData['is_aprovado']) && $postData['is_aprovado'] == '1';
+        $isRevisado = ($eraRevisado || $solicitouRevisao || $solicitouAprovacao) ? 1 : 0;
+        $isAprovado = ($eraAprovado || $solicitouAprovacao) ? 1 : 0;
+        $usuarioId = (int)($_SESSION['usuario_id'] ?? 0);
+        $isAdministrador = (int)($_SESSION['usuario_role'] ?? 0) === 1;
+        $motivo = trim($postData['motivoAlteracao'] ?? '');
+        $unlock = $_SESSION['cargo_unlocks'][$cargoIdSubmissao] ?? null;
+        $temDesbloqueioValido = is_array($unlock) && (int)($unlock['expires'] ?? 0) >= time();
+        $manterDesbloqueado = $eraAprovado
+            && $temDesbloqueioValido
+            && isset($postData['manter_desbloqueado'])
+            && $postData['manter_desbloqueado'] == '1';
+
+        if ($solicitouAprovacao && !$eraAprovado && !$isAdministrador) {
+            throw new Exception('Somente um administrador do sistema pode aprovar e bloquear um cargo.');
+        }
+        if ($eraAprovado && !$temDesbloqueioValido) {
+            throw new Exception('Este cargo está aprovado e bloqueado. Autorize a edição com a senha de um administrador.');
+        }
+        if ($eraAprovado && mb_strlen($motivo) < 10) {
+            throw new Exception('Informe uma justificativa com pelo menos 10 caracteres para alterar um cargo aprovado.');
+        }
+
+        $dataRevisao = $eraRevisado
+            ? $cargoAtual['data_revisao']
+            : ($isRevisado ? date('Y-m-d H:i:s') : null);
+        $dataAprovacao = $eraAprovado
+            ? $cargoAtual['data_aprovacao']
+            : ($isAprovado ? date('Y-m-d H:i:s') : null);
 
         // 1. Captura dos Dados Principais (COM AS NOVAS COLUNAS DO PISO SALARIAL)
         $data = [
@@ -73,7 +117,11 @@ class CargoRepository
             'nivelHierarquicoId' => empty($postData['nivelHierarquicoId']) ? null : (int)$postData['nivelHierarquicoId'],
             'cargoSupervisorId' => empty($postData['cargoSupervisorId']) ? null : (int)$postData['cargoSupervisorId'],
             'is_revisado' => $isRevisado,
-            'data_revisao' => $isRevisado ? date('Y-m-d H:i:s') : null,
+            'data_revisao' => $dataRevisao,
+            'is_aprovado' => $isAprovado,
+            'data_aprovacao' => $dataAprovacao,
+            'revisado_por_usuario_id' => $eraRevisado ? ($cargoAtual['revisado_por_usuario_id'] ?? null) : ($isRevisado ? $usuarioId : null),
+            'aprovado_por_usuario_id' => $eraAprovado ? ($cargoAtual['aprovado_por_usuario_id'] ?? null) : ($isAprovado ? $usuarioId : null),
             
             // --- BLOCO FINANCEIRO ADICIONADO AQUI ---
             'tem_piso_salarial' => isset($postData['tem_piso_salarial']) && $postData['tem_piso_salarial'] == '1' ? 1 : 0,
@@ -137,10 +185,34 @@ class CargoRepository
                 $novoCargoId = $cargoIdSubmissao;
 
                 // --- 7. LOG DE AUDITORIA (UPDATE) ---
-                $motivo = trim($postData['motivoAlteracao'] ?? '');
                 $dadosLog = $postData;
                 if (!empty($motivo)) $dadosLog['_motivo'] = $motivo;
                 $this->auditService->log('UPDATE', 'cargos', $novoCargoId, $dadosLog);
+
+                if (!$eraRevisado && $isRevisado) {
+                    $this->auditService->log('CARGO_REVISAO', 'cargos_homologacao', $novoCargoId, [
+                        'categoria' => 'homologacao_cargos',
+                        'data_revisao' => $dataRevisao,
+                    ]);
+                }
+                if (!$eraAprovado && $isAprovado) {
+                    $this->auditService->log('CARGO_APROVACAO', 'cargos_homologacao', $novoCargoId, [
+                        'categoria' => 'homologacao_cargos',
+                        'data_aprovacao' => $dataAprovacao,
+                        'cargo_bloqueado' => true,
+                    ]);
+                } elseif ($eraAprovado) {
+                    $this->auditService->log('CARGO_ALTERACAO_APROVADA', 'cargos_homologacao', $novoCargoId, [
+                        'categoria' => 'alteracao_pos_aprovacao',
+                        'justificativa' => $motivo,
+                        'administrador_autorizador_id' => (int)($unlock['usuarioId'] ?? 0),
+                        'administrador_autorizador_nome' => $unlock['usuarioNome'] ?? null,
+                        'permaneceu_desbloqueado' => $manterDesbloqueado,
+                        'desbloqueio_expira_em' => $manterDesbloqueado
+                            ? date('Y-m-d H:i:s', (int)$unlock['expires'])
+                            : null,
+                    ]);
+                }
 
             } else {
                 $sql_fields = implode(', ', $quotedFields);
@@ -151,7 +223,6 @@ class CargoRepository
                 $novoCargoId = (int)$this->pdo->lastInsertId('cargos_cargoId_seq');
                 
                 // --- 8. LOG DE AUDITORIA (CREATE) ---
-                $motivo = trim($postData['motivoAlteracao'] ?? '');
                 $dadosLog = $postData;
                 if (!empty($motivo)) $dadosLog['_motivo'] = $motivo;
                 $this->auditService->log('CREATE', 'cargos', $novoCargoId, $dadosLog);
@@ -218,6 +289,9 @@ class CargoRepository
 
             // 11. Commita a Transação
             $this->pdo->commit();
+            if ($eraAprovado && !$manterDesbloqueado) {
+                unset($_SESSION['cargo_unlocks'][$cargoIdSubmissao]);
+            }
             return [
                 'cargoId' => $novoCargoId,
                 'novasSoftskillsLideranca' => $novasSoftskillsNomes,
@@ -327,7 +401,7 @@ class CargoRepository
         $count_bindings = [];
 
         if (!empty($term)) {
-            $count_sql .= " WHERE c.\"cargoNome\" ILIKE :term1 OR c.\"cargoResumo\" ILIKE :term2 OR b.\"cboTituloOficial\" ILIKE :term3";
+            $count_sql .= " WHERE unaccent(COALESCE(c.\"cargoNome\"::text, '')) ILIKE unaccent(:term1) OR unaccent(COALESCE(c.\"cargoResumo\"::text, '')) ILIKE unaccent(:term2) OR unaccent(COALESCE(b.\"cboTituloOficial\"::text, '')) ILIKE unaccent(:term3)";
             $count_bindings[':term1'] = $sqlTerm;
             $count_bindings[':term2'] = $sqlTerm;
             $count_bindings[':term3'] = $sqlTerm;
@@ -358,7 +432,7 @@ class CargoRepository
         ";
 
         if (!empty($term)) {
-            $sql .= " WHERE c.\"cargoNome\" ILIKE :term1 OR c.\"cargoResumo\" ILIKE :term2 OR b.\"cboTituloOficial\" ILIKE :term3";
+            $sql .= " WHERE unaccent(COALESCE(c.\"cargoNome\"::text, '')) ILIKE unaccent(:term1) OR unaccent(COALESCE(c.\"cargoResumo\"::text, '')) ILIKE unaccent(:term2) OR unaccent(COALESCE(b.\"cboTituloOficial\"::text, '')) ILIKE unaccent(:term3)";
             $all_bindings[':term1'] = $sqlTerm;
             $all_bindings[':term2'] = $sqlTerm;
             $all_bindings[':term3'] = $sqlTerm;
@@ -458,14 +532,17 @@ class CargoRepository
                     c.*, e.\"escolaridadeTitulo\", b.\"cboCod\", b.\"cboTituloOficial\",
                     f.\"faixaNivel\", f.\"faixaSalarioMinimo\", f.\"faixaSalarioMaximo\",
                     n.\"nivelOrdem\", t.\"tipoNome\" AS \"tipoHierarquiaNome\",
-                    sup.\"cargoNome\" AS \"cargoSupervisorNome\"
+                    sup.\"cargoNome\" AS \"cargoSupervisorNome\",
+                    rev.nome AS \"revisadoPorNome\", apr.nome AS \"aprovadoPorNome\"
                 FROM cargos c
                 JOIN escolaridades e ON e.\"escolaridadeId\" = c.\"escolaridadeId\"  
                 JOIN cbos b ON b.\"cboId\" = c.\"cboId\"                          
                 LEFT JOIN faixas_salariais f ON f.\"faixaId\" = c.\"faixaId\"
                 LEFT JOIN nivel_hierarquico n ON n.\"nivelId\" = c.\"nivelHierarquicoId\" 
                 LEFT JOIN tipo_hierarquia t ON t.\"tipoId\" = n.\"tipoId\"              
-                LEFT JOIN cargos sup ON sup.\"cargoId\" = c.\"cargoSupervisorId\"        
+                LEFT JOIN cargos sup ON sup.\"cargoId\" = c.\"cargoSupervisorId\"
+                LEFT JOIN usuarios rev ON rev.\"usuarioId\" = c.revisado_por_usuario_id
+                LEFT JOIN usuarios apr ON apr.\"usuarioId\" = c.aprovado_por_usuario_id
                 WHERE c.\"cargoId\" = ?
             ");
             $stmt->execute([$cargoId]);
@@ -543,7 +620,7 @@ class CargoRepository
         $bindings = [];
         $whereClause = "";
         if (!empty($term)) {
-            $whereClause = " WHERE c.\"cargoNome\" ILIKE :term1 OR c.\"cargoResumo\" ILIKE :term2 OR b.\"cboTituloOficial\" ILIKE :term3";
+            $whereClause = " WHERE unaccent(COALESCE(c.\"cargoNome\"::text, '')) ILIKE unaccent(:term1) OR unaccent(COALESCE(c.\"cargoResumo\"::text, '')) ILIKE unaccent(:term2) OR unaccent(COALESCE(b.\"cboTituloOficial\"::text, '')) ILIKE unaccent(:term3)";
             $bindings[':term1'] = $sqlTerm;
             $bindings[':term2'] = $sqlTerm;
             $bindings[':term3'] = $sqlTerm;
@@ -588,7 +665,7 @@ class CargoRepository
         $bindings = [];
         $whereClause = "";
         if (!empty($term)) {
-            $whereClause = " WHERE c.\"cargoNome\" ILIKE :term1 OR c.\"cargoResumo\" ILIKE :term2 OR b.\"cboTituloOficial\" ILIKE :term3";
+            $whereClause = " WHERE unaccent(COALESCE(c.\"cargoNome\"::text, '')) ILIKE unaccent(:term1) OR unaccent(COALESCE(c.\"cargoResumo\"::text, '')) ILIKE unaccent(:term2) OR unaccent(COALESCE(b.\"cboTituloOficial\"::text, '')) ILIKE unaccent(:term3)";
             $bindings[':term1'] = $sqlTerm;
             $bindings[':term2'] = $sqlTerm;
             $bindings[':term3'] = $sqlTerm;

@@ -5,6 +5,16 @@ $(document).ready(function() {
     
     console.log("--- DEBUG START DOM READY ---: Inicializando rotina de renderização das grids.");
 
+    const formularioBloqueado = Number($('#cargoFields').attr('data-locked')) === 1;
+    const aplicarBloqueioVisual = () => {
+        if (!formularioBloqueado) return;
+        $('#cargoFields')
+            .find('input, select, textarea, button')
+            .not('[data-bs-toggle="tab"]')
+            .prop('disabled', true);
+    };
+    aplicarBloqueioVisual();
+
     // Mapeamento explícito das entidades (opção A)
     const ENTITY_CONFIG = {
         habilidade:   { global: 'habilidadesAssociadas',    tbody: 'habilidadesGridBody' },
@@ -332,6 +342,9 @@ $(document).ready(function() {
             `;
         });
         attachEditListeners('risco');
+        } catch (e) {
+            console.error('ERRO CRÍTICO [Riscos]:', e);
+        }
     };
 
     const renderCursosGrid = () => {
@@ -555,7 +568,7 @@ $(document).ready(function() {
         let addedCount = 0;
 
         selectedItems.forEach(data => {
-            const isDuplicate = stateArray.some(item => item.id === data.id);
+            const isDuplicate = stateArray.some(item => Number(item.id) === Number(data.id));
             if (!isDuplicate) {
                 const newItem = { id: data.id, nome: data.nome, ...(data.tipo && { tipo: data.tipo }) };
                 stateArray.push(newItem);
@@ -585,7 +598,21 @@ $(document).ready(function() {
     });
 
     $('#btnAssociarAreasAtuacao').on('click', function() {
-        handleMultiSelectAssociation('areasAtuacaoSelect', 'area', renderAreasAtuacaoGrid);
+        const selectedItems = getSelectedOptionsData('areasAtuacaoSelect');
+        if (selectedItems.length === 0) {
+            alert('Selecione ao menos uma área de atuação.');
+            return;
+        }
+
+        const areasAssociadas = getEntityMap('area');
+        selectedItems.forEach(area => {
+            const jaAssociada = areasAssociadas.some(item => Number(item.id) === Number(area.id));
+            if (!jaAssociada) {
+                areasAssociadas.push({ id: Number(area.id), nome: area.nome });
+            }
+        });
+
+        renderAreasAtuacaoGrid();
         $('#areasAtuacaoSelect').val(null).trigger('change');
         bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAssociacaoAreasAtuacao')).hide();
     });
@@ -661,7 +688,9 @@ $(document).ready(function() {
     // --- INICIALIZAÇÃO DE COMPONENTES DE INTERFACE ---
 
     function initSelect2() {
-        $('.searchable-select').select2({
+        // Inicializa apenas os seletores do formulário principal aqui.
+        // Os seletores dentro de modais precisam do próprio modal como dropdownParent.
+        $('#cargoForm .searchable-select').select2({
             theme: "bootstrap-5",
             width: '100%',
             placeholder: "Buscar e selecionar...",
@@ -698,6 +727,16 @@ $(document).ready(function() {
     }
     
     initSelect2();
+
+    // Preenche as grades com os relacionamentos já salvos ao abrir a edição.
+    renderHabilidadesGrid();
+    renderCaracteristicasGrid();
+    renderAreasAtuacaoGrid();
+    renderRecursosGruposGrid();
+    renderRiscosGrid();
+    renderCursosGrid();
+    renderSinonimosGrid();
+    aplicarBloqueioVisual();
 
     var firstTab = document.querySelector('#basicas-tab');
     if (firstTab) new bootstrap.Tab(firstTab).show();
@@ -741,17 +780,27 @@ $(document).ready(function() {
 
     // DINÂMICA DE INTERCEPTAÇÃO E TEXTO DO BOTÃO BASEADO NO STATUS DE HOMOLOGAÇÃO
     const gerenciarTextoBotaoSalvar = () => {
-        const isRevisadoOriginal = parseInt($('#hidden_original_revisado').val()) === 1;
+        const isAprovadoOriginal = parseInt($('#hidden_original_aprovado').val()) === 1;
         const isRevisadoMarcado = $('#is_revisado').is(':checked');
+        const isAprovadoMarcado = $('#is_aprovado').is(':checked');
         
-        if (isRevisadoOriginal || isRevisadoMarcado) {
-            $('#btnDispararSalvar').html('<i class="fas fa-check-double"></i> REVISAR E SALVAR ALTERAÇÕES').removeClass('btn-success').addClass('btn-info text-white');
+        if (isAprovadoOriginal) {
+            $('#btnDispararSalvar').html('<i class="fas fa-shield-alt"></i> SALVAR ALTERAÇÃO AUTORIZADA').removeClass('btn-success').addClass('btn-info text-white');
+        } else if (isAprovadoMarcado) {
+            $('#btnDispararSalvar').html('<i class="fas fa-lock"></i> APROVAR E BLOQUEAR CARGO').removeClass('btn-info text-white').addClass('btn-success');
+        } else if (isRevisadoMarcado) {
+            $('#btnDispararSalvar').html('<i class="fas fa-check-double"></i> SALVAR REVISÃO').removeClass('btn-info text-white').addClass('btn-success');
         } else {
             $('#btnDispararSalvar').html('<i class="fas fa-check-circle"></i> SALVAR CARGO').removeClass('btn-info text-white').addClass('btn-success');
         }
     };
 
     $('#is_revisado').on('change', gerenciarTextoBotaoSalvar);
+    $('#is_aprovado').on('change', function() {
+        if ($(this).is(':checked')) $('#is_revisado').prop('checked', true);
+        gerenciarTextoBotaoSalvar();
+    });
+    gerenciarTextoBotaoSalvar();
 
     // GATILHO COMPORTAMENTAL: EXIGIR MOTIVO DE ALTERAÇÃO EM MODAL SE HOMOLOGADO
     $('#btnDispararSalvar').on('click', function(e) {
@@ -762,16 +811,80 @@ $(document).ready(function() {
             return;
         }
 
-        const isRevisadoOriginal = parseInt($('#hidden_original_revisado').val()) === 1;
-        const isRevisadoMarcado = $('#is_revisado').is(':checked');
+        const isAprovadoOriginal = parseInt($('#hidden_original_aprovado').val()) === 1;
 
-        if (isRevisadoOriginal || isRevisadoMarcado) {
+        if (isAprovadoOriginal) {
             $('#txtJustificativaModal').val('');
             $('#erroJustificativaModal').hide();
             bootstrap.Modal.getOrCreateInstance(document.getElementById('modalJustificativaAlteracao')).show();
         } else {
-            console.error('ERRO: Função de renderização não encontrada para:', entityName);
+            document.getElementById('cargoForm').submit();
         }
+    });
+
+    $('#btnConfirmarSalvarComJustificativa').on('click', function() {
+        const justificativa = $('#txtJustificativaModal').val().trim();
+        if (justificativa.length < 10) {
+            $('#erroJustificativaModal').show();
+            return;
+        }
+
+        $('#motivoAlteracao').val(justificativa);
+        document.getElementById('cargoForm').submit();
+    });
+
+    $('#btnSolicitarDesbloqueio').on('click', function() {
+        $('#senhaDesbloqueioInput').val('');
+        $('#erroSenhaDesbloqueio').hide().text('');
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalDesbloqueioSenha')).show();
+    });
+
+    $('#btnConfirmarDesbloqueio').on('click', function() {
+        const botao = $(this);
+        const cargoId = $('input[name="cargoId"]').val();
+        const senha = $('#senhaDesbloqueioInput').val();
+        const email = $('#emailDesbloqueioInput').val() || '';
+
+        if (!senha) {
+            $('#erroSenhaDesbloqueio').text('Informe a senha do administrador.').show();
+            return;
+        }
+
+        botao.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Validando');
+        $.ajax({
+            url: window.location.href,
+            method: 'POST',
+            dataType: 'json',
+            data: { ajax_action: 'unlock', cargoId, email, senha }
+        }).done(function(response) {
+            if (response.success) {
+                window.location.reload();
+                return;
+            }
+            $('#erroSenhaDesbloqueio').text(response.message || 'Não foi possível autorizar a edição.').show();
+        }).fail(function() {
+            $('#erroSenhaDesbloqueio').text('Falha de comunicação ao validar a autorização.').show();
+        }).always(function() {
+            botao.prop('disabled', false).html('Autorizar');
+        });
+    });
+
+    let formularioAlterado = false;
+    let destinoNavegacao = '';
+
+    $('#cargoForm').on('input change', ':input', function() {
+        formularioAlterado = true;
+    });
+
+    $('.js-cargo-nav').on('click', function(e) {
+        if (!formularioAlterado) return;
+        e.preventDefault();
+        destinoNavegacao = this.href;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalNavegacaoInteligente')).show();
+    });
+
+    $('#btnConfirmarNavegacao').on('click', function() {
+        if (destinoNavegacao) window.location.href = destinoNavegacao;
     });
 
     console.log("cargos_form.js (VERSÃO FINAL) carregado e pronto.");

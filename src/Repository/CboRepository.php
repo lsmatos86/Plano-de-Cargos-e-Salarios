@@ -132,7 +132,7 @@ class CboRepository
 
         // Identificadores exclusivos com numeração para evitar o conflito do PDO
         if (!empty($term)) {
-            $where = " WHERE c.\"cboCod\" ILIKE :term OR c.\"cboTituloOficial\" ILIKE :term OR f.\"familiaCboNome\" ILIKE :term";
+            $where = " WHERE unaccent(COALESCE(c.\"cboCod\"::text, '')) ILIKE unaccent(:term) OR unaccent(COALESCE(c.\"cboTituloOficial\"::text, '')) ILIKE unaccent(:term) OR unaccent(COALESCE(f.\"familiaCboNome\"::text, '')) ILIKE unaccent(:term)";
             $bindings[':term'] = $sqlTerm;
         }
         

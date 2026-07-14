@@ -56,15 +56,20 @@ class GrupoRecursoRepository
         $currentPage = (int)($params['page'] ?? 1);
         $term = $params['term'] ?? '';
         
-        $sortCol = in_array($params['order_by'] ?? $this->nameColumn, [$this->nameColumn, $this->idColumn]) ? $params['order_by'] : $this->nameColumn;
-        $sortDir = in_array(strtoupper($params['sort_dir'] ?? 'ASC'), ['ASC', 'DESC']) ? $params['sort_dir'] : 'ASC';
+        $requestedSortCol = $params['order_by'] ?? $this->nameColumn;
+        $requestedSortDir = strtoupper($params['sort_dir'] ?? 'ASC');
+        $sortCol = in_array($requestedSortCol, [$this->nameColumn, $this->idColumn], true) ? $requestedSortCol : $this->nameColumn;
+        $sortDir = in_array($requestedSortDir, ['ASC', 'DESC'], true) ? $requestedSortDir : 'ASC';
 
         $termParam = "%{$term}%";
         $bindings = [$termParam];
-        $where = " WHERE t.{$this->nameColumn} LIKE ?";
+        $quotedNameColumn = Database::quoteIdent($this->nameColumn);
+        $quotedIdColumn = Database::quoteIdent($this->idColumn);
+        $quotedSortColumn = Database::quoteIdent($sortCol);
+        $where = " WHERE unaccent(COALESCE(t.{$quotedNameColumn}::text, '')) ILIKE unaccent(?)";
 
         // 1. Count total
-        $countSql = "SELECT COUNT(t.{$this->idColumn}) FROM {$this->tableName} t" . $where;
+        $countSql = "SELECT COUNT(t.{$quotedIdColumn}) FROM {$this->tableName} t" . $where;
 
         try {
             $countStmt = $this->pdo->prepare($countSql);
@@ -78,10 +83,10 @@ class GrupoRecursoRepository
             // 2. Data query
             $sql = "
                 SELECT 
-                    t.recursoGrupoId, t.recursoGrupoNome, t.recursoGrupoDescricao
+                    t.{$quotedIdColumn}, t.{$quotedNameColumn}
                 FROM {$this->tableName} t
                 {$where}
-                ORDER BY {$sortCol} {$sortDir} 
+                ORDER BY {$quotedSortColumn} {$sortDir}
                 LIMIT ? OFFSET ?
             ";
 

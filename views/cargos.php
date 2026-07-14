@@ -218,7 +218,7 @@ include '../includes/header.php';
                                     
                                     <span class="mx-1"></span> 
 
-                                    <a href="<?php echo htmlspecialchars($cargosFormUrl . '?id=' . (int)$row['cargoId'], ENT_QUOTES, 'UTF-8'); ?>" 
+                                    <a href="<?php echo htmlspecialchars($cargosFormUrl . '?' . $nav_params, ENT_QUOTES, 'UTF-8'); ?>"
                                         class="btn btn-sm btn-info text-white" 
                                         title="Editar Configurações">
                                         <i class="fas fa-edit"></i>

@@ -130,6 +130,12 @@ $navBaseUrl = defined('BASE_URL') ? BASE_URL : '/ita/';
             <span>Logs de Auditoria</span>
         </a>
     </li>
+    <li class="nav-item">
+        <a class="nav-link" href="<?php echo $navBaseUrl; ?>views/relatorio_homologacoes.php">
+            <i class="fas fa-fw fa-shield-alt"></i>
+            <span>Homologações de Cargos</span>
+        </a>
+    </li>
     <?php endif; ?>
 
     <hr class="sidebar-divider d-none d-md-block">

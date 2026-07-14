@@ -181,7 +181,7 @@ class NivelHierarquicoRepository
 
         // 2. Montagem dos Filtros
         if (!empty($term)) {
-            $where[] = "(n.\"nivelDescricao\" ILIKE :term OR t.\"tipoNome\" ILIKE :term)";
+            $where[] = "(unaccent(COALESCE(n.\"nivelDescricao\"::text, '')) ILIKE unaccent(:term) OR unaccent(COALESCE(t.\"tipoNome\"::text, '')) ILIKE unaccent(:term))";
             $bindings[':term'] = $sqlTerm;
         }
         

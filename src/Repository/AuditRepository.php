@@ -45,7 +45,7 @@ class AuditRepository
 
         // 2. Montagem dos Filtros
         if (!empty($term)) {
-            $where[] = "(a.\"nomeUsuario\" ILIKE :term OR a.\"dadosJson\" ILIKE :term OR a.\"idRegistro\" ILIKE :term)";
+            $where[] = "(unaccent(COALESCE(a.\"nomeUsuario\"::text, '')) ILIKE unaccent(:term) OR unaccent(COALESCE(a.\"dadosJson\"::text, '')) ILIKE unaccent(:term) OR unaccent(COALESCE(a.\"idRegistro\"::text, '')) ILIKE unaccent(:term))";
             $bindings[':term'] = $sqlTerm;
         }
         if (!empty($acao)) {
@@ -53,7 +53,7 @@ class AuditRepository
             $bindings[':acao'] = $acao;
         }
         if (!empty($nomeTabela)) {
-            $where[] = "a.nomeTabela = :nomeTabela";
+            $where[] = "a.\"nomeTabela\" = :nomeTabela";
             $bindings[':nomeTabela'] = $nomeTabela;
         }
         

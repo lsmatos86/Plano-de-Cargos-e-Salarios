@@ -17,57 +17,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_action']) && $_P
     header('Content-Type: application/json');
     try {
         $pdoAjax = \App\Core\Database::getConnection();
+        $cargoIdUnlock = (int)($_POST['cargoId'] ?? 0);
         $email = trim($_POST['email'] ?? '');
-        $senha = trim($_POST['senha'] ?? '');
-        $userIdToCheck = null;
+        $senha = (string)($_POST['senha'] ?? '');
 
-        if (empty($email)) {
-            $userIdToCheck = $_SESSION['usuario_id'] ?? 0;
-        } else {
-            $stmt = $pdoAjax->prepare("SELECT usuarioId, senha, ativo FROM usuarios WHERE email = ?");
-            $stmt->execute([$email]);
-            $userCheck = $stmt->fetch(\PDO::FETCH_ASSOC);
-            
-            if ($userCheck && password_verify($senha, $userCheck['senha']) && $userCheck['ativo'] == 1) {
-                $userIdToCheck = $userCheck['usuarioId'];
-            } else {
-                echo json_encode(['success' => false, 'message' => 'E-mail ou senha do administrador incorretos.']);
-                exit;
-            }
+        if ($cargoIdUnlock <= 0 || $senha === '') {
+            throw new \RuntimeException('Informe a senha do administrador.');
         }
 
-        if ($userIdToCheck > 0) {
-            if (empty($email)) {
-                $stmt = $pdoAjax->prepare("SELECT senha FROM usuarios WHERE usuarioId = ? AND ativo = 1");
-                $stmt->execute([$userIdToCheck]);
-                $currentUser = $stmt->fetch(\PDO::FETCH_ASSOC);
-                if (!$currentUser || !password_verify($senha, $currentUser['senha'])) {
-                    echo json_encode(['success' => false, 'message' => 'A sua senha está incorreta.']);
-                    exit;
-                }
-            }
+        $sqlUsuario = 'SELECT "usuarioId", nome, email, senha, ativo FROM usuarios WHERE ';
+        $paramUsuario = $email !== '' ? $email : (int)($_SESSION['usuario_id'] ?? 0);
+        $sqlUsuario .= $email !== '' ? 'LOWER(email) = LOWER(?)' : '"usuarioId" = ?';
+        $stmt = $pdoAjax->prepare($sqlUsuario);
+        $stmt->execute([$paramUsuario]);
+        $admin = $stmt->fetch(\PDO::FETCH_ASSOC);
 
-            $stmtPerm = $pdoAjax->prepare("
-                SELECT COUNT(*) FROM user_roles ur
-                JOIN role_permissions rp ON ur.roleId = rp.roleId
-                JOIN permissions p ON rp.permissionId = p.permissionId
-                WHERE ur.usuarioId = ? AND p.permissionName IN ('cargos:edit', 'cadastros:manage')
-            ");
-            $stmtPerm->execute([$userIdToCheck]);
-            $hasPerm = $stmtPerm->fetchColumn() > 0;
-            
-            if ($userIdToCheck == 1) $hasPerm = true;
-
-            if ($hasPerm) {
-                echo json_encode(['success' => true]);
-            } else {
-                echo json_encode(['success' => false, 'message' => 'Este utilizador não possui permissão de Administrador para desbloquear.']);
-            }
-        } else {
-             echo json_encode(['success' => false, 'message' => 'Sessão expirada. Faça login novamente.']);
+        if (!$admin || (int)$admin['ativo'] !== 1 || !password_verify($senha, $admin['senha'])) {
+            throw new \RuntimeException('Credenciais administrativas inválidas.');
         }
-    } catch (\Exception $e) {
-        echo json_encode(['success' => false, 'message' => 'Erro interno de servidor.']);
+
+        $stmtRole = $pdoAjax->prepare('SELECT COUNT(*) FROM user_roles WHERE "usuarioId" = ? AND "roleId" = 1');
+        $stmtRole->execute([(int)$admin['usuarioId']]);
+        $isAdmin = (int)$stmtRole->fetchColumn() > 0;
+        if ((int)$admin['usuarioId'] === (int)($_SESSION['usuario_id'] ?? 0) && (int)($_SESSION['usuario_role'] ?? 0) === 1) {
+            $isAdmin = true;
+        }
+
+        if (!$isAdmin) {
+            throw new \RuntimeException('O usuário informado não é administrador do sistema.');
+        }
+
+        $_SESSION['cargo_unlocks'][$cargoIdUnlock] = [
+            'usuarioId' => (int)$admin['usuarioId'],
+            'usuarioNome' => $admin['nome'],
+            'expires' => time() + 1800,
+        ];
+
+        (new \App\Service\AuditService())->log('CARGO_DESBLOQUEIO', 'cargos_homologacao', $cargoIdUnlock, [
+            'categoria' => 'desbloqueio_cargo',
+            'administrador_autorizador_id' => (int)$admin['usuarioId'],
+            'administrador_autorizador_nome' => $admin['nome'],
+            'validade_minutos' => 30,
+        ]);
+
+        echo json_encode(['success' => true, 'message' => 'Edição autorizada por 30 minutos.']);
+    } catch (\Throwable $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }
     exit;
 }
@@ -75,7 +70,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_action']) && $_P
 // Inicializa variáveis
 $message = '';
 $message_type = '';
-$temPermissaoEdicao = possuiPermissao('cargos:edit') || possuiPermissao('cadastros:manage');
+$isAdministradorSessao = (int)($_SESSION['usuario_role'] ?? 0) === 1;
+$temPermissaoEdicao = $isAdministradorSessao;
 
 // Variáveis de Controle
 $originalId = (int)($_GET['id'] ?? 0);
@@ -90,7 +86,6 @@ $cargoId = $originalId;
 // ======================================================
 $page_title = $isDuplicating ? 'Duplicar Cargo (Novo Registro)' : ($isEditing ? 'Editar Cargo' : 'Novo Cargo');
 $root_path = '../'; 
-$page_title = "Carregando..."; 
 $breadcrumb_items = [
     'Dashboard' => $root_path . 'index.php',
     'Gerenciamento de Cargos' => 'cargos.php',
@@ -153,6 +148,10 @@ $cargoRiscos = [];
 $cargoCursos = [];
 $cargoRecursosGrupos = [];
 $cargoSinonimos = [];
+$navigation = ['prev_id' => null, 'next_id' => null, 'first_id' => null, 'last_id' => null];
+$navSortCol = $_GET['sort_col'] ?? 'c.cargoId';
+$navSortDir = $_GET['sort_dir'] ?? 'ASC';
+$navTerm = trim($_GET['term'] ?? '');
 
 
 // ----------------------------------------------------
@@ -172,6 +171,12 @@ if ($isEditing || $isDuplicating) {
             $cargoCursos = $cargoData['cursos'];
             $cargoRecursosGrupos = $cargoData['recursos_grupos'];
 
+            if ($isEditing) {
+                $adjacentIds = $cargoRepo->findAdjacentCargoIds($originalId, $navSortCol, $navSortDir, $navTerm);
+                $edgeIds = $cargoRepo->findFirstAndLastCargoIds($navSortCol, $navSortDir, $navTerm);
+                $navigation = array_merge($navigation, $adjacentIds, $edgeIds);
+            }
+
             if ($isDuplicating) {
                 $cargo['cargoNome'] = ($cargo['cargoNome'] ?? 'Cargo Duplicado') . ' (CÓPIA)';
                 unset($cargo['cargoId']);
@@ -187,6 +192,13 @@ if ($isEditing || $isDuplicating) {
         $message_type = 'danger';
     }
 }
+
+$cargoAprovado = $isEditing && !empty($cargo['is_aprovado']);
+$unlockAtual = $_SESSION['cargo_unlocks'][$originalId] ?? null;
+$cargoDesbloqueado = $cargoAprovado
+    && is_array($unlockAtual)
+    && (int)($unlockAtual['expires'] ?? 0) >= time();
+$cargoBloqueado = $cargoAprovado && !$cargoDesbloqueado;
 
 
 // ----------------------------------------------------
@@ -311,11 +323,40 @@ include '../includes/header.php';
         <?php endif; ?>
     </h1>
     <?php if ($isEditing && $originalId > 0): ?>
-         <a href="cargos_form.php?id=<?php echo $originalId; ?>&action=duplicate" 
-            class="btn btn-warning btn-sm" 
-            title="Criar um novo registro com base neste.">
-            <i class="fas fa-copy"></i> Duplicar Cadastro
-        </a>
+        <?php
+        $navQuery = static function (int $id) use ($navSortCol, $navSortDir, $navTerm): string {
+            return 'cargos_form.php?' . http_build_query([
+                'id' => $id,
+                'sort_col' => $navSortCol,
+                'sort_dir' => $navSortDir,
+                'term' => $navTerm,
+            ]);
+        };
+        ?>
+        <div class="d-flex flex-wrap justify-content-end gap-2">
+            <div class="btn-group" role="group" aria-label="Navegação entre cargos">
+                <a class="btn btn-outline-secondary btn-sm js-cargo-nav <?php echo empty($navigation['first_id']) || (int)$navigation['first_id'] === $originalId ? 'disabled' : ''; ?>"
+                   href="<?php echo !empty($navigation['first_id']) ? htmlspecialchars($navQuery((int)$navigation['first_id'])) : '#'; ?>" title="Primeiro cargo">
+                    <i class="fas fa-step-backward"></i>
+                </a>
+                <a class="btn btn-outline-secondary btn-sm js-cargo-nav <?php echo empty($navigation['prev_id']) ? 'disabled' : ''; ?>"
+                   href="<?php echo !empty($navigation['prev_id']) ? htmlspecialchars($navQuery((int)$navigation['prev_id'])) : '#'; ?>" title="Cargo anterior">
+                    <i class="fas fa-chevron-left"></i> Anterior
+                </a>
+                <a class="btn btn-outline-secondary btn-sm js-cargo-nav <?php echo empty($navigation['next_id']) ? 'disabled' : ''; ?>"
+                   href="<?php echo !empty($navigation['next_id']) ? htmlspecialchars($navQuery((int)$navigation['next_id'])) : '#'; ?>" title="Próximo cargo">
+                    Próximo <i class="fas fa-chevron-right"></i>
+                </a>
+                <a class="btn btn-outline-secondary btn-sm js-cargo-nav <?php echo empty($navigation['last_id']) || (int)$navigation['last_id'] === $originalId ? 'disabled' : ''; ?>"
+                   href="<?php echo !empty($navigation['last_id']) ? htmlspecialchars($navQuery((int)$navigation['last_id'])) : '#'; ?>" title="Último cargo">
+                    <i class="fas fa-step-forward"></i>
+                </a>
+            </div>
+            <a href="cargos_form.php?id=<?php echo $originalId; ?>&action=duplicate"
+               class="btn btn-warning btn-sm" title="Criar um novo registro com base neste.">
+                <i class="fas fa-copy"></i> Duplicar Cadastro
+            </a>
+        </div>
     <?php endif; ?>
 </div>
 
@@ -329,6 +370,62 @@ include '../includes/header.php';
 
 <form method="POST" action="cargos_form.php" id="cargoForm">
     <input type="hidden" name="cargoId" value="<?php echo htmlspecialchars($currentFormId); ?>">
+    <input type="hidden" name="motivoAlteracao" id="motivoAlteracao" value="">
+    <input type="hidden" id="hidden_original_revisado" value="<?php echo !empty($cargo['is_revisado']) ? '1' : '0'; ?>">
+    <input type="hidden" id="hidden_original_aprovado" value="<?php echo !empty($cargo['is_aprovado']) ? '1' : '0'; ?>">
+
+    <?php if ($cargoAprovado): ?>
+        <div class="alert <?php echo $cargoBloqueado ? 'alert-warning' : 'alert-success'; ?> d-flex flex-wrap justify-content-between align-items-center gap-3" id="cargoLockStatus">
+            <div>
+                <strong><i class="fas <?php echo $cargoBloqueado ? 'fa-lock' : 'fa-lock-open'; ?> me-2"></i>
+                    Cargo revisado, aprovado e <?php echo $cargoBloqueado ? 'bloqueado' : 'temporariamente desbloqueado'; ?>
+                </strong>
+                <div class="small mt-1">
+                    Revisão: <?php echo !empty($cargo['data_revisao']) ? date('d/m/Y H:i', strtotime($cargo['data_revisao'])) : 'não informada'; ?>
+                    &nbsp;|&nbsp;
+                    Aprovação: <?php echo !empty($cargo['data_aprovacao']) ? date('d/m/Y H:i', strtotime($cargo['data_aprovacao'])) : 'não informada'; ?>
+                </div>
+            </div>
+            <?php if ($cargoBloqueado): ?>
+                <button type="button" class="btn btn-danger btn-sm" id="btnSolicitarDesbloqueio">
+                    <i class="fas fa-key me-1"></i> Autorizar edição
+                </button>
+            <?php elseif ($cargoDesbloqueado): ?>
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="manter_desbloqueado" name="manter_desbloqueado" value="1">
+                    <label class="form-check-label" for="manter_desbloqueado">
+                        Manter desbloqueado após salvar
+                    </label>
+                    <div class="small text-muted">A autorização continuará válida somente até completar 30 minutos.</div>
+                </div>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
+
+    <div id="cargoFields" data-locked="<?php echo $cargoBloqueado ? '1' : '0'; ?>">
+        <div class="card border-primary mb-3">
+            <div class="card-body py-3">
+                <div class="row align-items-center g-3">
+                    <div class="col-md-6">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="is_revisado" name="is_revisado" value="1" <?php echo !empty($cargo['is_revisado']) ? 'checked' : ''; ?>>
+                            <label class="form-check-label fw-bold" for="is_revisado">Revisão concluída</label>
+                        </div>
+                        <div class="small text-muted">Registra a data e o responsável pela revisão.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="is_aprovado" name="is_aprovado" value="1"
+                                <?php echo !empty($cargo['is_aprovado']) ? 'checked' : ''; ?>
+                                <?php echo (!$isAdministradorSessao && empty($cargo['is_aprovado'])) ? 'disabled data-admin-only="1"' : ''; ?>>
+                            <label class="form-check-label fw-bold text-success" for="is_aprovado">Aprovar e bloquear o cargo</label>
+                        </div>
+                        <div class="small text-muted">Disponível para administrador. Após salvar, alterações exigirão senha e justificativa.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <ul class="nav nav-tabs" id="cargoTabs" role="tablist">
             <li class="nav-item" role="presentation">
@@ -437,22 +534,6 @@ include '../includes/header.php';
                 </div>
             </div>
             <hr>
-            <h4 class="mb-3"><i class="fas fa-wallet"></i> Faixa Salarial</h4>
-             <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="faixaId" class="form-label">Faixa/Nível Salarial</label>
-                    <select class="form-select searchable-select" id="faixaId" name="faixaId">
-                        <option value="">--- Não Definido ---</option>
-                        <?php foreach ($faixasSalariais as $id => $nome): ?>
-                            <option value="<?php echo $id; ?>" <?php echo (int)($cargo['faixaId'] ?? 0) === (int)$id ? 'selected' : ''; ?>>
-                                <?php echo htmlspecialchars($nome); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                    <div class="form-text">Lembre-se de cadastrar as faixas salariais.</div>
-                </div>
-            </div>
-            <hr>
             <h4 class="mb-3"><i class="fas fa-building"></i> Áreas de Atuação</h4>
             <button type="button" class="btn btn-sm btn-outline-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAssociacaoAreasAtuacao">
                 <i class="fas fa-plus"></i> Adicionar Área
@@ -471,6 +552,7 @@ include '../includes/header.php';
                     </table>
                 </div>
             </div>
+        </div>
 
             <div class="tab-pane fade" id="remuneracao" role="tabpanel" aria-labelledby="remuneracao-tab">
                 <h4 class="mb-3"><i class="fas fa-wallet text-success"></i> Enquadramento na Matriz Salarial</h4>
@@ -601,9 +683,10 @@ include '../includes/header.php';
         
     </div>
     
-    <button type="submit" class="btn btn-lg btn-success w-100 mt-3">
+    <button type="submit" class="btn btn-lg btn-success w-100 mt-3" id="btnDispararSalvar">
         <i class="fas fa-check-circle"></i> SALVAR CARGO
     </button>
+    </div>
     <?php if ($isEditing || $isDuplicating): ?>
         <a href="cargos.php" class="btn btn-link text-secondary w-100 mt-2">
             <i class="fas fa-arrow-left"></i> Voltar sem salvar
@@ -784,7 +867,6 @@ include '../includes/header.php';
     </div>
 </div>
 
-<div class="modal fade" id="modalAssociacaoHabilidades" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header bg-success text-white"><h5>Habilidades</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><select class="form-select" id="habilidadeSelect" multiple="multiple"><?php foreach ($habilidadesAgrupadas as $gn => $hg): ?><optgroup label="<?php echo $gn; ?>"><?php foreach ($hg as $id => $n): ?><option value="<?php echo $id; ?>" data-nome="<?php echo $n; ?>" data-tipo="<?php echo $gn; ?>"><?php echo $n; ?></option><?php endforeach; ?></optgroup><?php endforeach; ?></select></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button><button type="button" class="btn btn-success" id="btnAssociarHabilidade">Adicionar</button></div></div></div></div>
 <div class="modal fade" id="modalAssociacaoCaracteristicas" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header bg-success text-white"><h5>Características</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><select class="form-select" id="caracteristicaSelect" multiple="multiple"><?php foreach ($caracteristicas as $id => $n): ?><option value="<?php echo $id; ?>" data-nome="<?php echo $n; ?>"><?php echo $n; ?></option><?php endforeach; ?></select></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button><button type="button" class="btn btn-success" id="btnAssociarCaracteristica">Adicionar</button></div></div></div></div>
 <div class="modal fade" id="modalAssociacaoRiscos" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header bg-success text-white"><h5>Riscos</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><select class="form-select mb-3" id="riscoSelect"><?php foreach ($riscos as $id => $n): ?><option value="<?php echo $id; ?>" data-nome="<?php echo $n; ?>"><?php echo $n; ?></option><?php endforeach; ?></select><textarea class="form-control" id="riscoDescricaoInput" rows="2" placeholder="Descrição..."></textarea></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button><button type="button" class="btn btn-success" id="btnAssociarRisco">Adicionar</button></div></div></div></div>
 <div class="modal fade" id="modalAssociacaoCursos" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header bg-success text-white"><h5>Cursos</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><select class="form-select mb-3" id="cursoSelect" multiple="multiple"><?php foreach ($cursos as $id => $n): ?><option value="<?php echo $id; ?>" data-nome="<?php echo $n; ?>"><?php echo $n; ?></option><?php endforeach; ?></select><div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="cursoObrigatorioInput"><label class="form-check-label" for="cursoObrigatorioInput">Obrigatório?</label></div><textarea class="form-control" id="cursoObsInput" rows="2" placeholder="Observações..."></textarea></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button><button type="button" class="btn btn-success" id="btnAssociarCurso">Adicionar</button></div></div></div></div>
@@ -797,10 +879,7 @@ include '../includes/header.php';
 // ======================================================
 // AJUSTE: Inclui os scripts JS específicos desta página ANTES de incluir o footer
 // ======================================================
-$extra_scripts = '
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
-    <script src="../scripts/cargos_form.js?v=4"></script>
-';
+$page_scripts = ['../scripts/cargos_form.js'];
 
 //
 include '../includes/footer.php';

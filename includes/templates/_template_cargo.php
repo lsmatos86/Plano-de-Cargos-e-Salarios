@@ -54,8 +54,12 @@ if (!isset($cargo) || !isset($section_counter)) {
      <tr>
         <th><i class="fas fa-user-tie"></i> Reporta-se a</th>
         <td><?php 
-        if (!empty($supervisores)) {
-            echo htmlspecialchars(implode(' | ', $supervisores));
+        $nomesSupervisores = $supervisores ?? [];
+        if (empty($nomesSupervisores) && !empty($cargo['cargoSupervisorNome'])) {
+            $nomesSupervisores = [$cargo['cargoSupervisorNome']];
+        }
+        if (!empty($nomesSupervisores)) {
+            echo htmlspecialchars(implode(' | ', $nomesSupervisores));
         } else {
             echo 'N/A';
         }

@@ -161,7 +161,7 @@ class EscolaridadeRepository
 
         // 2. Montagem dos Filtros
         if (!empty($term)) {
-            $where[] = "(\"escolaridadeTitulo\" ILIKE :term)";
+            $where[] = "(unaccent(COALESCE(\"escolaridadeTitulo\"::text, '')) ILIKE unaccent(:term))";
             $bindings[':term'] = $sqlTerm;
         }
         

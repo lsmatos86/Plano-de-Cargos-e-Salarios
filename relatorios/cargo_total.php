@@ -116,6 +116,7 @@ ob_start();
         $cargo = $data['cargo'];
         $soft_skills = array_filter($data['habilidades'], fn($h) => $h['habilidadeTipo'] == 'Softskill');
         $hard_skills = array_filter($data['habilidades'], fn($h) => $h['habilidadeTipo'] == 'Hardskill');
+        $supervisores = $data['supervisores'] ?? [];
         
         // 8.3. Define a variável de controlo (NÃO MOSTRAR HIERARQUIA)
         $show_hierarquia = false; 

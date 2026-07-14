@@ -49,6 +49,7 @@ $desktopItems = [
     ['label' => 'Usuários', 'description' => 'Usuários e acessos', 'icon' => 'fa-users-gear', 'color' => 'purple', 'url' => BASE_URL . 'views/usuarios.php'],
     ['label' => 'Papéis', 'description' => 'Papéis e permissões', 'icon' => 'fa-user-shield', 'color' => 'danger', 'url' => BASE_URL . 'views/roles.php'],
     ['label' => 'Auditoria', 'description' => 'Histórico de atividades', 'icon' => 'fa-clock-rotate-left', 'color' => 'secondary', 'url' => BASE_URL . 'views/auditoria.php'],
+    ['label' => 'Homologações', 'description' => 'Aprovações e desbloqueios', 'icon' => 'fa-shield-alt', 'color' => 'success', 'url' => BASE_URL . 'views/relatorio_homologacoes.php'],
     ['label' => 'Relatório Geral', 'description' => 'Relatório consolidado', 'icon' => 'fa-file-pdf', 'color' => 'danger', 'url' => BASE_URL . 'relatorios/cargo_total.php'],
 ];
 

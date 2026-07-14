@@ -451,3 +451,21 @@ function registrarAuditoria(string $acao, string $tabela, $id_registro = null, $
         return false;
     }
 }
+
+/**
+ * Retorna um ícone Font Awesome coerente com o tipo de risco ocupacional.
+ * Mantido como helper global porque os templates HTML e PDF o compartilham.
+ */
+function getRiscoIcon(?string $riscoNome): string {
+    $nome = function_exists('mb_strtolower')
+        ? mb_strtolower((string)$riscoNome, 'UTF-8')
+        : strtolower((string)$riscoNome);
+
+    if (str_contains($nome, 'quím')) return 'fas fa-flask';
+    if (str_contains($nome, 'biol')) return 'fas fa-biohazard';
+    if (str_contains($nome, 'fís')) return 'fas fa-wave-square';
+    if (str_contains($nome, 'ergon')) return 'fas fa-chair';
+    if (str_contains($nome, 'acidente') || str_contains($nome, 'mecân')) return 'fas fa-hard-hat';
+
+    return 'fas fa-exclamation-triangle';
+}

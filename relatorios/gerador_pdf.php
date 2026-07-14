@@ -186,11 +186,11 @@ ob_start();
                     <?php endif; ?>
                     <?php foreach ($data['cursos'] as $cur): ?>
                         <li class="recurso-item">
-                            <strong style="font-size: 10pt;"><?php echo htmlspecialchars($cur['cursoNome']); ?></strong>
-                            <span style="color: <?php echo $cur['cursoCargoObrigatorio'] ? 'red' : 'green'; ?>; font-size: 9pt;">
-                                (<?php echo $cur['cursoCargoObrigatorio'] ? 'OBRIGATÓRIO' : 'Recomendado'; ?>)
+                            <strong style="font-size: 10pt;"><?php echo htmlspecialchars($cur['nome'] ?? 'Curso não identificado'); ?></strong>
+                            <span style="color: <?php echo !empty($cur['obrigatorio']) ? 'red' : 'green'; ?>; font-size: 9pt;">
+                                (<?php echo !empty($cur['obrigatorio']) ? 'OBRIGATÓRIO' : 'Recomendado'; ?>)
                             </span>
-                            <?php echo !empty($cur['cursoCargoObs']) ? '<br><span style="font-size: 8pt; color: #555;">Observação: '. htmlspecialchars($cur['cursoCargoObs']) . '</span>' : ''; ?>
+                            <?php echo !empty($cur['obs']) ? '<br><span style="font-size: 8pt; color: #555;">Observação: '. htmlspecialchars($cur['obs']) . '</span>' : ''; ?>
                         </li>
                     <?php endforeach; ?>
                     </ul>

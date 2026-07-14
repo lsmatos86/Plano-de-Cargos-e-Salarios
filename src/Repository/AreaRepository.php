@@ -56,7 +56,7 @@ class AreaRepository
         $bindings     = [];
 
         if (!empty($term)) {
-            $whereClause = ' WHERE a."areaNome" ILIKE :term';
+            $whereClause = ' WHERE unaccent(COALESCE(a."areaNome"::text, \'\')) ILIKE unaccent(:term)';
             $bindings[':term'] = $sqlTerm;
         }
 

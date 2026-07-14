@@ -9,7 +9,7 @@ use Dompdf\Options;
 
 if (!isUserLoggedIn()) { die('Acesso Negado.'); }
 $authService = new AuthService();
-if (!$authService->hasPermission('cargos:view')) { die('Acesso Negado.'); }
+if (!$authService->temPermissao('cargos:view')) { die('Acesso Negado.'); }
 
 $pdo = Database::getConnection();
 

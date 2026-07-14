@@ -58,7 +58,7 @@ class HabilidadeRepository
 
         // 2. Montagem dos Filtros
         if (!empty($term)) {
-            $where[] = "(\"habilidadeNome\" ILIKE :term OR \"habilidadeDescricao\" ILIKE :term)";
+            $where[] = "(unaccent(COALESCE(\"habilidadeNome\"::text, '')) ILIKE unaccent(:term) OR unaccent(COALESCE(\"habilidadeDescricao\"::text, '')) ILIKE unaccent(:term))";
             $bindings[':term'] = $sqlTerm;
         }
         if (!empty($tipo)) {
