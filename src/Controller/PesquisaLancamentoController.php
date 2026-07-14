@@ -182,7 +182,9 @@ class PesquisaLancamentoController
         }
 
         // 3. Mapa CBO
-        $stmtCbo = $this->pdo->query("SELECT cboId, REPLACE(cboCod, '-', '') as cboCodLimpo FROM cbos");
+        $stmtCbo = $this->pdo->query(
+            'SELECT "cboId", REPLACE("cboCod", \'-\', \'\') AS "cboCodLimpo" FROM cbos'
+        );
         $cboMap = [];
         while ($row = $stmtCbo->fetch(\PDO::FETCH_ASSOC)) {
             $cboMap[$row['cboCodLimpo']] = $row['cboId'];

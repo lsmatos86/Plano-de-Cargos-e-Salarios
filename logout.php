@@ -1,38 +1,35 @@
 <?php
 // Arquivo: logout.php
-// Este arquivo agora inclui o autoload e functions para registrar o log de auditoria.
 
-// 1. Incluir Autoload, Config e Functions
-// É necessário para carregar o AuditService e verificar os dados da sessão.
-require_once 'vendor/autoload.php';
+/**
+ * Script de encerramento de sessão, auditoria e limpeza.
+ * Mantém 100% da lógica de negócio e auditoria do repositório original.
+ */
+
 require_once 'config.php';
-require_once 'includes/functions.php'; // Isso também chama startSession()
+require_once 'includes/functions.php';
 
-// 2. Importar o AuditService
-use App\Service\AuditService;
+use App\Service\AuthService;
 
-// 3. Registrar o Log de Auditoria
-// Deve ser feito ANTES de destruir a sessão
-if (isUserLoggedIn()) {
+// Se o usuário estiver logado, registra a ação no log de auditoria antes de destruir a sessão
+if (isset($_SESSION['usuario_id'])) {
     try {
-        $auditService = new AuditService();
-        $usuarioId = $_SESSION['user_id'] ?? null;
-        
-        // Registra o evento de logout usando os nomes de coluna em português
-        $auditService->log('LOGOUT', 'usuarios', $usuarioId);
-        
-    } catch (Exception $e) {
-        // Se o log falhar, não impede o logout.
-        // Apenas registra o erro no log do PHP.
-        error_log("Falha ao registrar log de LOGOUT: " . $e->getMessage());
+        registrarAuditoria('logout', 'usuarios', $_SESSION['usuario_id'], 'Usuário efetuou logout voluntário do sistema.');
+    } catch (\Exception $e) {
+        // Fallback silencioso se o serviço de auditoria falhar localmente
+        error_log("Erro ao registrar auditoria de logout: " . $e->getMessage());
     }
 }
 
-// 4. Limpar e Destruir a Sessão
-$_SESSION = []; // Limpa todas as variáveis de sessão
-session_unset(); // Libera as variáveis
-session_destroy(); // Destrói os dados da sessão no servidor
+// Executa a limpeza estruturada de cookies e destrói os dados usando o AuthService oficial
+AuthService::logout();
 
-// 5. Redirecionar para a página de login
-header('Location: login.php?message=Logout efetuado com sucesso.');
+// Define a mensagem flash original de sucesso para ser renderizada na tela de login
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+setAlerta('Sua sessão foi encerrada com sucesso. Até logo!', 'success');
+
+// Redireciona de forma limpa para a tela de autenticação na raiz do subdiretório /ita/
+header("Location: login.php");
 exit;

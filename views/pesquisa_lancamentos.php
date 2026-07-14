@@ -5,6 +5,9 @@ require_once '../vendor/autoload.php';
 require_once '../config.php';
 require_once '../includes/functions.php';
 
+$pesquisaSalarialUrl = BASE_URL . 'views/pesquisa_salarial.php';
+$pesquisaLancamentosUrl = BASE_URL . 'views/pesquisa_lancamentos.php';
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -44,7 +47,7 @@ require_once '../includes/header.php';
                     <i class="fas fa-file-csv"></i> Importar Dados (CAGED / CSV)
                 </button>
             <?php endif; ?>
-            <a href="pesquisa_salarial.php" class="btn btn-outline-secondary shadow-sm">
+            <a href="<?php echo htmlspecialchars($pesquisaSalarialUrl, ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-outline-secondary shadow-sm">
                 <i class="fas fa-arrow-left"></i> Voltar
             </a>
         </div>
@@ -67,7 +70,7 @@ require_once '../includes/header.php';
                     <?php if (!$isAberta): ?>
                         <div class="alert alert-warning">Esta campanha está encerrada. Não é possível fazer novos lançamentos.</div>
                     <?php else: ?>
-                        <form method="POST" action="pesquisa_lancamentos.php?id=<?php echo $campanha['campanhaId']; ?>">
+                        <form method="POST" action="<?php echo htmlspecialchars($pesquisaLancamentosUrl . '?id=' . (int)$campanha['campanhaId'], ENT_QUOTES, 'UTF-8'); ?>">
                             <input type="hidden" name="action" value="novo_lancamento">
                             
                             <div class="mb-3">
@@ -178,7 +181,7 @@ require_once '../includes/header.php';
                                             
                                             <?php if ($isAberta): ?>
                                             <td class="text-center">
-                                                <form method="POST" action="pesquisa_lancamentos.php?id=<?php echo $campanha['campanhaId']; ?>">
+                                                <form method="POST" action="<?php echo htmlspecialchars($pesquisaLancamentosUrl . '?id=' . (int)$campanha['campanhaId'], ENT_QUOTES, 'UTF-8'); ?>">
                                                     <input type="hidden" name="action" value="excluir_lancamento">
                                                     <input type="hidden" name="valorId" value="<?php echo $l['valorId']; ?>">
                                                     <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir"><i class="fas fa-trash"></i></button>
@@ -200,7 +203,7 @@ require_once '../includes/header.php';
 
 <div class="modal fade" id="modalImportarCsv" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
-        <form method="POST" action="pesquisa_lancamentos.php?id=<?php echo $campanha['campanhaId']; ?>" enctype="multipart/form-data" class="modal-content border-primary">
+        <form method="POST" action="<?php echo htmlspecialchars($pesquisaLancamentosUrl . '?id=' . (int)$campanha['campanhaId'], ENT_QUOTES, 'UTF-8'); ?>" enctype="multipart/form-data" class="modal-content border-primary">
             <input type="hidden" name="action" value="importar_csv">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title"><i class="fas fa-file-csv"></i> Assistente de Importação e Limpeza (CAGED)</h5>

@@ -7,267 +7,115 @@ use App\Core\Database;
 use PDO;
 
 /**
- * Lida com operações genéricas de busca de dados para Lookups (Selects).
+ * Repositório genérico para tabelas de busca simples (Lookups).
  */
-class LookupRepository
-{
-    private PDO $pdo;
-
-    public function __construct()
-    {
-        $this->pdo = Database::getConnection();
-    }
-
-    /**
-     * Retorna a contagem de registros de uma tabela.
-     *
-     * @param string $tableName O nome da tabela.
-     * @return int A contagem total.
-     */
-    public function countRecords(string $tableName): int
-    {
-        // Validação simples para segurança (idealmente, isValidTableName deveria estar em um Helper)
-        if (!preg_match('/^[a-zA-Z0-9_]+$/', $tableName)) {
-            error_log("Tentativa de contagem em tabela inválida: {$tableName}");
-            return 0;
-        }
-
-        try {
-            $stmt = $this->pdo->query("SELECT COUNT(*) FROM {$tableName}");
-            return (int)$stmt->fetchColumn();
-        } catch (\Exception $e) {
-            error_log("Erro ao contar registros da tabela {$tableName}: " . $e->getMessage());
-            return 0;
-        }
-    }
-
-    // ====================================================================
-    // MÉTODOS PÚBLICOS PARA BUSCA DE LOOKUPS (REPARO DO ERRO FATAL)
-    // ====================================================================
-
-    /**
-<<<<<<< HEAD
-     * Busca genérica de lookup: retorna id => nome de qualquer tabela.
-     *
-     * @param string $tableName   Nome da tabela (validado contra SQL injection)
-     * @param string $idColumn    Coluna que representa o ID
-     * @param string $nameColumn  Coluna que representa o nome/descrição
-     * @return array              Array associativo com os registros
-     */
-    public function getLookup(string $tableName, string $idColumn, string $nameColumn): array
-    {
-        if (!preg_match('/^[a-zA-Z0-9_]+$/', $tableName)
-            || !preg_match('/^[a-zA-Z0-9_]+$/', $idColumn)
-            || !preg_match('/^[a-zA-Z0-9_]+$/', $nameColumn)) {
-            error_log("getLookup: parâmetros inválidos ({$tableName}, {$idColumn}, {$nameColumn})");
-            return [];
-        }
-        try {
-            $sql = "SELECT \"{$idColumn}\", \"{$nameColumn}\" FROM {$tableName} ORDER BY \"{$nameColumn}\" ASC";
-            $stmt = $this->pdo->query($sql);
-            return $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
-        } catch (\PDOException $e) {
-            error_log("Erro no getLookup({$tableName}): " . $e->getMessage());
-            return [];
-=======
-     * NOVO MÉTODO IMPLEMENTADO.
-     * Busca dados genéricos de uma tabela para uso em SELECTs (ID => NOME).
-     *
-     * @param string $tableName O nome da tabela.
-     * @param string $idColumn A coluna a ser usada como chave.
-     * @param string $nameColumn A coluna a ser usada como valor.
-     * @return array Um array no formato [id => nome].
-     * @throws \Exception Se o nome da tabela for inválido ou a consulta falhar.
-     */
-    public function getLookup(string $tableName, string $idColumn, string $nameColumn): array
-    {
-        // Validação básica de nomes de tabela e coluna (previne injeção simples)
-        if (!preg_match('/^[a-zA-Z0-9_]+$/', $tableName) ||
-            !preg_match('/^[a-zA-Z0-9_]+$/', $idColumn) ||
-            !preg_match('/^[a-zA-Z0-9_]+$/', $nameColumn)) {
-            throw new \Exception("Nome de tabela ou coluna inválido para lookup.");
-        }
-
-        try {
-            $sql = "SELECT {$idColumn} AS id, {$nameColumn} AS nome FROM {$tableName} ORDER BY {$nameColumn} ASC";
-            $stmt = $this->pdo->query($sql);
-            
-            // Retorna um array associativo no formato [id => nome]
-            return array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'nome', 'id');
-        } catch (\PDOException $e) {
-            error_log("Erro ao buscar lookup na tabela {$tableName}: " . $e->getMessage());
-            throw new \Exception("Falha na consulta ao banco de dados para lookup: {$tableName}.");
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
-        }
-    }
-
-    /**
-     * Busca CBOs, formatando para exibição (Código - Título).
-     */
-    public function findCbos(): array
-    {
-        try {
-            $sql = "SELECT \"cboId\", \"cboCod\", \"cboTituloOficial\", CONCAT(\"cboCod\", ' - ', \"cboTituloOficial\") AS display_name
-                    FROM cbos
-                    ORDER BY \"cboCod\" ASC";
-            $stmt = $this->pdo->query($sql);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (\PDOException $e) {
-            error_log("Erro ao buscar CBOs: " . $e->getMessage());
-            return [];
-        }
-    }
-
-    /**
-     * Busca Escolaridades.
-     */
-    public function findEscolaridades(): array
-    {
-        try {
-            $sql = 'SELECT "escolaridadeId", "escolaridadeTitulo" FROM escolaridades ORDER BY "escolaridadeId" ASC';
-            $stmt = $this->pdo->query($sql);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (\PDOException $e) {
-            error_log("Erro ao buscar Escolaridades: " . $e->getMessage());
-            return [];
-        }
-    }
-
-    /**
-     * Busca Faixas Salariais.
-     */
-    public function findFaixas(): array
-    {
-        try {
-            $sql = 'SELECT "faixaId", "faixaNivel" FROM faixas_salariais ORDER BY "faixaId" ASC';
-            $stmt = $this->pdo->query($sql);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (\PDOException $e) {
-            error_log("Erro ao buscar Faixas Salariais: " . $e->getMessage());
-            return [];
-        }
-    }
-
-    /**
-     * Busca Níveis Hierárquicos com o nome do Tipo (Substituindo o antigo getNivelHierarquicoLookup).
-     */
-    public function findNivelHierarquico(): array
-    {
-        try {
-            $sql = 'SELECT n."nivelId", n."nivelOrdem", n."nivelDescricao" AS "nivelNome", t."tipoNome" AS "tipoHierarquiaNome"
-                    FROM nivel_hierarquico n
-                    JOIN tipo_hierarquia t ON t."tipoId" = n."tipoId"
-                    ORDER BY n."nivelOrdem" DESC';
-            $stmt = $this->pdo->query($sql);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (\PDOException $e) {
-            error_log("Erro ao buscar Níveis Hierárquicos: " . $e->getMessage());
-            return [];
-        }
-    }
+class LookupRepository {
     
-    /**
-     * Busca Cargos para uso como Supervisor (Select).
-     */
-    public function findCargosForSelect(): array
-    {
-        try {
-            $sql = "SELECT \"cargoId\" AS id, \"cargoNome\" AS nome FROM cargos ORDER BY \"cargoNome\" ASC";
-            $stmt = $this->pdo->query($sql);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (\PDOException $e) {
-            error_log("Erro ao buscar Cargos para Select: " . $e->getMessage());
-            return [];
-        }
+    private $db;
+
+    public function __construct() {
+        $this->db = Database::getConnection();
     }
 
     /**
-     * Busca Habilidades (incluindo o tipo).
+     * Retorna um lookup no formato [id => nome] para tabelas auxiliares.
      */
-    public function findHabilidades(): array
-    {
-        try {
-            $sql = "SELECT \"habilidadeId\" AS id, \"habilidadeNome\" AS nome, \"habilidadeTipo\" AS tipo FROM habilidades ORDER BY \"habilidadeTipo\" DESC, \"habilidadeNome\" ASC";
-            $stmt = $this->pdo->query($sql);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (\PDOException $e) {
-            error_log("Erro ao buscar Habilidades: " . $e->getMessage());
-            return [];
+    public function getLookup(string $table, string $keyColumn, string $valueColumn): array {
+        $allowedTables = [
+            'areas_atuacao', 'caracteristicas', 'cargos', 'cbos', 'cursos',
+            'escolaridades', 'faixas_salariais', 'familia_cbo', 'habilidades',
+            'nivel_hierarquico', 'recursos', 'recursos_grupos', 'riscos',
+            'tipo_hierarquia',
+        ];
+
+        if (!in_array($table, $allowedTables, true)) {
+            throw new \InvalidArgumentException('Tabela de lookup não permitida: ' . $table);
         }
+
+        foreach ([$keyColumn, $valueColumn] as $column) {
+            if (!preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $column)) {
+                throw new \InvalidArgumentException('Coluna de lookup inválida.');
+            }
+        }
+
+        $quotedTable = Database::quoteIdent($table);
+        $quotedKey = Database::quoteIdent($keyColumn);
+        $quotedValue = Database::quoteIdent($valueColumn);
+        $sql = "SELECT {$quotedKey}, {$quotedValue} FROM {$quotedTable} ORDER BY {$quotedValue} ASC";
+
+        return $this->db->query($sql)->fetchAll(PDO::FETCH_KEY_PAIR);
     }
 
     /**
-     * Busca Características (Comportamentais).
+     * Retorna a quantidade total de registros em uma determinada tabela.
+     * Método adicionado para atender a geração de indicadores da index/dashboard.
+     * * @param string $table Nome da tabela
+     * @return int
      */
-    public function findCaracteristicas(): array
-    {
-        try {
-            $sql = "SELECT \"caracteristicaId\" AS id, \"caracteristicaNome\" AS nome FROM caracteristicas ORDER BY \"caracteristicaNome\" ASC";
-            $stmt = $this->pdo->query($sql);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (\PDOException $e) {
-            error_log("Erro ao buscar Características: " . $e->getMessage());
-            return [];
+    public function countRecords(string $table): int {
+        // Lista de tabelas permitidas para evitar SQL Injection dinâmico
+        $allowedTables = [
+            'escolaridades', 'areas_atuacao', 'niveis_hierarquicos', 
+            'tipos_hierarquia', 'riscos', 'cursos', 'recursos',
+            'cargos', 'usuarios', 'pesquisas'
+        ];
+
+        if (!in_array($table, $allowedTables)) {
+            return 0;
         }
+
+        $sql = "SELECT COUNT(*) FROM {$table}";
+        $stmt = $this->db->query($sql);
+        return (int) $stmt->fetchColumn();
     }
 
     /**
-     * Busca Riscos Ocupacionais.
+     * Busca todos os registros de uma tabela ordenada por uma coluna.
+     * * @param string $table Nome da tabela
+     * @param string $orderBy Coluna para ordenação
+     * @return array
      */
-    public function findRiscos(): array
-    {
-        try {
-            $sql = "SELECT \"riscoId\" AS id, \"riscoNome\" AS nome FROM riscos ORDER BY \"riscoNome\" ASC";
-            $stmt = $this->pdo->query($sql);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (\PDOException $e) {
-            error_log("Erro ao buscar Riscos: " . $e->getMessage());
+    public function getAll(string $table, string $orderBy = 'nome'): array {
+        // Validação básica para evitar SQL Injection no nome da tabela/coluna dinâmicos
+        $allowedTables = [
+            'escolaridades', 'areas_atuacao', 'niveis_hierarquicos', 
+            'tipos_hierarquia', 'riscos', 'cursos', 'recursos',
+            'cargos', 'usuarios', 'pesquisas'
+        ];
+        
+        if (!in_array($table, $allowedTables)) {
             return [];
         }
+
+        // Garante que a coluna de ordenação seja minimamente segura
+        $orderBy = preg_match('/^[a-zA-Z0-9_]+$/', $orderBy) ? $orderBy : 'nome';
+
+        $sql = "SELECT * FROM {$table} ORDER BY {$orderBy} ASC";
+        $stmt = $this->db->query($sql);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
-     * Busca Cursos e Certificações.
+     * Busca um registro específico por ID em uma tabela informada.
+     * * @param string $table Nome da tabela
+     * @param string $pkName Nome da chave primária (ex: 'id_escolaridade')
+     * @param int $id Valor do ID
+     * @return array|bool
      */
-    public function findCursos(): array
-    {
-        try {
-            $sql = "SELECT \"cursoId\" AS id, \"cursoNome\" AS nome FROM cursos ORDER BY \"cursoNome\" ASC";
-            $stmt = $this->pdo->query($sql);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (\PDOException $e) {
-            error_log("Erro ao buscar Cursos: " . $e->getMessage());
-            return [];
-        }
-    }
+    public function getById(string $table, string $pkName, int $id) {
+        $allowedTables = [
+            'escolaridades', 'areas_atuacao', 'niveis_hierarquicos', 
+            'tipos_hierarquia', 'riscos', 'cursos', 'recursos',
+            'cargos', 'usuarios', 'pesquisas'
+        ];
 
-    /**
-     * Busca Grupos de Recursos.
-     */
-    public function findRecursosGrupos(): array
-    {
-        try {
-            $sql = "SELECT \"recursoGrupoId\" AS id, \"recursoGrupoNome\" AS nome FROM recursos_grupos ORDER BY \"recursoGrupoNome\" ASC";
-            $stmt = $this->pdo->query($sql);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (\PDOException $e) {
-            error_log("Erro ao buscar Grupos de Recursos: " . $e->getMessage());
-            return [];
+        if (!in_array($table, $allowedTables) || !preg_match('/^[a-zA-Z0-9_]+$/', $pkName)) {
+            return false;
         }
-    }
 
-    /**
-     * Busca Áreas de Atuação.
-     */
-    public function findAreasAtuacao(): array
-    {
-        try {
-            $sql = "SELECT \"areaId\" AS id, \"areaNome\" AS nome FROM areas_atuacao ORDER BY \"areaNome\" ASC";
-            $stmt = $this->pdo->query($sql);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (\PDOException $e) {
-            error_log("Erro ao buscar Áreas de Atuação: " . $e->getMessage());
-            return [];
-        }
+        $sql = "SELECT * FROM {$table} WHERE {$pkName} = :id LIMIT 1";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':id' => $id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 }

@@ -181,8 +181,8 @@ include '../includes/header.php';
                                     <th scope="col">Descrição</th>
                                     <th scope="col" class="text-center">Ações</th>
                                 </tr>
-<<<<<<< HEAD
-                            <?php endif; ?>
+                            </thead>
+                            <tbody>
                             <?php foreach ($allRoles as $role): ?>
                                 <tr>
                                     <td><?php echo $role['roleId']; ?></td>
@@ -193,41 +193,17 @@ include '../includes/header.php';
                                             <i class="fas fa-pen"></i>
                                         </a>
                                         <?php if ($role['roleId'] != 1): // Não deixa excluir o Admin ?>
-                                            <a href="roles.php?delete=<?php echo $role['\"roleId\"']; ?>" 
+                                            <a href="roles.php?delete=<?php echo $role['roleId']; ?>" 
                                                class="btn btn-sm btn-danger" 
                                                title="Excluir"
                                                onclick="return confirm('Atenção: Excluir um papel irá removê-lo de todos os usuários. Deseja continuar?');">
                                                 <i class="fas fa-trash"></i>
-=======
-                            </thead>
-                            <tbody>
-                                <?php if (empty($allRoles)): ?>
-                                    <tr>
-                                        <td colspan="4" class="text-center p-4">Nenhum papel cadastrado.</td>
-                                    </tr>
-                                <?php endif; ?>
-                                <?php foreach ($allRoles as $role): ?>
-                                    <tr>
-                                        <td><?php echo $role['roleId']; ?></td>
-                                        <td><?php echo htmlspecialchars($role['roleName']); ?></td>
-                                        <td><?php echo htmlspecialchars($role['roleDescription']); ?></td>
-                                        <td class="text-center">
-                                            <a href="roles.php?edit=<?php echo $role['roleId']; ?>" class="btn btn-sm btn-info" title="Editar">
-                                                <i class="fas fa-pen"></i>
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
                                             </a>
-                                            <?php if ($role['roleId'] != 1): // Não deixa excluir o Admin ?>
-                                                <a href="roles.php?delete=<?php echo $role['roleId']; ?>" 
-                                                   class="btn btn-sm btn-danger" 
-                                                   title="Excluir"
-                                                   onclick="return confirm('Atenção: Excluir um papel irá removê-lo de todos os usuários. Deseja continuar?');">
-                                                    <i class="fas fa-trash"></i>
-                                                </a>
-                                            <?php else: ?>
-                                                <button class="btn btn-sm btn-outline-secondary" disabled title="Não é possível excluir o Administrador">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            <?php endif; ?>
+                                        <?php else: ?>
+                                            <button class="btn btn-sm btn-outline-secondary" disabled title="Não é possível excluir o Administrador">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        <?php endif; ?>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

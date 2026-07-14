@@ -1,541 +1,582 @@
 <?php
-require_once '../vendor/autoload.php';
-require_once '../config.php';
-require_once '../includes/functions.php';
+// Arquivo: views/organograma.php
+
+require_once dirname(__DIR__) . '/vendor/autoload.php';
+require_once dirname(__DIR__) . '/config.php';
+require_once dirname(__DIR__) . '/includes/functions.php';
+
 use App\Core\Database;
 use App\Service\AuthService;
 
-if (!isUserLoggedIn()) { header('Location: ../login.php'); exit; }
+// Fallback de compatibilidade para checagem de sessão no XAMPP local
+if (class_exists('App\Service\AuthService') && method_exists('App\Service\AuthService', 'checkAuth')) {
+    if (!AuthService::checkAuth()) { 
+        header('Location: ../login.php'); 
+        exit; 
+    }
+} else if (!isset($_SESSION['usuario_id'])) {
+    header('Location: ../login.php');
+    exit;
+}
+
 $authService = new AuthService();
-$authService->checkAndFail('cargos:view', '../index.php?error=Acesso+negado');
-$pdo = Database::getConnection();
+$authService->checkAndFail('cargos_visualizar');
 
-// ── MODO SUPERVISÃO ──────────────────────────────────────────────────────────
-$stmt = $pdo->query('
-    SELECT c."cargoId", c."cargoNome", c."cargoSupervisorId",
-           nh."nivelId", nh."nivelDescricao", nh."nivelOrdem",
-           th."tipoNome"
-    FROM cargos c
-    LEFT JOIN nivel_hierarquico nh ON nh."nivelId" = c."nivelHierarquicoId"
-    LEFT JOIN tipo_hierarquia th ON th."tipoId" = nh."tipoId"
-    ORDER BY nh."nivelOrdem" DESC NULLS LAST, c."cargoNome"
-');
-$todosCargos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$db = Database::getConnection();
 
-$mapaCargos = [];
-foreach ($todosCargos as $c) $mapaCargos[$c['cargoId']] = $c;
+// Áreas disponíveis para o filtro, usando aliases esperados pelo HTML legado.
+$areas = $db->query(
+    'SELECT "areaId" AS id_area_atuacao, "areaNome" AS nome
+     FROM areas_atuacao
+     ORDER BY "areaNome" ASC'
+)->fetchAll(PDO::FETCH_ASSOC);
 
-$idsNaArvore = [];
-foreach ($todosCargos as $c) {
-    if ($c['cargoSupervisorId'] !== null) {
-        $idsNaArvore[$c['cargoId']] = true;
-        $idsNaArvore[$c['cargoSupervisorId']] = true;
-    }
-}
+// Filtro de Área
+$area_filtro = isset($_GET['area']) ? $_GET['area'] : '';
+$modo_visualizacao = isset($_GET['modo']) ? $_GET['modo'] : 'cargo'; // 'cargo' ou 'setor'
+$cargos_por_area = [];
 
-$naoVinculados = array_filter($todosCargos, fn($c) => !isset($idsNaArvore[$c['cargoId']]));
-$naoVinculadosPorNivel = [];
-foreach ($naoVinculados as $c) {
-    $nivel = $c['nivelDescricao'] ?? 'Sem Nível';
-    $ordem = $c['nivelOrdem'] ?? 0;
-    if (!isset($naoVinculadosPorNivel[$nivel])) {
-        $naoVinculadosPorNivel[$nivel] = ['ordem' => $ordem, 'cargos' => []];
-    }
-    $naoVinculadosPorNivel[$nivel]['cargos'][] = $c;
-}
-uasort($naoVinculadosPorNivel, fn($a, $b) => $b['ordem'] <=> $a['ordem']);
+if ($modo_visualizacao === 'setor') {
+    $cargosAreaRows = $db->query(
+        'SELECT ca."areaId" AS area_id,
+                c."cargoId" AS id,
+                c."cargoNome" AS nome,
+                COALESCE(n."nivelDescricao", \'Sem nível definido\') AS nivel
+           FROM cargos_area ca
+           JOIN cargos c ON c."cargoId" = ca."cargoId"
+      LEFT JOIN nivel_hierarquico n ON n."nivelId" = c."nivelHierarquicoId"
+       ORDER BY ca."areaId", n."nivelOrdem" ASC NULLS LAST, c."cargoNome" ASC'
+    )->fetchAll(PDO::FETCH_ASSOC);
 
-function buildD3Node(array $mapaCargos, int $cargoId, array &$visitados): ?array {
-    if (isset($visitados[$cargoId])) return null;
-    $visitados[$cargoId] = true;
-    $c = $mapaCargos[$cargoId] ?? null;
-    if (!$c) return null;
-    $node = [
-        'id' => $c['cargoId'], 'name' => $c['cargoNome'], 'type' => 'cargo',
-        'level' => $c['nivelDescricao'] ?? '', 'nivelOrdem' => (int)($c['nivelOrdem'] ?? 0),
-        'editUrl' => 'cargos_form.php?id=' . $c['cargoId'],
-    ];
-    $filhos = array_filter($mapaCargos, fn($x) => $x['cargoSupervisorId'] == $cargoId);
-    usort($filhos, fn($a, $b) => ($b['nivelOrdem'] ?? 0) <=> ($a['nivelOrdem'] ?? 0) ?: strcmp($a['cargoNome'], $b['cargoNome']));
-    $children = [];
-    foreach ($filhos as $f) {
-        $child = buildD3Node($mapaCargos, $f['cargoId'], $visitados);
-        if ($child) $children[] = $child;
-    }
-    if (!empty($children)) $node['children'] = $children;
-    return $node;
-}
-
-$visitados = [];
-$arvoreRaizes = [];
-foreach ($todosCargos as $c) {
-    $cid = $c['cargoId'];
-    if (!isset($idsNaArvore[$cid]) || isset($visitados[$cid])) continue;
-    $supId = $c['cargoSupervisorId'];
-    $ehRaiz = ($supId === null) || !isset($mapaCargos[$supId]) || (!isset($idsNaArvore[$supId]) && !isset($visitados[$supId]));
-    if ($ehRaiz) {
-        $node = buildD3Node($mapaCargos, $cid, $visitados);
-        if ($node) $arvoreRaizes[] = $node;
-    }
-}
-
-if (count($arvoreRaizes) === 1) {
-    $d3Data = $arvoreRaizes[0];
-} elseif (count($arvoreRaizes) > 1) {
-    $d3Data = ['id' => 0, 'name' => 'ITACITRUS', 'type' => 'cargo', 'level' => 'Organização', 'nivelOrdem' => 99, 'children' => $arvoreRaizes];
-} else {
-    $d3Data = null;
-}
-$supervisaoVR = count($arvoreRaizes) > 1;
-
-// ── MODO SETOR ───────────────────────────────────────────────────────────────
-$stmtAreas = $pdo->query('SELECT "areaId", "areaNome", "areaPaiId" FROM areas_atuacao ORDER BY "areaNome"');
-$todasAreas = $stmtAreas->fetchAll(PDO::FETCH_ASSOC);
-$mapaAreas = [];
-foreach ($todasAreas as $a) $mapaAreas[$a['areaId']] = $a;
-
-$stmtCA = $pdo->query('SELECT "cargoId", "areaId" FROM cargos_area');
-$relCA = $stmtCA->fetchAll(PDO::FETCH_ASSOC);
-$cargosPorArea = [];
-$cargosComAreaSet = [];
-foreach ($relCA as $r) {
-    $cargosPorArea[$r['areaId']][] = $r['cargoId'];
-    $cargosComAreaSet[$r['cargoId']] = true;
-}
-
-function buildD3AreaNode(array $mapaAreas, array $cargosPorArea, array $mapaCargos, int $areaId, array &$visitadosAreas): ?array {
-    if (isset($visitadosAreas[$areaId])) return null;
-    $visitadosAreas[$areaId] = true;
-    $area = $mapaAreas[$areaId] ?? null;
-    if (!$area) return null;
-
-    $node = ['id' => 'area_' . $areaId, 'name' => $area['areaNome'], 'type' => 'area', 'editUrl' => null];
-    $children = [];
-
-    $subAreas = array_filter($mapaAreas, fn($a) => $a['areaPaiId'] == $areaId);
-    usort($subAreas, fn($a, $b) => strcmp($a['areaNome'], $b['areaNome']));
-    foreach ($subAreas as $sa) {
-        $child = buildD3AreaNode($mapaAreas, $cargosPorArea, $mapaCargos, $sa['areaId'], $visitadosAreas);
-        if ($child) $children[] = $child;
-    }
-
-    $cidsArea = $cargosPorArea[$areaId] ?? [];
-    $cargosArea = array_filter(array_map(fn($cid) => $mapaCargos[$cid] ?? null, $cidsArea));
-    usort($cargosArea, fn($a, $b) => ($b['nivelOrdem'] ?? 0) <=> ($a['nivelOrdem'] ?? 0) ?: strcmp($a['cargoNome'], $b['cargoNome']));
-    foreach ($cargosArea as $c) {
-        $children[] = [
-            'id' => 'cargo_' . $c['cargoId'], 'name' => $c['cargoNome'], 'type' => 'cargo',
-            'level' => $c['nivelDescricao'] ?? '', 'nivelOrdem' => (int)($c['nivelOrdem'] ?? 0),
-            'editUrl' => 'cargos_form.php?id=' . $c['cargoId'],
+    foreach ($cargosAreaRows as $cargoArea) {
+        $areaId = (int)$cargoArea['area_id'];
+        $cargos_por_area[$areaId][] = [
+            'id' => (int)$cargoArea['id'],
+            'nome' => (string)$cargoArea['nome'],
+            'nivel' => (string)$cargoArea['nivel'],
         ];
     }
-
-    if (!empty($children)) $node['children'] = $children;
-    return $node;
 }
 
-$visitadosAreas = [];
-$setorRaizes = [];
-foreach ($todasAreas as $a) {
-    $aId = $a['areaId'];
-    if (isset($visitadosAreas[$aId])) continue;
-    if ($a['areaPaiId'] === null || !isset($mapaAreas[$a['areaPaiId']])) {
-        $node = buildD3AreaNode($mapaAreas, $cargosPorArea, $mapaCargos, $aId, $visitadosAreas);
-        if ($node) $setorRaizes[] = $node;
+// Query principal
+if ($modo_visualizacao === 'setor') {
+    $sql = "SELECT 
+                a.\"areaId\" AS id,
+                a.\"areaNome\" AS nome,
+                a.\"areaPaiId\" AS pai_id,
+                'setor' AS tipo,
+                (SELECT COUNT(DISTINCT ca.\"cargoId\")
+                   FROM cargos_area ca
+                  WHERE ca.\"areaId\" = a.\"areaId\") AS total_cargos,
+                0::INTEGER AS total_colaboradores
+            FROM areas_atuacao a
+            WHERE 1=1";
+    if (!empty($area_filtro)) {
+        $areaId = (int)$area_filtro;
+        $sql .= " AND (a.\"areaId\" = {$areaId} OR a.\"areaPaiId\" = {$areaId})";
     }
-}
-usort($setorRaizes, fn($a, $b) => strcmp($a['name'], $b['name']));
-
-if (count($setorRaizes) === 1) {
-    $d3SetorData = $setorRaizes[0];
-} elseif (count($setorRaizes) > 1) {
-    $d3SetorData = ['id' => 'org_root', 'name' => 'ITACITRUS', 'type' => 'area', 'editUrl' => null, 'children' => $setorRaizes];
+    $sql .= ' ORDER BY a."areaNome" ASC';
 } else {
-    $d3SetorData = null;
-}
-$setorVR = count($setorRaizes) > 1;
-
-$cargosSemSetor = array_filter($todosCargos, fn($c) => !isset($cargosComAreaSet[$c['cargoId']]));
-$semSetorPorNivel = [];
-foreach ($cargosSemSetor as $c) {
-    $nivel = $c['nivelDescricao'] ?? 'Sem Nível';
-    $ordem = $c['nivelOrdem'] ?? 0;
-    if (!isset($semSetorPorNivel[$nivel])) {
-        $semSetorPorNivel[$nivel] = ['ordem' => $ordem, 'cargos' => []];
+    $sql = "SELECT 
+                c.\"cargoId\" AS id,
+                c.\"cargoNome\" AS nome,
+                c.\"cargoSupervisorId\" AS pai_id,
+                'cargo' AS tipo,
+                COALESCE(n.\"nivelDescricao\", 'Sem nível definido') AS nivel_nome,
+                COALESCE(area_info.area_nome, 'Sem área definida') AS area_nome,
+                COALESCE(c.piso_valor, f.\"faixaSalarioMinimo\", 0) AS salario_base,
+                0::INTEGER AS total_colaboradores
+            FROM cargos c
+            LEFT JOIN nivel_hierarquico n
+                   ON n.\"nivelId\" = c.\"nivelHierarquicoId\"
+            LEFT JOIN faixas_salariais f
+                   ON f.\"faixaId\" = c.\"faixaId\"
+            LEFT JOIN LATERAL (
+                SELECT STRING_AGG(a.\"areaNome\", ', ' ORDER BY a.\"areaNome\") AS area_nome
+                  FROM cargos_area ca
+                  JOIN areas_atuacao a ON a.\"areaId\" = ca.\"areaId\"
+                 WHERE ca.\"cargoId\" = c.\"cargoId\"
+            ) area_info ON TRUE
+            WHERE 1=1";
+    if (!empty($area_filtro)) {
+        $areaId = (int)$area_filtro;
+        $sql .= " AND EXISTS (
+                    SELECT 1 FROM cargos_area ca_filter
+                     WHERE ca_filter.\"cargoId\" = c.\"cargoId\"
+                       AND ca_filter.\"areaId\" = {$areaId}
+                  )";
     }
-    $semSetorPorNivel[$nivel]['cargos'][] = $c;
+    $sql .= ' ORDER BY n."nivelOrdem" ASC NULLS LAST, c."cargoNome" ASC';
 }
-uasort($semSetorPorNivel, fn($a, $b) => $b['ordem'] <=> $a['ordem']);
 
-$totalNaArvore  = count($idsNaArvore);
-$totalSemVinculo = count($naoVinculados);
-$totalComSetor  = count($cargosComAreaSet);
-$totalSemSetor  = count($cargosSemSetor);
-$totalAreas     = count($todasAreas);
+$itens = $db->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 
-$levelColors = [
-    99 => ['#495057','Organização'], 7 => ['#1a237e','Diretor'],
-    6  => ['#283593','Gerente'],     5 => ['#0277bd','Coordenador'],
-    4  => ['#00838f','Supervisor/Analista'], 3 => ['#558b2f','Encarregado'],
-    2  => ['#ef6c00','Assistente'],  1 => ['#616161','Auxiliar/Operacional'],
-    0  => ['#9e9e9e','Sem Nível'],
-];
+// Montar a árvore
+$itens_by_id = [];
+foreach ($itens as $item) {
+    $item['children'] = [];
+    $itens_by_id[$item['id']] = $item;
+}
 
-$page_title = 'Organograma';
-$root_path  = '../';
-include '../includes/header.php';
+$tree = [];
+foreach ($itens_by_id as $id => &$node) {
+    if (empty($node['pai_id']) || !isset($itens_by_id[$node['pai_id']])) {
+        $tree[] = &$node;
+    } else {
+        $itens_by_id[$node['pai_id']]['children'][] = &$node;
+    }
+}
+unset($node);
+
+function renderTree($nodes, $modo = 'cargo') {
+    echo '<ul>';
+    foreach ($nodes as $node) {
+        echo '<li>';
+        
+        if ($modo === 'setor') {
+            echo '<div class="organograma-node sector-node card shadow-sm" data-id="'.$node['id'].'" data-tipo="setor">';
+            echo '<div class="card-body p-2 text-center">';
+            echo '<div class="node-icon mb-1"><i class="fas fa-layer-group text-info"></i></div>';
+            echo '<div class="font-weight-bold text-dark small text-truncate" title="'.htmlspecialchars($node['nome']).'">'.htmlspecialchars($node['nome']).'</div>';
+            echo '<div class="text-muted text-xs mt-1">'.$node['total_cargos'].' Cargos</div>';
+            echo '<div class="badge badge-secondary text-xs font-weight-normal mt-1">'.$node['total_colaboradores'].' Colaboradores</div>';
+            echo '</div>';
+            echo '</div>';
+        } else {
+            $salario_fmt = 'R$ ' . number_format($node['salario_base'], 2, ',', '.');
+            echo '<div class="organograma-node cargo-node card shadow-sm" 
+                       data-id="'.$node['id'].'" 
+                       data-tipo="cargo"
+                       data-nivel="'.htmlspecialchars($node['nivel_nome']).'"
+                       data-area="'.htmlspecialchars($node['area_nome']).'"
+                       data-salario="'.$salario_fmt.'"
+                       data-colaboradores="'.$node['total_colaboradores'].'">';
+            echo '<div class="card-body p-2 text-center">';
+            echo '<div class="badge badge-primary text-xs font-weight-normal mb-1">'.htmlspecialchars($node['nivel_nome']).'</div>';
+            echo '<div class="font-weight-bold text-dark small text-truncate" title="'.htmlspecialchars($node['nome']).'">'.htmlspecialchars($node['nome']).'</div>';
+            echo '<div class="text-muted text-xs text-truncate">'.htmlspecialchars($node['area_nome']).'</div>';
+            echo '<div class="text-success font-weight-bold text-xs mt-1">'.$salario_fmt.'</div>';
+            if ($node['total_colaboradores'] > 0) {
+                echo '<div class="mt-1"><span class="badge badge-pill badge-secondary" style="font-size: 10px;">'.$node['total_colaboradores'].' em atividade</span></div>';
+            }
+            echo '</div>';
+            echo '</div>';
+        }
+        
+        if (!empty($node['children'])) {
+            renderTree($node['children'], $modo);
+        }
+        echo '</li>';
+    }
+    echo '</ul>';
+}
+
+// ⚠️ ESSENCIAL: Define as variáveis de controle que o header e navbar originais utilizam para caminhos locais
+$page_title = "Organograma Institucional";
+$root_path = '../'; 
+$main_container_class = 'container-fluid px-2 px-md-4';
+
+include_once dirname(__DIR__) . '/includes/header.php';
 ?>
 
-<!-- CABEÇALHO DA PÁGINA -->
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="mb-0"><i class="fas fa-sitemap me-2"></i>Organograma</h1>
-    <div class="d-flex gap-2 align-items-center flex-wrap">
-        <span class="badge bg-success fs-6 py-2 px-3 stat-sup"><?php echo $totalNaArvore; ?> vinculados</span>
-        <span class="badge bg-warning text-dark fs-6 py-2 px-3 stat-sup"><?php echo $totalSemVinculo; ?> sem vínculo</span>
-        <span class="badge bg-info fs-6 py-2 px-3 stat-set d-none"><?php echo $totalComSetor; ?> com área</span>
-        <span class="badge bg-secondary fs-6 py-2 px-3 stat-set d-none"><?php echo $totalSemSetor; ?> sem área</span>
-        <a href="../relatorios/organograma_pdf.php" target="_blank" class="btn btn-danger">
-            <i class="fas fa-file-pdf me-1"></i> Exportar PDF
-        </a>
-    </div>
-</div>
+<style>
+    .organograma-wrapper {
+        position: relative;
+        width: 100%;
+        height: clamp(460px, calc(100vh - 290px), 760px);
+        overflow: hidden;
+        padding: 20px;
+        background: #f8f9fc;
+        border-radius: 8px;
+        border: 1px solid #e3e6f0;
+        cursor: grab;
+        user-select: none;
+        touch-action: none;
+        overscroll-behavior: contain;
+    }
+    .organograma-wrapper.is-dragging {
+        cursor: grabbing;
+    }
+    .organograma-tree {
+        display: inline-block;
+        min-width: 100%;
+        text-align: center;
+        transform-origin: 0 0;
+        will-change: transform;
+    }
+    .organograma-tree ul {
+        padding-top: 20px; 
+        position: relative;
+        transition: all 0.5s;
+        display: inline-flex;
+    }
+    .organograma-tree li {
+        float: left; 
+        text-align: center;
+        list-style-type: none;
+        position: relative;
+        padding: 20px 10px 0 10px;
+        transition: all 0.5s;
+    }
+    .organograma-tree li::before, .organograma-tree li::after {
+        content: '';
+        position: absolute; 
+        top: 0; 
+        right: 50%;
+        border-top: 2px solid #b7b9cc;
+        width: 50%; 
+        height: 20px;
+    }
+    .organograma-tree li::after {
+        right: auto; 
+        left: 50%;
+        border-left: 2px solid #b7b9cc;
+    }
+    .organograma-tree li:only-child::after, .organograma-tree li:only-child::before {
+        display: none;
+    }
+    .organograma-tree li:only-child { 
+        padding-top: 0;
+    }
+    .organograma-tree li:first-child::before, .organograma-tree li:last-child::after {
+        border: 0 none;
+    }
+    .organograma-tree li:last-child::before {
+        border-right: 2px solid #b7b9cc;
+        border-radius: 0 5px 0 0;
+    }
+    .organograma-tree li:first-child::after {
+        border-radius: 5px 0 0 0;
+    }
+    .organograma-tree ul ul::before {
+        content: '';
+        position: absolute; 
+        top: 0; 
+        left: 50%;
+        border-left: 2px solid #b7b9cc;
+        width: 0; 
+        height: 20px;
+    }
+    .organograma-node {
+        min-width: 180px;
+        max-width: 220px;
+        display: inline-block;
+        border-radius: 8px;
+        border: 1px solid #d1d3e2;
+        transition: all 0.3s;
+        background: #fff;
+        cursor: pointer;
+        z-index: 10;
+        position: relative;
+    }
+    .organograma-node:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+        border-color: #4e73df;
+    }
+    .sector-node { border-left: 4px solid #36b9cc; }
+    .cargo-node { border-left: 4px solid #4e73df; }
+    .node-icon { font-size: 20px; }
+    .zoom-controls {
+        position: absolute;
+        bottom: 16px;
+        right: 16px;
+        z-index: 100;
+    }
+    .zoom-level {
+        min-width: 52px;
+        pointer-events: none;
+    }
+    .organograma-help {
+        position: absolute;
+        left: 16px;
+        bottom: 16px;
+        z-index: 90;
+        background: rgba(255, 255, 255, .92);
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 5px 9px;
+        color: #6c757d;
+        font-size: .75rem;
+        pointer-events: none;
+    }
+    @media (max-width: 767.98px) {
+        .organograma-wrapper {
+            height: 62vh;
+            min-height: 420px;
+            padding: 12px;
+        }
+        .organograma-node {
+            min-width: 155px;
+            max-width: 180px;
+        }
+        .organograma-help {
+            display: none;
+        }
+    }
+</style>
 
-<!-- ALTERNÂNCIA DE MODO -->
-<div class="d-flex align-items-center gap-3 mb-3">
-    <div class="btn-group" role="group" aria-label="Modo de visualização">
-        <button type="button" class="btn btn-primary active" id="btn-supervisao" onclick="setMode('supervisao')">
-            <i class="fas fa-sitemap me-1"></i> Por Supervisão
-        </button>
-        <button type="button" class="btn btn-outline-primary" id="btn-setor" onclick="setMode('setor')">
-            <i class="fas fa-building me-1"></i> Por Setor
-        </button>
+<div class="container-fluid mt-4">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800 font-weight-bold"><i class="fas fa-sitemap text-primary mr-2"></i>Organograma Institucional</h1>
+        <div>
+            <button onclick="window.print()" class="btn btn-sm btn-primary shadow-sm"><i class="fas fa-print fa-sm text-white-50 mr-1"></i> Imprimir</button>
+            <a href="../relatorios/organograma_pdf.php<?php echo !empty($area_filtro) ? '?area='.$area_filtro : ''; ?>" target="_blank" class="btn btn-sm btn-danger shadow-sm"><i class="fas fa-file-pdf fa-sm text-white-50 mr-1"></i> Exportar PDF</a>
+        </div>
     </div>
-    <span class="text-muted small" id="mode-hint">Hierarquia de supervisão — quem reporta a quem</span>
-</div>
 
-<!-- CARD DA ÁRVORE -->
-<div class="card shadow-sm mb-4">
-    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-        <span id="tree-title"><i class="fas fa-project-diagram me-1"></i> Árvore Hierárquica (<?php echo $totalNaArvore; ?> cargos)</span>
-        <small class="opacity-75">Arraste para mover · Scroll para zoom · Clique no cargo para editar</small>
-    </div>
-    <div class="card-body p-0" style="background:#f0f4f8;">
-        <!-- Estados vazios -->
-        <div id="empty-supervisao" class="text-center p-5 d-none">
-            <i class="fas fa-exclamation-triangle fa-2x text-warning mb-3 d-block"></i>
-            <strong>Nenhuma relação hierárquica definida.</strong><br>
-            <span class="text-muted">Abra cada cargo e defina o campo <strong>"Reporta-se a"</strong> na aba Hierarquia.</span>
-        </div>
-        <div id="empty-setor" class="text-center p-5 d-none">
-            <i class="fas fa-exclamation-triangle fa-2x text-warning mb-3 d-block"></i>
-            <strong>Nenhum cargo vinculado a áreas.</strong><br>
-            <span class="text-muted">Abra cada cargo e vincule-o a uma <strong>Área de Atuação</strong>.</span>
-        </div>
-        <!-- SVG D3 -->
-        <div id="org-container" style="width:100%;height:620px;overflow:hidden;position:relative;">
-            <svg id="org-svg" style="width:100%;height:100%;"></svg>
-        </div>
-        <!-- Legenda -->
-        <div class="p-2 border-top d-flex gap-3 flex-wrap align-items-center" style="font-size:.8rem;" id="legend-bar">
-            <span id="legend-area" class="d-none">
-                <span style="display:inline-block;width:14px;height:14px;background:#546e7a;border-radius:3px;vertical-align:middle;"></span>
-                Área/Setor
-            </span>
-            <?php
-            $ordensUsadas = array_unique(array_map(fn($c) => (int)($c['nivelOrdem'] ?? 0), $todosCargos));
-            rsort($ordensUsadas);
-            foreach ($ordensUsadas as $ord):
-                $info = $levelColors[$ord] ?? $levelColors[0];
-            ?>
-            <span>
-                <span style="display:inline-block;width:14px;height:14px;background:<?php echo $info[0]; ?>;border-radius:3px;vertical-align:middle;"></span>
-                <?php echo htmlspecialchars($info[1]); ?>
-            </span>
-            <?php endforeach; ?>
-        </div>
-    </div>
-</div>
-
-<!-- CARGOS SEM VÍNCULO (modo Supervisão) -->
-<?php if (!empty($naoVinculados)): ?>
-<div class="card shadow-sm mb-4" id="section-nao-vinculados">
-    <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
-        <span><i class="fas fa-unlink me-1"></i> Cargos sem vínculo hierárquico (<?php echo $totalSemVinculo; ?>)</span>
-        <small>Defina o campo "Reporta-se a" no cadastro do cargo para incluí-los.</small>
-    </div>
-    <div class="card-body p-3">
-        <div class="row g-3">
-        <?php foreach ($naoVinculadosPorNivel as $nivel => $dados): ?>
-            <div class="col-md-4 col-lg-3">
-                <div class="card border-0 bg-light h-100">
-                    <div class="card-header py-1 px-2 text-white" style="font-size:.75rem;font-weight:bold;background:<?php echo ($levelColors[$dados['ordem']] ?? $levelColors[0])[0]; ?>;">
-                        <?php echo htmlspecialchars($nivel); ?> (<?php echo count($dados['cargos']); ?>)
-                    </div>
-                    <div class="card-body p-2">
-                        <ul class="list-unstyled mb-0" style="font-size:.8rem;">
-                        <?php foreach ($dados['cargos'] as $c): ?>
-                            <li class="mb-1">
-                                <a href="cargos_form.php?id=<?php echo $c['cargoId']; ?>" class="text-decoration-none text-dark">
-                                    <i class="fas fa-chevron-right text-muted me-1" style="font-size:.65rem;"></i>
-                                    <?php echo htmlspecialchars($c['cargoNome']); ?>
-                                </a>
-                            </li>
+    <div class="card shadow-sm mb-4">
+        <div class="card-body p-3">
+            <form method="GET" action="" class="form-inline row">
+                <div class="form-group col-md-4 mb-2 mb-md-0">
+                    <label class="mr-2 font-weight-bold small text-dark">Área/Setor:</label>
+                    <select name="area" class="form-control form-control-sm w-70">
+                        <option value="">-- Todas as Áreas --</option>
+                        <?php foreach ($areas as $a): ?>
+                            <option value="<?php echo $a['id_area_atuacao']; ?>" <?php echo $area_filtro == $a['id_area_atuacao'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($a['nome']); ?></option>
                         <?php endforeach; ?>
-                        </ul>
+                    </select>
+                </div>
+                <div class="form-group col-md-4 mb-2 mb-md-0">
+                    <label class="mr-2 font-weight-bold small text-dark">Visualizar por:</label>
+                    <div class="btn-group btn-group-toggle" data-toggle="buttons">
+                        <label class="btn btn-sm btn-outline-primary <?php echo $modo_visualizacao === 'cargo' ? 'active' : ''; ?>">
+                            <input type="radio" name="modo" value="cargo" onchange="this.form.submit()" <?php echo $modo_visualizacao === 'cargo' ? 'checked' : ''; ?>> <i class="fas fa-briefcase mr-1"></i> Cargos
+                        </label>
+                        <label class="btn btn-sm btn-outline-primary <?php echo $modo_visualizacao === 'setor' ? 'active' : ''; ?>">
+                            <input type="radio" name="modo" value="setor" onchange="this.form.submit()" <?php echo $modo_visualizacao === 'setor' ? 'checked' : ''; ?>> <i class="fas fa-layer-group mr-1"></i> Setores
+                        </label>
                     </div>
                 </div>
-            </div>
-        <?php endforeach; ?>
+                <div class="col-md-4 text-right">
+                    <button type="submit" class="btn btn-sm btn-secondary shadow-sm"><i class="fas fa-filter mr-1"></i> Filtrar</button>
+                    <a href="organograma.php" class="btn btn-sm btn-light border ml-1">Limpar</a>
+                </div>
+            </form>
         </div>
     </div>
-</div>
-<?php endif; ?>
 
-<!-- CARGOS SEM ÁREA (modo Setor) -->
-<?php if (!empty($cargosSemSetor)): ?>
-<div class="card shadow-sm mb-4 d-none" id="section-sem-setor">
-    <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
-        <span><i class="fas fa-folder-open me-1"></i> Cargos sem área de atuação (<?php echo $totalSemSetor; ?>)</span>
-        <small>Abra o cadastro do cargo e vincule-o a uma Área de Atuação.</small>
-    </div>
-    <div class="card-body p-3">
-        <div class="row g-3">
-        <?php foreach ($semSetorPorNivel as $nivel => $dados): ?>
-            <div class="col-md-4 col-lg-3">
-                <div class="card border-0 bg-light h-100">
-                    <div class="card-header py-1 px-2 text-white" style="font-size:.75rem;font-weight:bold;background:<?php echo ($levelColors[$dados['ordem']] ?? $levelColors[0])[0]; ?>;">
-                        <?php echo htmlspecialchars($nivel); ?> (<?php echo count($dados['cargos']); ?>)
-                    </div>
-                    <div class="card-body p-2">
-                        <ul class="list-unstyled mb-0" style="font-size:.8rem;">
-                        <?php foreach ($dados['cargos'] as $c): ?>
-                            <li class="mb-1">
-                                <a href="cargos_form.php?id=<?php echo $c['cargoId']; ?>" class="text-decoration-none text-dark">
-                                    <i class="fas fa-chevron-right text-muted me-1" style="font-size:.65rem;"></i>
-                                    <?php echo htmlspecialchars($c['cargoNome']); ?>
-                                </a>
-                            </li>
-                        <?php endforeach; ?>
-                        </ul>
-                    </div>
+    <div class="card shadow-sm position-relative overflow-hidden">
+        <div class="card-body p-0">
+            <div class="organograma-wrapper" id="organogramaWrapper">
+                <div class="organograma-tree" id="organogramaTree">
+                    <?php if (!empty($tree)): ?>
+                        <?php renderTree($tree, $modo_visualizacao); ?>
+                    <?php else: ?>
+                        <div class="text-center py-5">
+                            <i class="fas fa-network-wired fa-3x text-gray-300 mb-3"></i>
+                            <p class="text-muted">Nenhum dado encontrado para a estrutura hierárquica atual.</p>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
-        <?php endforeach; ?>
+            
+            <div class="zoom-controls btn-group-vertical shadow-sm">
+                <button type="button" class="btn btn-light btn-sm border" id="btnZoomIn" title="Aproximar"><i class="fas fa-plus text-dark"></i></button>
+                <span class="btn btn-light btn-sm border zoom-level" id="zoomLevel">100%</span>
+                <button type="button" class="btn btn-light btn-sm border" id="btnZoomReset" title="Centralizar e restaurar"><i class="fas fa-sync-alt text-dark"></i></button>
+                <button type="button" class="btn btn-light btn-sm border" id="btnZoomOut" title="Afastar"><i class="fas fa-minus text-dark"></i></button>
+            </div>
+            <div class="organograma-help"><i class="fas fa-mouse-pointer me-1"></i> Arraste para mover · use a roda para ampliar</div>
         </div>
     </div>
 </div>
-<?php endif; ?>
 
-<script src="https://d3js.org/d3.v7.min.js"></script>
+<div class="modal fade" id="modalDetalhesNode" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title font-weight-bold text-dark" id="modalTitle"><i class="fas fa-info-circle text-primary mr-2"></i>Detalhes</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body py-3" id="modalBody"></div>
+            <div class="modal-footer bg-light py-2">
+                <a href="#" id="btnEditarNode" class="btn btn-sm btn-warning font-weight-bold d-none"><i class="fas fa-edit mr-1"></i> Editar Registro</a>
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-(function () {
-    const supervisaoData = <?php echo json_encode($d3Data,       JSON_UNESCAPED_UNICODE); ?>;
-    const setorData      = <?php echo json_encode($d3SetorData,  JSON_UNESCAPED_UNICODE); ?>;
-    const supervisaoVR   = <?php echo $supervisaoVR ? 'true' : 'false'; ?>;
-    const setorVR        = <?php echo $setorVR      ? 'true' : 'false'; ?>;
+$(document).ready(function() {
+    const sectorCargos = <?php echo json_encode(
+        $cargos_por_area,
+        JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+    ); ?>;
+    let currentZoom = 1;
+    let panX = 0;
+    let panY = 20;
+    let isDragging = false;
+    let dragMoved = false;
+    let suppressNodeClick = false;
+    let lastPointerX = 0;
+    let lastPointerY = 0;
+    const step = 0.12;
+    const maxZoom = 2.5;
+    const minZoom = 0.35;
+    const wrapper = document.getElementById('organogramaWrapper');
+    const treeElement = document.getElementById('organogramaTree');
 
-    const LEVEL_COLORS = {
-        99:'#495057', 7:'#1a237e', 6:'#283593', 5:'#0277bd',
-        4:'#00838f',  3:'#558b2f', 2:'#ef6c00', 1:'#616161', 0:'#9e9e9e'
-    };
-    const AREA_COLOR = '#546e7a';
+    function applyTransform() {
+        treeElement.style.transform = `translate(${panX}px, ${panY}px) scale(${currentZoom})`;
+        document.getElementById('zoomLevel').textContent = `${Math.round(currentZoom * 100)}%`;
+    }
 
-    const container = document.getElementById('org-container');
-    const svg = d3.select('#org-svg');
-    const g   = svg.append('g');
+    function setZoom(nextZoom, clientX, clientY) {
+        const boundedZoom = Math.min(maxZoom, Math.max(minZoom, nextZoom));
+        if (boundedZoom === currentZoom) return;
 
-    const zoom = d3.zoom()
-        .scaleExtent([0.08, 4])
-        .on('zoom', e => g.attr('transform', e.transform));
-    svg.call(zoom);
+        const rect = wrapper.getBoundingClientRect();
+        const focusX = (clientX ?? (rect.left + rect.width / 2)) - rect.left;
+        const focusY = (clientY ?? (rect.top + rect.height / 2)) - rect.top;
+        const contentX = (focusX - panX) / currentZoom;
+        const contentY = (focusY - panY) / currentZoom;
 
-    // Controles de zoom (montados uma vez)
-    const ctrlDiv = document.createElement('div');
-    ctrlDiv.style.cssText = 'position:absolute;top:12px;right:12px;display:flex;gap:6px;z-index:10;';
-    ctrlDiv.innerHTML = `
-        <button onclick="fitView()" class="btn btn-sm btn-light border" title="Centralizar"><i class="fas fa-expand-arrows-alt"></i></button>
-        <button onclick="zoomIn()"  class="btn btn-sm btn-light border" title="Zoom +"><i class="fas fa-search-plus"></i></button>
-        <button onclick="zoomOut()" class="btn btn-sm btn-light border" title="Zoom -"><i class="fas fa-search-minus"></i></button>
-    `;
-    container.appendChild(ctrlDiv);
+        panX = focusX - contentX * boundedZoom;
+        panY = focusY - contentY * boundedZoom;
+        currentZoom = boundedZoom;
+        applyTransform();
+    }
 
-    let fitParams = { tx: 0, ty: 0, scale: 1 };
+    function resetView() {
+        currentZoom = window.innerWidth < 768 ? 0.7 : 1;
+        panX = 0;
+        panY = 20;
+        applyTransform();
+    }
 
-    function wrapText(textSel, nameStr, hasLabel) {
-        const words = nameStr.split(' ');
-        const maxChars = 22;
-        let line = '', lines = [];
-        for (const w of words) {
-            const test = line ? line + ' ' + w : w;
-            if (test.length > maxChars && line) { lines.push(line); line = w; }
-            else line = test;
+    wrapper.addEventListener('wheel', function(event) {
+        event.preventDefault();
+        setZoom(currentZoom + (event.deltaY < 0 ? step : -step), event.clientX, event.clientY);
+    }, { passive: false });
+
+    wrapper.addEventListener('pointerdown', function(event) {
+        if (event.button !== 0) return;
+        isDragging = true;
+        dragMoved = false;
+        lastPointerX = event.clientX;
+        lastPointerY = event.clientY;
+        wrapper.classList.add('is-dragging');
+        wrapper.setPointerCapture(event.pointerId);
+    });
+
+    wrapper.addEventListener('pointermove', function(event) {
+        if (!isDragging) return;
+        const deltaX = event.clientX - lastPointerX;
+        const deltaY = event.clientY - lastPointerY;
+        if (Math.abs(deltaX) + Math.abs(deltaY) > 1) dragMoved = true;
+        panX += deltaX;
+        panY += deltaY;
+        lastPointerX = event.clientX;
+        lastPointerY = event.clientY;
+        applyTransform();
+    });
+
+    function stopDragging(event) {
+        if (!isDragging) return;
+        isDragging = false;
+        wrapper.classList.remove('is-dragging');
+        if (wrapper.hasPointerCapture(event.pointerId)) wrapper.releasePointerCapture(event.pointerId);
+        if (dragMoved) {
+            suppressNodeClick = true;
+            window.setTimeout(() => { suppressNodeClick = false; }, 0);
         }
-        if (line) lines.push(line);
-        if (lines.length > 2) lines = [lines.slice(0, 2).join(' ').substring(0, 24) + '…'];
-        const yStart = hasLabel ? (lines.length === 1 ? -8 : -13) : (lines.length === 1 ? 0 : -7);
-        lines.forEach((l, i) => {
-            textSel.append('tspan')
-                .attr('x', 0)
-                .attr('dy', i === 0 ? `${yStart}px` : '13px')
-                .text(l);
-        });
     }
 
-    function drawTree(data, isVR) {
-        g.selectAll('*').remove();
-        if (!data) return;
+    wrapper.addEventListener('pointerup', stopDragging);
+    wrapper.addEventListener('pointercancel', stopDragging);
+    wrapper.addEventListener('dblclick', resetView);
 
-        const W = container.clientWidth;
-        const H = container.clientHeight;
-        const nodeH = 56, nodeW = 200, gap = 18;
+    $('#btnZoomIn').click(function() { setZoom(currentZoom + step); });
+    $('#btnZoomOut').click(function() { setZoom(currentZoom - step); });
+    $('#btnZoomReset').click(resetView);
+    resetView();
 
-        const root       = d3.hierarchy(data);
-        const treeLayout = d3.tree().nodeSize([nodeH + gap, nodeW + 60]);
-        treeLayout(root);
+    $('.organograma-node').click(function() {
+        if (suppressNodeClick) return;
+        const id = $(this).data('id');
+        const tipo = $(this).data('tipo');
+        
+        if (tipo === 'cargo') {
+            const nome = $(this).find('.font-weight-bold').text();
+            const nivel = $(this).data('nivel');
+            const area = $(this).data('area');
+            const salario = $(this).data('salario');
+            const colaboradores = $(this).data('colaboradores');
 
-        const visNodes = root.descendants().filter(d => !(isVR && d.depth === 0));
-        const visLinks = root.links().filter(d =>        !(isVR && d.source.depth === 0));
-
-        // Links
-        g.selectAll('.org-link')
-            .data(visLinks)
-            .join('path')
-            .attr('class', 'org-link')
-            .attr('fill', 'none')
-            .attr('stroke', '#9ca3af')
-            .attr('stroke-width', 1.5)
-            .attr('d', d3.linkHorizontal().x(d => d.y).y(d => d.x));
-
-        // Nodes
-        const node = g.selectAll('.org-node')
-            .data(visNodes)
-            .join('g')
-            .attr('class', 'org-node')
-            .attr('transform', d => `translate(${d.y},${d.x})`)
-            .style('cursor', d => d.data.editUrl ? 'pointer' : 'default')
-            .on('click', (e, d) => { if (d.data.editUrl) window.open(d.data.editUrl, '_self'); });
-
-        // Fundo do nó
-        node.append('rect')
-            .attr('x', -nodeW / 2).attr('y', -nodeH / 2)
-            .attr('width', nodeW).attr('height', nodeH)
-            .attr('rx', 8).attr('ry', 8)
-            .attr('fill', d => d.data.type === 'area' ? AREA_COLOR : (LEVEL_COLORS[d.data.nivelOrdem] ?? '#6c757d'))
-            .attr('stroke', 'rgba(255,255,255,0.3)').attr('stroke-width', 1.5)
-            .attr('filter', 'drop-shadow(0 2px 4px rgba(0,0,0,0.25))');
-
-        // Texto do nome (com quebra de linha)
-        node.append('text')
-            .attr('text-anchor', 'middle')
-            .attr('fill', 'white')
-            .attr('font-size', '10.5px').attr('font-weight', '700')
-            .attr('font-family', 'system-ui, sans-serif')
-            .each(function (d) {
-                const hasLabel = (d.data.type === 'cargo' && !!d.data.level)
-                              || d.data.type === 'area';
-                wrapText(d3.select(this), d.data.name, hasLabel);
-            });
-
-        // Badge de nível (apenas cargos com nível)
-        node.filter(d => d.data.type === 'cargo' && !!d.data.level)
-            .append('text')
-            .attr('text-anchor', 'middle')
-            .attr('fill', 'rgba(255,255,255,0.75)')
-            .attr('font-size', '9px').attr('font-family', 'system-ui, sans-serif')
-            .attr('y', d => Math.ceil(d.data.name.length / 22) <= 1 ? 12 : 18)
-            .text(d => d.data.level);
-
-        // Badge "Setor" (apenas áreas)
-        node.filter(d => d.data.type === 'area')
-            .append('text')
-            .attr('text-anchor', 'middle')
-            .attr('fill', 'rgba(255,255,255,0.65)')
-            .attr('font-size', '9px').attr('font-family', 'system-ui, sans-serif')
-            .attr('y', d => Math.ceil(d.data.name.length / 22) <= 1 ? 12 : 18)
-            .text('Área');
-
-        // Tooltip
-        node.append('title').text(d =>
-            d.data.type === 'area'
-                ? d.data.name + '\nÁrea de Atuação'
-                : d.data.name + (d.data.level ? '\n' + d.data.level : '') + '\nClique para editar'
-        );
-
-        // Centraliza vista
-        const allX = visNodes.map(d => d.y);
-        const allY = visNodes.map(d => d.x);
-        const minX = d3.min(allX) - nodeW / 2 - 20, maxX = d3.max(allX) + nodeW / 2 + 20;
-        const minY = d3.min(allY) - nodeH / 2 - 20, maxY = d3.max(allY) + nodeH / 2 + 20;
-        const treeW = maxX - minX, treeH = maxY - minY;
-        const scale = Math.min(W / treeW, H / treeH, 1.2) * 0.9;
-        const tx = (W - treeW * scale) / 2 - minX * scale;
-        const ty = (H - treeH * scale) / 2 - minY * scale;
-        fitParams = { tx, ty, scale };
-        svg.call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
-    }
-
-    window.fitView  = () => svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity.translate(fitParams.tx, fitParams.ty).scale(fitParams.scale));
-    window.zoomIn   = () => svg.transition().duration(300).call(zoom.scaleBy, 1.4);
-    window.zoomOut  = () => svg.transition().duration(300).call(zoom.scaleBy, 0.7);
-
-    window.setMode = function (mode) {
-        // Botões
-        const btnSup = document.getElementById('btn-supervisao');
-        const btnSet = document.getElementById('btn-setor');
-        btnSup.className = 'btn ' + (mode === 'supervisao' ? 'btn-primary active' : 'btn-outline-primary');
-        btnSet.className = 'btn ' + (mode === 'setor'      ? 'btn-primary active' : 'btn-outline-primary');
-
-        // Badges de estatística
-        document.querySelectorAll('.stat-sup').forEach(el => el.classList.toggle('d-none', mode !== 'supervisao'));
-        document.querySelectorAll('.stat-set').forEach(el => el.classList.toggle('d-none', mode !== 'setor'));
-
-        // Dica de modo + título do card
-        const hints = {
-            supervisao: 'Hierarquia de supervisão — quem reporta a quem',
-            setor:      'Áreas de atuação com seus cargos vinculados'
-        };
-        const titles = {
-            supervisao: '<i class="fas fa-project-diagram me-1"></i> Árvore Hierárquica (<?php echo $totalNaArvore; ?> cargos)',
-            setor:      '<i class="fas fa-building me-1"></i> Organograma por Setor (<?php echo $totalAreas; ?> áreas)'
-        };
-        document.getElementById('mode-hint').textContent = hints[mode];
-        document.getElementById('tree-title').innerHTML  = titles[mode];
-
-        // Legenda: mostra/oculta item de área
-        document.getElementById('legend-area').classList.toggle('d-none', mode !== 'setor');
-
-        // Seções inferiores
-        const nvEl = document.getElementById('section-nao-vinculados');
-        const ssEl = document.getElementById('section-sem-setor');
-        if (nvEl) nvEl.classList.toggle('d-none', mode !== 'supervisao');
-        if (ssEl) ssEl.classList.toggle('d-none', mode !== 'setor');
-
-        // Reset empty states
-        document.getElementById('empty-supervisao').classList.add('d-none');
-        document.getElementById('empty-setor').classList.add('d-none');
-        document.getElementById('org-container').style.display = '';
-
-        // Desenha árvore ou mostra estado vazio
-        if (mode === 'supervisao') {
-            if (!supervisaoData) {
-                document.getElementById('org-container').style.display = 'none';
-                document.getElementById('empty-supervisao').classList.remove('d-none');
-            } else {
-                drawTree(supervisaoData, supervisaoVR);
-            }
+            $('#modalTitle').html('<i class="fas fa-briefcase text-primary mr-2"></i> Ficha do Cargo');
+            let html = `
+                <table class="table table-sm table-striped mb-0 small">
+                    <tr><td class="font-weight-bold" width="35%">Cargo:</td><td>${nome}</td></tr>
+                    <tr><td class="font-weight-bold">Nível Hierárquico:</td><td><span class="badge badge-primary font-weight-normal">${nivel}</span></td></tr>
+                    <tr><td class="font-weight-bold">Área/Setor:</td><td>${area}</td></tr>
+                    <tr><td class="font-weight-bold">Salário Base:</td><td class="text-success font-weight-bold">${salario}</td></tr>
+                    <tr><td class="font-weight-bold">Colaboradores Alocados:</td><td><span class="badge badge-secondary">${colaboradores}</span></td></tr>
+                </table>
+            `;
+            $('#modalBody').html(html);
+            $('#btnEditarNode').attr('href', 'cargos_form.php?id=' + id).removeClass('d-none');
         } else {
-            if (!setorData) {
-                document.getElementById('org-container').style.display = 'none';
-                document.getElementById('empty-setor').classList.remove('d-none');
-            } else {
-                drawTree(setorData, setorVR);
-            }
-        }
-    };
+            const nome = $(this).find('.font-weight-bold').text();
+            const cargos = sectorCargos[String(id)] || sectorCargos[id] || [];
+            const $modalTitle = $('#modalTitle').empty();
+            $modalTitle.append('<i class="fas fa-layer-group text-info me-2"></i>');
+            $modalTitle.append(document.createTextNode(nome));
 
-    // Renderização inicial
-    setMode('supervisao');
-})();
+            const $modalBody = $('#modalBody').empty();
+            $modalBody.append(
+                $('<p>', { class: 'text-muted mb-3' }).text(
+                    `${cargos.length} cargo(s) vinculado(s) diretamente a este setor.`
+                )
+            );
+
+            if (cargos.length === 0) {
+                $modalBody.append(
+                    $('<div>', { class: 'alert alert-info mb-0' }).text(
+                        'Nenhum cargo está vinculado diretamente a este setor.'
+                    )
+                );
+            } else {
+                const $table = $('<table>', { class: 'table table-sm table-striped table-hover align-middle mb-0' });
+                $table.append(
+                    '<thead class="table-light"><tr><th>Cargo</th><th>Nível hierárquico</th><th class="text-end">Ação</th></tr></thead>'
+                );
+                const $tbody = $('<tbody>');
+
+                cargos.forEach(function(cargo) {
+                    const $row = $('<tr>');
+                    $row.append($('<td>', { class: 'fw-semibold' }).text(cargo.nome));
+                    $row.append($('<td>').append($('<span>', { class: 'badge bg-primary' }).text(cargo.nivel)));
+                    $row.append(
+                        $('<td>', { class: 'text-end' }).append(
+                            $('<a>', {
+                                class: 'btn btn-sm btn-outline-primary',
+                                href: 'cargos_form.php?id=' + encodeURIComponent(cargo.id),
+                                title: 'Abrir cargo'
+                            }).append('<i class="fas fa-external-link-alt me-1"></i> Abrir')
+                        )
+                    );
+                    $tbody.append($row);
+                });
+
+                $table.append($tbody);
+                $modalBody.append($('<div>', { class: 'table-responsive' }).append($table));
+            }
+            $('#btnEditarNode').addClass('d-none');
+        }
+
+        const modalElement = document.getElementById('modalDetalhesNode');
+        if (window.bootstrap && window.bootstrap.Modal) {
+            window.bootstrap.Modal.getOrCreateInstance(modalElement).show();
+        } else if ($.fn.modal) {
+            $('#modalDetalhesNode').modal('show');
+        }
+    });
+});
 </script>
 
-<?php include '../includes/footer.php'; ?>
+<?php
+require_once dirname(__DIR__) . '/includes/footer.php';
+?>

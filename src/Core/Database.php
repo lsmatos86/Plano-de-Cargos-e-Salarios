@@ -14,6 +14,26 @@ class Database {
     private static $connection = null;
 
     /**
+     * Escapa identificadores SQL (incluindo alias.coluna) para PostgreSQL.
+     * Valores de consultas devem continuar sendo enviados como parâmetros PDO;
+     * este método é destinado apenas a identificadores previamente validados.
+     */
+    public static function quoteIdent(string $identifier): string {
+        $parts = explode('.', $identifier);
+
+        foreach ($parts as $part) {
+            if ($part === '') {
+                throw new \InvalidArgumentException('Identificador SQL inválido.');
+            }
+        }
+
+        return implode('.', array_map(
+            static fn (string $part): string => '"' . str_replace('"', '""', $part) . '"',
+            $parts
+        ));
+    }
+
+    /**
      * Retorna a conexão ativa com o banco de dados.
      * Caso não exista, cria uma nova baseado nas configurações.
      * 

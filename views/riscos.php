@@ -28,114 +28,9 @@ $data = $controller->handleRequest($_GET, $_POST, $_SERVER['REQUEST_METHOD']);
 // Isso cria $registros, $params, $message, $id_column, etc.
 extract($data);
 
-<<<<<<< HEAD
-$message = '';
-$message_type = '';
-
-// Instancia o Repositório
-$repo = new RiscoRepository();
-
-// ----------------------------------------------------
-// LÓGICA DE CRUD (CREATE/UPDATE/DELETE)
-// ----------------------------------------------------
-try {
-    // 1. Lógica de CREATE/UPDATE (POST)
-    // (Esta página é especial, o nome é um ENUM, então só podemos INSERIR ou APAGAR)
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-        $titulo = trim($_POST[$name_column] ?? '');
-        
-        // Apenas 'insert' é permitido
-        if ($_POST['action'] === 'insert') {
-            $repo->save($_POST);
-            $message = "Risco '{$titulo}' cadastrado com sucesso!";
-            $message_type = 'success';
-        }
-    }
-
-    // 2. Lógica de DELETE (GET)
-    if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
-        $id = (int)$_GET['id'];
-        $deleted = $repo->delete($id);
-        
-        if ($deleted) {
-            $message = "Risco ID {$id} excluído com sucesso!";
-            $message_type = 'success';
-        } else {
-            $message = "Erro: Risco ID {$id} não encontrado ou já excluído.";
-            $message_type = 'danger';
-        }
-        
-        header("Location: riscos.php?message=" . urlencode($message) . "&type={$message_type}");
-        exit;
-    }
-
-} catch (Exception $e) {
-    if ($e->getCode() == '23505' || strpos($e->getMessage(), 'duplicate key') !== false) {
-        $message = "Erro: O risco '{$titulo}' já está cadastrado.";
-        $message_type = 'danger';
-    } else {
-        $message = $e->getMessage();
-        $message_type = 'danger';
-    }
-}
-
-// Mensagens vindas de um redirecionamento (ex: após delete)
-if (empty($message) && isset($_GET['message'])) {
-    $message = htmlspecialchars($_GET['message']);
-    $message_type = htmlspecialchars($_GET['type'] ?? 'info');
-}
-
-// ----------------------------------------------------
-// LÓGICA DE LEITURA (READ)
-// ----------------------------------------------------
-// 1. Parâmetros de Filtro e Ordenação
-$params = [
-    'term' => $_GET['term'] ?? '',
-    'sort_col' => $_GET['sort_col'] ?? $id_column,
-    'sort_dir' => $_GET['sort_dir'] ?? 'ASC',
-    'page' => $_GET['page'] ?? 1,
-    'limit' => 10
-];
-
-// 2. Busca os dados
-try {
-    $repoParams = [
-        'term' => $params['term'],
-        'order_by' => $params['sort_col'], 
-        'sort_dir' => $params['sort_dir'],
-        'page' => $params['page'],
-        'limit' => $params['limit']
-    ];
-
-    $result = $repo->findAllPaginated($repoParams);
-    
-    $registros = $result['data'];
-    $totalRecords = $result['total'];
-    $totalPages = $result['totalPages'];
-    $currentPage = $result['currentPage'];
-
-} catch (Exception $e) {
-    $registros = [];
-    $totalRecords = 0;
-    $totalPages = 1;
-    $currentPage = 1;
-    $message = "Erro ao carregar dados: " . $e->getMessage();
-    $message_type = 'danger';
-}
-
-// Lista de riscos (ENUM) para o <select> do modal
-$tipos_risco_enum = [
-    'Físico', 'Químico', 'Ergonômico', 'Psicossocial', 'Acidental', 'Biológico'
-];
-
-
-// 7. Inclui o Header
-include '../includes/header.php';
-=======
 // 6. Inclui o Header (HTML)
 // (O header.php agora aplica o padding-top globalmente)
 include $root_path . 'includes/header.php';
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
 ?>
 
 <div class="container mt-4 mb-5">
@@ -149,11 +44,7 @@ include $root_path . 'includes/header.php';
 
 <?php if ($message): ?>
     <div class="alert alert-<?php echo $message_type; ?> alert-dismissible fade show" role="alert">
-<<<<<<< HEAD
         <?php echo htmlspecialchars($message ?? ''); ?>
-=======
-        <?php echo htmlspecialchars($message); ?>
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 <?php endif; ?>

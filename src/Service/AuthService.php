@@ -8,39 +8,51 @@ use PDO;
 
 /**
  * Classe para gerenciar Autenticação e Autorização (Permissões).
- * (Versão corrigida com nomes de colunas em Português e lógica de URL)
+ * Versão corrigida para o esquema PostgreSQL local da Koppla (Tabela de ligação user_roles).
  */
 class AuthService {
     
     private $db;
 
     public function __construct() {
-        // Correção para o padrão correto da sua classe Database
         $this->db = Database::getConnection();
     }
 
     /**
      * Tenta realizar o login do usuário
-     * * @param string $email
+     * @param string $email
      * @param string $password
      * @return array|bool Retorna os dados do usuário ou false se falhar
      */
     public function login(string $email, string $password) {
-        // Busca o usuário pelo e-mail principal ativo
-        $sql = "SELECT u.*, r.nome as role_nome 
-                FROM usuarios u 
-                LEFT JOIN roles r ON u.id_role = r.id_role 
-                WHERE u.email_principal = :email AND u.status = 'ativo' 
-                LIMIT 1";
+        // CORREÇÃO POSTGRESQL: A tabela usuarios não possui id_role diretamente.
+        // Buscamos o usuário primeiro apenas pelo e-mail ativo de forma segura.
+        $sql = "SELECT * FROM usuarios WHERE email = :email AND ativo = 1 LIMIT 1";
                 
         $stmt = $this->db->prepare($sql);
         $stmt->execute([':email' => $email]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // Verifica a senha usando password_verify
+        // Verifica a senha usando o algoritmo nativo password_verify
         if ($user && password_verify($password, $user['senha'])) {
-            // Remove a senha do array por segurança antes de salvar na sessão
+            // Remove o hash de senha do array por segurança antes de transitar os dados
             unset($user['senha']);
+            
+            // Busca dinamicamente a Role/Perfil vinculada a este usuário na tabela de ligação (user_roles)
+            $sqlRole = "SELECT r.id_role, r.nome as role_nome 
+                        FROM user_roles ur
+                        JOIN roles r ON ur.id_role = r.id_role
+                        WHERE ur.id_usuario = :id_usuario 
+                        LIMIT 1";
+            
+            $stmtRole = $this->db->prepare($sqlRole);
+            $stmtRole->execute([':id_usuario' => $user['id_usuario']]);
+            $roleData = $stmtRole->fetch(PDO::FETCH_ASSOC);
+
+            // Injeta os dados da Role recuperados de forma relacional dentro do array de usuário
+            $user['id_role'] = $roleData ? $roleData['id_role'] : null;
+            $user['role_nome'] = $roleData ? $roleData['role_nome'] : 'Usuário';
+
             return $user;
         }
 
@@ -48,24 +60,24 @@ class AuthService {
     }
 
     /**
-     * Inicia a sessão oficial do usuário no PHP
+     * Inicia a sessão oficial do usuário no PHP populando a memória global global
      */
     public function loginSession(array $user): void {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
-        $_SESSION['usuario_id'] = $user['id_usuario'];
-        $_SESSION['usuario_nome'] = $user['nome_completo'] ?? $user['login'];
-        $_SESSION['usuario_email'] = $user['email_principal'];
+        $_SESSION['usuario_id'] = $user['usuarioId'];
+        $_SESSION['usuario_nome'] = $user['nome'] ?? $user['login'] ?? '';
+        $_SESSION['usuario_email'] = $user['email'];
         $_SESSION['usuario_role'] = $user['id_role'];
         $_SESSION['usuario_role_nome'] = $user['role_nome'] ?? 'Usuário';
         
-        // Regenera o ID da sessão para prevenir Session Fixation
+        // Regenera o ID da sessão para mitigar ataques de Session Fixation
         session_regenerate_id(true);
     }
 
     /**
-     * Verifica se o usuário está logado
+     * Verifica de forma rápida se o usuário está logado
      */
     public static function checkAuth(): bool {
         if (session_status() === PHP_SESSION_NONE) {
@@ -79,14 +91,31 @@ class AuthService {
      */
     public static function requireAuth(string $redirectUrl = 'login.php'): void {
         if (!self::checkAuth()) {
+            if (!file_exists($redirectUrl) && file_exists('../' . $redirectUrl)) {
+                $redirectUrl = '../' . $redirectUrl;
+            }
             header("Location: " . $redirectUrl);
             exit;
         }
     }
 
     /**
+     * Método Legado / Compatibilidade: Valida autenticação e barra o acesso se falhar.
+     */
+    public static function checkAndFail(string $redirectUrl = 'login.php'): void {
+        self::requireAuth($redirectUrl);
+    }
+
+    /**
+     * Método Legado / Compatibilidade: Retorna se o usuário está autenticado
+     */
+    public static function checkUrl(): bool {
+        return self::checkAuth();
+    }
+
+    /**
      * Verifica se o usuário logado possui uma permissão (recurso) específica
-     * * @param string $recursoChave O slug ou chave do recurso (ex: 'usuarios_listar', 'cargos_criar')
+     * @param string $recursoChave O slug ou chave do recurso (ex: 'cargos_editar')
      */
     public function temPermissao(string $recursoChave): bool {
         if (!self::checkAuth()) {
@@ -98,12 +127,12 @@ class AuthService {
             return false;
         }
 
-        // Se for administrador master (id_role = 1), costuma ter acesso total
-        if ($idRole == 1) {
+        // Se for administrador master (id_role = 1), concede acesso irrestrito
+        if ((int)$idRole === 1) {
             return true;
         }
 
-        // Consulta se a Role do usuário tem vínculo com a chave do recurso solicitado
+        // Consulta se a Role mapeada na sessão possui vínculo com a chave do privilégio
         $sql = "SELECT COUNT(*) FROM role_recursos rr
                 JOIN recursos r ON rr.id_recurso = r.id_recurso
                 WHERE rr.id_role = :id_role AND r.chave = :recurso_chave";
@@ -118,7 +147,7 @@ class AuthService {
     }
 
     /**
-     * Exige uma permissão específica. Se não tiver, bloqueia o acesso.
+     * Exige uma permissão específica. Se não tiver, bloqueia o acesso imediatamente.
      */
     public function requirePermissao(string $recursoChave): void {
         self::requireAuth();
@@ -132,7 +161,7 @@ class AuthService {
     }
 
     /**
-     * Desloga o usuário limpando a sessão
+     * Desloga o usuário limpando as variáveis globais e destruindo o cookie ativo
      */
     public static function logout(): void {
         if (session_status() === PHP_SESSION_NONE) {
@@ -148,11 +177,4 @@ class AuthService {
         }
         session_destroy();
     }
-    catch (\PDOException $e) {
-    // Comente temporariamente a linha amigável que esconde o erro
-    // die("Erro de Conexão com o Banco de Dados. Por favor, tente novamente mais tarde.");
-    
-    // Adicione isto para imprimir o erro verdadeiro:
-    die("Erro Real: " . $e->getMessage());
-}
 }

@@ -35,7 +35,11 @@ class GrupoRecursoRepository
     public function findAllSimple(): array
     {
         try {
-            $stmt = $this->pdo->query("SELECT {$this->idColumn} AS id, {$this->nameColumn} AS nome FROM {$this->tableName} ORDER BY {$this->nameColumn} ASC");
+            $stmt = $this->pdo->query(
+                'SELECT "recursoGrupoId" AS id, "recursoGrupoNome" AS nome
+                 FROM recursos_grupos
+                 ORDER BY "recursoGrupoNome" ASC'
+            );
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
             error_log("Erro ao buscar Grupos de Recurso (simples): " . $e->getMessage());

@@ -52,14 +52,8 @@ class RecursoRepository
 
         // 1. Coleta de Dados
         $id = (int)($data['recursoId'] ?? 0);
-<<<<<<< HEAD
         $nome = trim($data['recursoNome'] ?? '');
         $descricao = trim($data['recursoDescricao'] ?? '');
-=======
-    $nome = trim($data['recursoNome'] ?? '');
-    // Garante que não chamamos trim() sobre null (pode gerar warnings/TypeError em algumas versões PHP)
-    $descricao = isset($data['recursoDescricao']) ? trim((string)$data['recursoDescricao']) : null;
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
         $isUpdating = $id > 0;
 
         // 2. Validação de Permissão e Dados

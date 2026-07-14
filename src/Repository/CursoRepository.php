@@ -24,14 +24,10 @@ class CursoRepository
 
     public function find(int $id)
     {
-<<<<<<< HEAD
         // Apenas quem pode gerenciar pode buscar os dados
         $this->authService->checkAndFail('cadastros:manage');
         
         $stmt = $this->pdo->prepare("SELECT * FROM cursos WHERE \"cursoId\" = ?");
-=======
-        $stmt = $this->pdo->prepare("SELECT * FROM cursos WHERE cursoId = ?");
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
@@ -52,58 +48,6 @@ class CursoRepository
     }
 
     /**
-     * Busca dados dos cursos de forma paginada incluindo a nova coluna de periodicidade.
-     */
-    public function findAllPaginated(array $params = []): array
-    {
-        $itemsPerPage = (int)($params['limit'] ?? 10);
-        $currentPage = (int)($params['page'] ?? 1);
-        $term = $params['term'] ?? '';
-        
-        $sortCol = in_array($params['order_by'] ?? 'cursoNome', ['cursoId', 'cursoNome', 'cursoPeriodicidade']) ? $params['order_by'] : 'cursoNome';
-        $sortDir = in_array(strtoupper($params['sort_dir'] ?? 'ASC'), ['ASC', 'DESC']) ? $params['sort_dir'] : 'ASC';
-
-        $termParam = "%{$term}%";
-
-        try {
-            $countSql = "SELECT COUNT(*) FROM cursos WHERE cursoNome LIKE ?";
-            $countStmt = $this->pdo->prepare($countSql);
-            $countStmt->execute([$termParam]);
-            $totalRecords = (int)$countStmt->fetchColumn();
-
-            $totalPages = $totalRecords > 0 ? ceil($totalRecords / $itemsPerPage) : 1;
-            $currentPage = max(1, min($currentPage, $totalPages));
-            $offset = ($currentPage - 1) * $itemsPerPage;
-
-            $sql = "
-                SELECT cursoId, cursoNome, cursoDescricao, cursoPeriodicidade
-                FROM cursos
-                WHERE cursoNome LIKE ?
-                ORDER BY {$sortCol} {$sortDir}
-                LIMIT ? OFFSET ?
-            ";
-
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->bindParam(1, $termParam);
-            $stmt->bindParam(2, $itemsPerPage, PDO::PARAM_INT);
-            $stmt->bindParam(3, $offset, PDO::PARAM_INT);
-            $stmt->execute();
-            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            return [
-                'data' => $data,
-                'total' => $totalRecords,
-                'totalPages' => $totalPages,
-                'currentPage' => $currentPage
-            ];
-
-        } catch (\PDOException $e) {
-            error_log("Erro em CursoRepository::findAllPaginated: " . $e->getMessage());
-            return ['data' => [], 'total' => 0, 'totalPages' => 1, 'currentPage' => 1];
-        }
-    }
-
-    /**
      * Salva (cria ou atualiza) um curso incluindo a periodicidade padrão em meses.
      */
     public function save(array $data): int
@@ -113,16 +57,6 @@ class CursoRepository
         $id = (int)($data['cursoId'] ?? 0);
         $nome = trim($data['cursoNome'] ?? '');
         $descricao = trim($data['cursoDescricao'] ?? '');
-<<<<<<< HEAD
-=======
-        $descricao = $descricao === '' ? null : $descricao;
-        
-        // Nova coluna: Periodicidade em meses (Ex: 12 para anual, 24 para bienal, null se não houver obrigação preventiva)
-        $periodicidade = (empty($data['cursoPeriodicidade']) || (int)$data['cursoPeriodicidade'] <= 0) 
-            ? null 
-            : (int)$data['cursoPeriodicidade'];
-
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
         $isUpdating = $id > 0;
 
         $permissionNeeded = $isUpdating ? 'cadastros:manage' : 'cadastros:manage';
@@ -140,22 +74,14 @@ class CursoRepository
 
         try {
             if ($isUpdating) {
-<<<<<<< HEAD
                 $sql = "UPDATE {$tableName} SET \"cursoNome\" = :nome, \"cursoDescricao\" = :descricao WHERE \"cursoId\" = :id";
-=======
-                $sql = "UPDATE {$tableName} SET cursoNome = :nome, cursoDescricao = :descricao, cursoPeriodicidade = :periodicidade WHERE cursoId = :id";
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
                 $params[':id'] = $id;
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = $id;
                 
                 $this->auditService->log('UPDATE', $tableName, $savedId, $data);
             } else {
-<<<<<<< HEAD
                 $sql = "INSERT INTO {$tableName} (\"cursoNome\", \"cursoDescricao\") VALUES (:nome, :descricao)";
-=======
-                $sql = "INSERT INTO {$tableName} (cursoNome, cursoDescricao, cursoPeriodicidade) VALUES (:nome, :descricao, :periodicidade)";
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = (int)$this->pdo->lastInsertId();
                 
@@ -165,13 +91,8 @@ class CursoRepository
             return $savedId;
 
         } catch (Exception $e) {
-<<<<<<< HEAD
             if ($e->getCode() == '23505') {
                  throw new Exception("O curso '$nome' já existe.");
-=======
-            if (str_contains($e->getMessage(), 'Duplicate entry')) {
-                throw new Exception("O curso '$nome' já está cadastrado.");
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
             }
             throw $e;
         }
@@ -186,25 +107,16 @@ class CursoRepository
         $this->authService->checkAndFail('cadastros:manage');
 
         try {
-<<<<<<< HEAD
             // 1. Verifica se o curso está sendo usado por um cargo
             //
             $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM cursos_cargo WHERE \"cursoId\" = ?");
-=======
-            // Verifica se o curso está associado a algum cargo antes de remover
-            $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM cursos_cargo WHERE cursoId = ?");
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
             $stmtCheck->execute([$id]);
             if ($stmtCheck->fetchColumn() > 0) {
                 throw new Exception("Este curso não pode ser excluído pois está associado a um ou mais cargos.");
             }
 
-<<<<<<< HEAD
             // 2. Exclui
             $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE \"cursoId\" = ?");
-=======
-            $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE cursoId = ?");
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
             $stmt->execute([$id]);
             $success = $stmt->rowCount() > 0;
             
@@ -221,7 +133,6 @@ class CursoRepository
             throw $e;
         }
     }
-<<<<<<< HEAD
     
     /**
      * Busca cursos de forma paginada, com filtro.
@@ -311,6 +222,4 @@ class CursoRepository
             'currentPage' => $currentPage
         ];
     }
-=======
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
 }

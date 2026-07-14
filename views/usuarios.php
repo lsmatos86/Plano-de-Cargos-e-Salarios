@@ -80,7 +80,7 @@ try {
 
 // 6. BUSCA DE DADOS PARA PREENCHER O FORMULÁRIO E A TABELA
 $allRoles = $repo->getAllRoles(); // Papéis disponíveis para o <select>
-$loggedUserId = (int)($_SESSION['user_id'] ?? 0); // ID do usuário logado
+$loggedUserId = (int)($_SESSION['usuario_id'] ?? 0); // ID do usuário logado
 
 // Parâmetros de Paginação/Filtro
 $params = [

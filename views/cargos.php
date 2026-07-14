@@ -34,6 +34,10 @@ $breadcrumb_items = [
 $message = '';
 $message_type = '';
 $cargoRepo = new CargoRepository(); // Instancia o repositório
+$cargosUrl = BASE_URL . 'views/cargos.php';
+$cargosFormUrl = BASE_URL . 'views/cargos_form.php';
+$cargoIndividualUrl = BASE_URL . 'relatorios/cargo_individual.php';
+$cargoPdfUrl = BASE_URL . 'relatorios/cargo_pdf.php';
 
 // ----------------------------------------------------
 // 1. LÓGICA DE EXCLUSÃO (DELETE)
@@ -130,7 +134,7 @@ include '../includes/header.php';
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="mb-0"><?php echo $page_title; ?></h1>
-    <a href="cargos_form.php" class="btn btn-primary">
+    <a href="<?php echo htmlspecialchars($cargosFormUrl, ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-primary">
         <i class="fas fa-plus"></i> Novo Cargo
     </a>
 </div>
@@ -152,7 +156,7 @@ include '../includes/header.php';
             
             <button class="btn btn-outline-secondary" type="submit"><i class="fas fa-search"></i></button>
             <?php if (!empty($params['term'])): ?>
-                <a href="cargos.php" class="btn btn-outline-danger ms-2" title="Limpar Filtro"><i class="fas fa-times"></i></a>
+                <a href="<?php echo htmlspecialchars($cargosUrl, ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-outline-danger ms-2" title="Limpar Filtro"><i class="fas fa-times"></i></a>
             <?php endif; ?>
         </form>
     </div>
@@ -198,14 +202,14 @@ include '../includes/header.php';
                                     ]);
                                     ?>
 
-                                    <a href="../relatorios/cargo_individual.php?<?php echo $nav_params; ?>" 
+                                    <a href="<?php echo htmlspecialchars($cargoIndividualUrl . '?' . $nav_params, ENT_QUOTES, 'UTF-8'); ?>" 
                                        class="btn btn-sm btn-outline-secondary" 
                                        title="Visualizar HTML" 
                                        target="_blank">
                                         <i class="fas fa-eye"></i>
                                     </a>
 
-                                    <a href="../relatorios/cargo_pdf.php?id=<?php echo $row['cargoId']; ?>" 
+                                    <a href="<?php echo htmlspecialchars($cargoPdfUrl . '?id=' . (int)$row['cargoId'], ENT_QUOTES, 'UTF-8'); ?>" 
                                        class="btn btn-sm btn-secondary" 
                                        title="Gerar PDF" 
                                        target="_blank">
@@ -214,13 +218,13 @@ include '../includes/header.php';
                                     
                                     <span class="mx-1"></span> 
 
-                                    <a href="cargos_form.php?id=<?php echo $row['cargoId']; ?>" 
+                                    <a href="<?php echo htmlspecialchars($cargosFormUrl . '?id=' . (int)$row['cargoId'], ENT_QUOTES, 'UTF-8'); ?>" 
                                         class="btn btn-sm btn-info text-white" 
                                         title="Editar Configurações">
                                         <i class="fas fa-edit"></i>
                                     </a>
                                     
-                                    <a href="cargos.php?action=delete&id=<?php echo $row['cargoId']; ?>" 
+                                    <a href="<?php echo htmlspecialchars($cargosUrl . '?action=delete&id=' . (int)$row['cargoId'], ENT_QUOTES, 'UTF-8'); ?>" 
                                        class="btn btn-sm btn-danger" 
                                        title="Excluir Cargo"
                                        onclick="return confirm('ATENÇÃO: Excluir este cargo removerá todos os seus requisitos associados (Habilidades, Riscos, etc.). Deseja realmente excluir?');">
@@ -254,7 +258,7 @@ include '../includes/header.php';
                 
                 <li class="page-item <?php echo ($currentPage <= 1) ? 'disabled' : ''; ?>">
                     <?php $prev_query = http_build_query(array_merge($params, ['page' => $currentPage - 1])); ?>
-                    <a class="page-link" href="?<?php echo $prev_query; ?>">Anterior</a>
+                    <a class="page-link" href="<?php echo htmlspecialchars($cargosUrl . '?' . $prev_query, ENT_QUOTES, 'UTF-8'); ?>">Anterior</a>
                 </li>
 
                 <?php 
@@ -273,13 +277,13 @@ include '../includes/header.php';
                     $page_query = http_build_query(array_merge($params, ['page' => $i]));
                 ?>
                     <li class="page-item <?php echo ($i === $currentPage) ? 'active' : ''; ?>">
-                        <a class="page-link" href="?<?php echo $page_query; ?>"><?php echo $i; ?></a>
+                        <a class="page-link" href="<?php echo htmlspecialchars($cargosUrl . '?' . $page_query, ENT_QUOTES, 'UTF-8'); ?>"><?php echo $i; ?></a>
                     </li>
                 <?php endfor; ?>
 
                 <li class="page-item <?php echo ($currentPage >= $totalPages) ? 'disabled' : ''; ?>">
                     <?php $next_query = http_build_query(array_merge($params, ['page' => $currentPage + 1])); ?>
-                    <a class="page-link" href="?<?php echo $next_query; ?>">Próxima</a>
+                    <a class="page-link" href="<?php echo htmlspecialchars($cargosUrl . '?' . $next_query, ENT_QUOTES, 'UTF-8'); ?>">Próxima</a>
                 </li>
             </ul>
         </nav>

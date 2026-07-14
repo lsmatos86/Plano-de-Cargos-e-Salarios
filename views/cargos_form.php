@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_action']) && $_P
         $userIdToCheck = null;
 
         if (empty($email)) {
-            $userIdToCheck = $_SESSION['user_id'] ?? 0;
+            $userIdToCheck = $_SESSION['usuario_id'] ?? 0;
         } else {
             $stmt = $pdoAjax->prepare("SELECT usuarioId, senha, ativo FROM usuarios WHERE email = ?");
             $stmt->execute([$email]);

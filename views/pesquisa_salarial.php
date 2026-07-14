@@ -5,6 +5,9 @@ require_once '../vendor/autoload.php';
 require_once '../config.php';
 require_once '../includes/functions.php';
 
+$pesquisaSalarialUrl = BASE_URL . 'views/pesquisa_salarial.php';
+$pesquisaLancamentosUrl = BASE_URL . 'views/pesquisa_lancamentos.php';
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -96,12 +99,12 @@ require_once '../includes/header.php';
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-end">
-                                        <a href="pesquisa_lancamentos.php?id=<?php echo $c['campanhaId']; ?>" class="btn btn-sm btn-info text-white fw-bold">
+                                        <a href="<?php echo htmlspecialchars($pesquisaLancamentosUrl . '?id=' . (int)$c['campanhaId'], ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-sm btn-info text-white fw-bold">
                                             <i class="fas fa-table"></i> Acessar Lançamentos
                                         </a>
                                         
                                         <?php if($c['status'] == 'Aberta'): ?>
-                                            <form method="POST" action="pesquisa_salarial.php" class="d-inline btn-encerrar-form">
+                                            <form method="POST" action="<?php echo htmlspecialchars($pesquisaSalarialUrl, ENT_QUOTES, 'UTF-8'); ?>" class="d-inline btn-encerrar-form">
                                                 <input type="hidden" name="action" value="encerrar_campanha">
                                                 <input type="hidden" name="campanhaId" value="<?php echo $c['campanhaId']; ?>">
                                                 <button type="submit" class="btn btn-sm btn-outline-danger" title="Encerrar Campanha">
@@ -160,7 +163,7 @@ require_once '../includes/header.php';
 
 <div class="modal fade" id="modalNovaCampanha" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
-        <form method="POST" action="pesquisa_salarial.php" class="modal-content">
+        <form method="POST" action="<?php echo htmlspecialchars($pesquisaSalarialUrl, ENT_QUOTES, 'UTF-8'); ?>" class="modal-content">
             <input type="hidden" name="action" value="nova_campanha">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title"><i class="fas fa-folder-plus"></i> Abrir Nova Pesquisa</h5>
@@ -186,7 +189,7 @@ require_once '../includes/header.php';
 
 <div class="modal fade" id="modalNovaEmpresa" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
-        <form method="POST" action="pesquisa_salarial.php" class="modal-content border-success">
+        <form method="POST" action="<?php echo htmlspecialchars($pesquisaSalarialUrl, ENT_QUOTES, 'UTF-8'); ?>" class="modal-content border-success">
             <input type="hidden" name="action" value="nova_empresa">
             <div class="modal-header bg-success text-white">
                 <h5 class="modal-title"><i class="fas fa-building"></i> Cadastrar Empresa Referência</h5>

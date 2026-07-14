@@ -79,11 +79,7 @@ class CboRepository
             return $savedId;
 
         } catch (\PDOException $e) {
-<<<<<<< HEAD
             if ($e->getCode() == '23505') { // Duplicate entry
-=======
-            if (isset($e->errorInfo[1]) && $e->errorInfo[1] == 1062) { 
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
                 throw new Exception("O código CBO '{$params[':cboCod']}' já está cadastrado.");
             }
             throw $e;
@@ -112,12 +108,8 @@ class CboRepository
             return $success;
             
         } catch (\PDOException $e) {
-<<<<<<< HEAD
             if ($e->getCode() == '23503') { // Foreign key constraint
                 // (tabela 'cargos' usa 'cboId')
-=======
-            if (isset($e->errorInfo[1]) && $e->errorInfo[1] == 1451) { 
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
                 throw new Exception("Este CBO não pode ser excluído pois está sendo utilizado em um ou mais Cargos.");
             }
             throw $e;
@@ -140,56 +132,31 @@ class CboRepository
 
         // Identificadores exclusivos com numeração para evitar o conflito do PDO
         if (!empty($term)) {
-<<<<<<< HEAD
             $where = " WHERE c.\"cboCod\" ILIKE :term OR c.\"cboTituloOficial\" ILIKE :term OR f.\"familiaCboNome\" ILIKE :term";
             $bindings[':term'] = $sqlTerm;
         }
         
         // Count total
         $countSql = "SELECT COUNT(c.\"cboId\") FROM cbos c LEFT JOIN familia_cbo f ON f.\"familiaCboId\" = c.\"familiaCboId\"" . $where;
-=======
-            $where = " WHERE c.cboCod LIKE :term1 OR c.cboTituloOficial LIKE :term2 OR f.familiaCboNome LIKE :term3";
-            $bindings[':term1'] = $sqlTerm;
-            $bindings[':term2'] = $sqlTerm;
-            $bindings[':term3'] = $sqlTerm;
-        }
-        
-        // 1. Count total seguro
-        $countSql = "SELECT COUNT(c.cboId) FROM cbos c LEFT JOIN familia_cbo f ON f.familiaCboId = c.familiaCboId" . $where;
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
         $countStmt = $this->pdo->prepare($countSql);
         $countStmt->execute($bindings);
         $totalRecords = (int)$countStmt->fetchColumn();
         $totalPages = $totalRecords > 0 ? ceil($totalRecords / $itemsPerPage) : 1;
 
-<<<<<<< HEAD
         // Data query
         $dataSql = "SELECT c.*, f.\"familiaCboNome\" FROM cbos c LEFT JOIN familia_cbo f ON f.\"familiaCboId\" = c.\"familiaCboId\"" . $where;
-=======
-        // 2. Query de dados principal
-        $dataSql = "SELECT c.*, f.familiaCboNome FROM cbos c LEFT JOIN familia_cbo f ON f.familiaCboId = c.familiaCboId" . $where;
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
-        
-        // 3. Tratamento explícito de colunas para afastar o erro de ambiguidade
+
+        // Tratamento explícito de colunas para afastar ambiguidades e injeção em ORDER BY.
         $sort_col = $params['order_by'] ?? 'c.cboTituloOficial';
         $sort_dir = $params['sort_dir'] ?? 'ASC';
-<<<<<<< HEAD
-        $validColumns = ['cboId' => 'c', 'cboCod' => 'c', 'cboTituloOficial' => 'c', 'familiaCboNome' => 'f'];
-        $orderBy = array_key_exists($sort_col, $validColumns) ? $sort_col : 'cboTituloOficial';
-        $tableAlias = $validColumns[$orderBy];
-        $sortDir = in_array(strtoupper($sort_dir), ['ASC', 'DESC']) ? strtoupper($sort_dir) : 'ASC';
-        $dataSql .= ' ORDER BY ' . $tableAlias . '."' . $orderBy . '" ' . $sortDir;
-=======
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
-        
         $validColumns = [
-            'c.cboId'            => 'c.cboId',
-            'c.cboCod'           => 'c.cboCod',
-            'c.cboTituloOficial' => 'c.cboTituloOficial',
-            'f.familiaCboNome'   => 'f.familiaCboNome'
+            'c.cboId'            => 'c."cboId"',
+            'c.cboCod'           => 'c."cboCod"',
+            'c.cboTituloOficial' => 'c."cboTituloOficial"',
+            'f.familiaCboNome'   => 'f."familiaCboNome"',
         ];
         
-        $orderBy = $validColumns[$sort_col] ?? 'c.cboTituloOficial';
+        $orderBy = $validColumns[$sort_col] ?? 'c."cboTituloOficial"';
         $sortDir = in_array(strtoupper($sort_dir), ['ASC', 'DESC']) ? strtoupper($sort_dir) : 'ASC';
         
         $dataSql .= " ORDER BY {$orderBy} {$sortDir}";

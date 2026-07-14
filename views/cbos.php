@@ -102,7 +102,10 @@ if (empty($message) && isset($_GET['message'])) {
 $rawFamilias = $familiaRepo->findAllForLookup();
 $todasFamilias = [];
 foreach ($rawFamilias as $fid => $fnome) {
-    $todasFamilias[] = ['familiaCboId' => $fid, 'familiaCboNome' => $fnome];
+    $todasFamilias[] = [
+        'id' => (int)$fid,
+        'nome' => (string)$fnome,
+    ];
 }
 
 // 2. Parâmetros de Filtro e Paginação (para CBOs)

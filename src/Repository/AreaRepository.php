@@ -39,21 +39,6 @@ class AreaRepository
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    /**
-     * Retorna todas as áreas de forma simples (id, nome) para SELECTs.
-     */
-    public function findAllSimple(): array
-    {
-        try {
-            $stmt = $this->pdo->query("SELECT areaId AS id, areaNome AS nome FROM areas_atuacao ORDER BY areaNome ASC");
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (\PDOException $e) {
-            error_log("Erro ao buscar todas as áreas: " . $e->getMessage());
-            return [];
-        }
-    }
-
-<<<<<<< HEAD
     public function findAllSimple(): array
     {
         $stmt = $this->pdo->query("SELECT \"areaId\", \"areaNome\" FROM areas_atuacao ORDER BY \"areaNome\" ASC");
@@ -132,77 +117,6 @@ class AreaRepository
         ];
     }
 
-=======
-    /**
-     * Busca dados das áreas de atuação de forma paginada.
-     * @param array $params Parâmetros de busca (term, page, limit, order_by, sort_dir)
-     * @return array Contendo ['data', 'total', 'totalPages', 'currentPage']
-     */
-    public function findAllPaginated(array $params = []): array
-    {
-        $itemsPerPage = (int)($params['limit'] ?? 10);
-        $currentPage = (int)($params['page'] ?? 1);
-        $term = $params['term'] ?? '';
-        
-        $sortCol = in_array($params['order_by'] ?? 'areaNome', ['areaNome', 'areaId', 'areaDescricao', 'areaPaiNome']) ? $params['order_by'] : 'areaNome';
-        $sortDir = in_array(strtoupper($params['sort_dir'] ?? 'ASC'), ['ASC', 'DESC']) ? $params['sort_dir'] : 'ASC';
-
-        $termParam = "%{$term}%";
-        $bindings = [$termParam];
-
-        // 1. Query para Contagem Total
-        $countSql = "SELECT COUNT(a.areaId) FROM areas_atuacao a WHERE a.areaNome LIKE ?";
-
-        try {
-            $countStmt = $this->pdo->prepare($countSql);
-            $countStmt->execute($bindings);
-            $totalRecords = (int)$countStmt->fetchColumn();
-
-            $totalPages = $totalRecords > 0 ? ceil($totalRecords / $itemsPerPage) : 1;
-            $currentPage = max(1, min($currentPage, $totalPages));
-            $offset = ($currentPage - 1) * $itemsPerPage;
-            
-            // 2. Query Principal
-            // Força o ORDER BY a funcionar corretamente mesmo quando o nome da área pai for nulo
-            $orderSql = ($sortCol === 'areaPaiNome') 
-                ? "COALESCE(pa.areaNome, '') {$sortDir}, a.areaNome ASC" 
-                : "a.{$sortCol} {$sortDir}";
-
-            $sql = "
-                SELECT 
-                    a.areaId, a.areaNome, a.areaDescricao, a.areaPaiId,
-                    pa.areaNome AS areaPaiNome
-                FROM areas_atuacao a
-                LEFT JOIN areas_atuacao pa ON pa.areaId = a.areaPaiId
-                WHERE a.areaNome LIKE ?
-                ORDER BY {$orderSql}
-                LIMIT ? OFFSET ?
-            ";
-
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->bindParam(1, $termParam);
-            $stmt->bindParam(2, $itemsPerPage, PDO::PARAM_INT);
-            $stmt->bindParam(3, $offset, PDO::PARAM_INT);
-            $stmt->execute();
-            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            return [
-                'data' => $data,
-                'total' => $totalRecords,
-                'totalPages' => $totalPages,
-                'currentPage' => $currentPage
-            ];
-
-        } catch (\PDOException $e) {
-            error_log("Erro em AreaRepository::findAllPaginated: " . $e->getMessage());
-            return ['data' => [], 'total' => 0, 'totalPages' => 1, 'currentPage' => 1];
-        }
-    }
-    
-    /**
-     * Obtém o lookup hierárquico formatado (ex: 'Pai > Filho') para SELECTs em outros formulários.
-     */
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
     public function getHierarchyLookup(): array
     {
         $areas = $this->findAll();
@@ -273,17 +187,7 @@ class AreaRepository
         $id = (int)($data['areaId'] ?? 0);
         $nome = trim($data['areaNome'] ?? '');
         $descricao = trim($data['areaDescricao'] ?? '');
-<<<<<<< HEAD
         $areaPaiId = empty($data['areaPaiId']) ? null : (int)$data['areaPaiId'];
-=======
-        $descricao = $descricao === '' ? null : $descricao;
-        
-        // Garante que se vier vazio, zero ou string "null", vira NULL no banco
-        $areaPaiId = (empty($data['areaPaiId']) || $data['areaPaiId'] === 'null' || (int)$data['areaPaiId'] === 0) 
-            ? null 
-            : (int)$data['areaPaiId'];
-            
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
         $isUpdating = $id > 0;
 
         // 2. Validação de Permissão e Dados

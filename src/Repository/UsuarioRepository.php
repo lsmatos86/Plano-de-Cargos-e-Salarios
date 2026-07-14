@@ -171,7 +171,7 @@ class UsuarioRepository
         }
         
         // 3. Proteção: Não deixa o usuário excluir a si mesmo
-        $loggedUserId = $_SESSION['user_id'] ?? 0;
+        $loggedUserId = $_SESSION['usuario_id'] ?? 0;
         if ($usuarioId === $loggedUserId) {
             throw new Exception("Você não pode excluir sua própria conta.");
         }

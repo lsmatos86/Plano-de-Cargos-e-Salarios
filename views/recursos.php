@@ -191,11 +191,7 @@ include '../includes/header.php';
                                                     title="Editar">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-<<<<<<< HEAD
-                                            <a href="recursos.php?action=delete&type=grupo&id=<?php echo $grupo['\"recursoGrupoId\"']; ?>" 
-=======
-                                            <a href="recursos.php?action=delete&type=grupo&id=<?php echo $grupo['id']; ?>" 
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
+                                            <a href="recursos.php?action=delete&amp;type=grupo&amp;id=<?php echo (int)$grupo['id']; ?>" 
                                                class="btn btn-sm btn-danger" 
                                                title="Excluir"
                                                onclick="return confirm('Deseja realmente excluir este Grupo?');">
@@ -253,7 +249,7 @@ include '../includes/header.php';
                                                     title="Editar">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <a href="recursos.php?action=delete&type=recurso&id=<?php echo $row['\"recursoId\"']; ?>" 
+                                            <a href="recursos.php?action=delete&amp;type=recurso&amp;id=<?php echo (int)$row['recursoId']; ?>" 
                                                class="btn btn-sm btn-danger" 
                                                title="Excluir"
                                                onclick="return confirm('Deseja realmente excluir este Recurso?');">

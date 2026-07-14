@@ -17,8 +17,8 @@ class AuditService
 
     public function log(string $acao, ?string $nomeTabela = null, ?int $idRegistro = null, ?array $dadosJson = null, ?string $nomeUsuarioOverride = null): void
     {
-        $usuarioId   = $_SESSION['user_id'] ?? null; 
-        $nomeUsuario = $nomeUsuarioOverride ?? $_SESSION['username'] ?? 'System';
+        $usuarioId   = $_SESSION['usuario_id'] ?? null; 
+        $nomeUsuario = $nomeUsuarioOverride ?? $_SESSION['usuario_nome'] ?? 'System';
 
         $json = null;
         if ($dadosJson !== null) {

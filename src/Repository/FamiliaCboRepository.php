@@ -32,7 +32,11 @@ class FamiliaCboRepository
     public function findAllSimple(): array
     {
         try {
-            $stmt = $this->pdo->query("SELECT familiaCboId AS id, familiaCboNome AS nome FROM familia_cbo ORDER BY familiaCboNome ASC");
+            $stmt = $this->pdo->query(
+                'SELECT "familiaCboId" AS id, "familiaCboNome" AS nome
+                 FROM familia_cbo
+                 ORDER BY "familiaCboNome" ASC'
+            );
             // O erro na views/cbos.php na linha 102 deve ser corrigido por esta implementação.
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
@@ -41,75 +45,12 @@ class FamiliaCboRepository
         }
     }
 
-    /**
-     * Busca Famílias CBO de forma paginada para a listagem principal.
-     * @param array $params Parâmetros de busca (term, page, limit, order_by, sort_dir)
-     * @return array Contendo ['data', 'total', 'totalPages', 'currentPage']
-     */
-    public function findAllPaginated(array $params = []): array
-    {
-        $itemsPerPage = (int)($params['limit'] ?? 10);
-        $currentPage = (int)($params['page'] ?? 1);
-        $term = $params['term'] ?? '';
-        
-        $sortCol = in_array($params['order_by'] ?? 'familiaCboNome', ['familiaCboNome', 'familiaCboId']) ? $params['order_by'] : 'familiaCboNome';
-        $sortDir = in_array(strtoupper($params['sort_dir'] ?? 'ASC'), ['ASC', 'DESC']) ? $params['sort_dir'] : 'ASC';
-
-        $termParam = "%{$term}%";
-        $bindings = [$termParam];
-
-        // 1. Query para Contagem Total
-        $countSql = "SELECT COUNT(f.familiaCboId) FROM familia_cbo f WHERE f.familiaCboNome LIKE ?";
-
-        try {
-            $countStmt = $this->pdo->prepare($countSql);
-            $countStmt->execute($bindings);
-            $totalRecords = (int)$countStmt->fetchColumn();
-
-            $totalPages = $totalRecords > 0 ? ceil($totalRecords / $itemsPerPage) : 1;
-            $currentPage = max(1, min($currentPage, $totalPages));
-            $offset = ($currentPage - 1) * $itemsPerPage;
-            
-            // 2. Query Principal
-            $sql = "
-                SELECT 
-                    f.familiaCboId, f.familiaCboNome, f.familiaCboDescricao
-                FROM familia_cbo f
-                WHERE f.familiaCboNome LIKE ?
-                ORDER BY {$sortCol} {$sortDir} 
-                LIMIT ? OFFSET ?
-            ";
-
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->bindParam(1, $termParam);
-            $stmt->bindParam(2, $itemsPerPage, PDO::PARAM_INT);
-            $stmt->bindParam(3, $offset, PDO::PARAM_INT);
-            $stmt->execute();
-            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            return [
-                'data' => $data,
-                'total' => $totalRecords,
-                'totalPages' => $totalPages,
-                'currentPage' => $currentPage
-            ];
-
-        } catch (\PDOException $e) {
-            error_log("Erro em FamiliaCboRepository::findAllPaginated: " . $e->getMessage());
-            return ['data' => [], 'total' => 0, 'totalPages' => 1, 'currentPage' => 1];
-        }
-    }
-    
     public function find(int $id)
     {
-<<<<<<< HEAD
         // Apenas quem pode gerenciar pode buscar os dados
         $this->authService->checkAndFail('cadastros:manage');
         
         $stmt = $this->pdo->prepare("SELECT * FROM familia_cbo WHERE \"familiaCboId\" = ?");
-=======
-        $stmt = $this->pdo->prepare("SELECT * FROM familia_cbo WHERE familiaCboId = ?");
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
@@ -118,7 +59,6 @@ class FamiliaCboRepository
     // MÉTODOS DE CRUD
     // ======================================================
 
-<<<<<<< HEAD
     /**
      * Busca todos as famílias (para o <select> no form de CBO).
      */
@@ -131,8 +71,6 @@ class FamiliaCboRepository
     /**
      * Salva (cria ou atualiza) uma Família de CBO.
      */
-=======
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
     public function save(array $data): int
     {
         $tableName = 'familia_cbo';
@@ -155,28 +93,17 @@ class FamiliaCboRepository
 
         try {
             if ($isUpdating) {
-<<<<<<< HEAD
                 $sql = "UPDATE {$tableName} SET \"familiaCboNome\" = :nome WHERE \"familiaCboId\" = :id";
                 $stmt = $this->pdo->prepare($sql);
                 $stmt->execute([':nome' => $nome, ':id' => $id]);
-=======
-                $sql = "UPDATE {$tableName} SET familiaCboNome = :nome, familiaCboDescricao = :descricao WHERE familiaCboId = :id";
-                $params[':id'] = $id;
-                $this->pdo->prepare($sql)->execute($params);
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
                 $savedId = $id;
                 
                 $this->auditService->log('UPDATE', $tableName, $savedId, $data);
                 
             } else {
-<<<<<<< HEAD
                 $sql = "INSERT INTO {$tableName} (\"familiaCboNome\") VALUES (:nome)";
                 $stmt = $this->pdo->prepare($sql);
                 $stmt->execute([':nome' => $nome]);
-=======
-                $sql = "INSERT INTO {$tableName} (familiaCboNome, familiaCboDescricao) VALUES (:nome, :descricao)";
-                $this->pdo->prepare($sql)->execute($params);
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
                 $savedId = (int)$this->pdo->lastInsertId();
                 
                 $this->auditService->log('CREATE', $tableName, $savedId, $data);
@@ -184,15 +111,9 @@ class FamiliaCboRepository
             
             return $savedId;
 
-<<<<<<< HEAD
         } catch (\PDOException $e) {
             if ($e->getCode() == '23505') { // Duplicate entry
                 throw new Exception("A família '$nome' já existe.");
-=======
-        } catch (Exception $e) {
-            if (str_contains($e->getMessage(), 'Duplicate entry')) {
-                 throw new Exception("A Família CBO '$nome' já existe.");
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
             }
             throw $e;
         }
@@ -204,23 +125,11 @@ class FamiliaCboRepository
         $this->authService->checkAndFail('cbos:delete');
 
         try {
-<<<<<<< HEAD
             // Nota: A verificação de FK (uso na tabela 'cbos')
             //
             // é tratada pelo catch (PDOException) abaixo.
             
             $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE \"familiaCboId\" = ?");
-=======
-            // Verifica se a família está sendo usada por algum CBO
-            $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM cbos WHERE familiaCboId = ?");
-            $stmtCheck->execute([$id]);
-            if ($stmtCheck->fetchColumn() > 0) {
-                throw new Exception("Esta Família CBO não pode ser excluída pois está associada a um ou mais CBOs.");
-            }
-
-            // Exclui
-            $stmt = $this->pdo->prepare("DELETE FROM {$tableName} WHERE familiaCboId = ?");
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
             $stmt->execute([$id]);
             
             $success = $stmt->rowCount() > 0;
@@ -231,20 +140,13 @@ class FamiliaCboRepository
             
             return $success;
 
-<<<<<<< HEAD
         } catch (\PDOException $e) {
             if ($e->getCode() == '23503') { // Foreign key constraint
                 throw new Exception("Esta família não pode ser excluída pois está sendo utilizada em um ou mais CBOs.");
-=======
-        } catch (Exception $e) {
-            if (str_contains($e->getMessage(), 'foreign key constraint')) {
-                 throw new Exception("Esta Família CBO não pode ser excluída pois está em uso em outra parte do sistema.");
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
             }
             throw $e;
         }
     }
-<<<<<<< HEAD
 
     /**
      * Busca famílias de forma paginada, com filtro.
@@ -307,6 +209,4 @@ class FamiliaCboRepository
             'currentPage' => $currentPage
         ];
     }
-=======
->>>>>>> bb884dcf3453295c611e83f375ba02211d8cbd0a
 }

@@ -102,7 +102,7 @@ class RiscoRepository
 
         // 2. Montagem dos Filtros
         if (!empty($term)) {
-            $where[] = "(\"riscoNome\" ILIKE :term)";
+            $where[] = '(CAST("riscoNome" AS TEXT) ILIKE :term)';
             $bindings[':term'] = "%{$term}%"; // Permitir busca parcial no enum
         }
         

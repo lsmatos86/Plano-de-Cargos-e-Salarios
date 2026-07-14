@@ -15,8 +15,11 @@ if (!isset($page_title)) {
 }
 
 if (!isset($root_path)) {
-    $root_path = '../';
+    $root_path = defined('BASE_URL') ? BASE_URL : '/';
 }
+$baseUrl = defined('BASE_URL') ? BASE_URL : '/';
+$appUrl = rtrim($baseUrl, '/') . '/';
+$main_container_class = $main_container_class ?? 'container';
 // Define o padrão para $is_dashboard se não for fornecido
 $is_dashboard = $is_dashboard ?? false;
 ?>
@@ -26,9 +29,9 @@ $is_dashboard = $is_dashboard ?? false;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($page_title); ?> | ITACITRUS</title>
-    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="<?= BASE_URL; ?>css/estilo.css">
     
     <style>
         body {
@@ -89,14 +92,14 @@ $is_dashboard = $is_dashboard ?? false;
 
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container-fluid container">
-            <a class="navbar-brand" href="<?php echo htmlspecialchars($root_path); ?>index.php">
+            <a class="navbar-brand" href="<?php echo htmlspecialchars($appUrl, ENT_QUOTES, 'UTF-8'); ?>index.php">
                 <i class="fas fa-briefcase me-2"></i> ITACITRUS | Gestão de Cargos
             </a>
             <div class="d-flex">
                 <span class="navbar-text me-3 text-white">
                     <i class="fas fa-user-circle me-1"></i> Olá, <?php echo htmlspecialchars($username); ?>
                 </span>
-                <a href="<?php echo htmlspecialchars($root_path); ?>logout.php" class="btn btn-outline-light btn-sm">
+                <a href="<?php echo htmlspecialchars($appUrl, ENT_QUOTES, 'UTF-8'); ?>logout.php" class="btn btn-outline-light btn-sm">
                     <i class="fas fa-sign-out-alt me-1"></i> Sair
                 </a>
             </div>
@@ -117,7 +120,7 @@ $is_dashboard = $is_dashboard ?? false;
                             <i class="fas fa-briefcase me-1"></i> Gestão
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navGestao">
-                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>views/cargos.php">Gerenciar Cargos</a></li>
+                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($appUrl, ENT_QUOTES, 'UTF-8'); ?>views/cargos.php">Gerenciar Cargos</a></li>
                         </ul>
                     </li>
 
@@ -126,13 +129,13 @@ $is_dashboard = $is_dashboard ?? false;
                             <i class="fas fa-sitemap me-1"></i> Estrutura
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navEstrutura">
-                            <li><a class="dropdown-item fw-semibold" href="<?php echo htmlspecialchars($root_path); ?>views/organograma.php"><i class="fas fa-project-diagram me-1 text-primary"></i>Organograma</a></li>
+                            <li><a class="dropdown-item fw-semibold" href="<?php echo htmlspecialchars($appUrl, ENT_QUOTES, 'UTF-8'); ?>views/organograma.php"><i class="fas fa-project-diagram me-1 text-primary"></i>Organograma</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>views/areas_atuacao.php">Áreas de Atuação</a></li>
-                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>views/tipo_hierarquia.php">Tipos de Hierarquia</a></li>
-                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>views/nivel_hierarquico.php">Níveis Hierárquicos</a></li>
+                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($appUrl, ENT_QUOTES, 'UTF-8'); ?>views/areas_atuacao.php">Áreas de Atuação</a></li>
+                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($appUrl, ENT_QUOTES, 'UTF-8'); ?>views/tipo_hierarquia.php">Tipos de Hierarquia</a></li>
+                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($appUrl, ENT_QUOTES, 'UTF-8'); ?>views/nivel_hierarquico.php">Níveis Hierárquicos</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>views/faixas_salariais.php"><i class="fas fa-money-check-alt text-success me-1"></i> Matriz Salarial</a></li>
+                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($appUrl, ENT_QUOTES, 'UTF-8'); ?>views/faixas_salariais.php"><i class="fas fa-money-check-alt text-success me-1"></i> Matriz Salarial</a></li>
                         </ul>
                     </li>
 
@@ -141,14 +144,14 @@ $is_dashboard = $is_dashboard ?? false;
                             <i class="fas fa-database me-1"></i> Cadastros
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navCadastros">
-                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>views/habilidades.php">Habilidades</a></li>
-                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>views/lideranca_softskills.php"><i class="fas fa-star me-1 text-warning"></i>Softskills de Liderança</a></li>
-                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>views/cursos.php">Cursos</a></li>
-                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>views/riscos.php">Riscos</a></li>
-                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>views/caracteristicas.php">Características</a></li>
-                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>views/escolaridades.php">Escolaridades</a></li>
-                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>views/cbos.php">CBOs e Família</a></li>
-                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>views/recursos.php">Recursos e Grupos</a></li>
+                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($appUrl, ENT_QUOTES, 'UTF-8'); ?>views/habilidades.php">Habilidades</a></li>
+                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($appUrl, ENT_QUOTES, 'UTF-8'); ?>views/lideranca_softskills.php"><i class="fas fa-star me-1 text-warning"></i>Softskills de Liderança</a></li>
+                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($appUrl, ENT_QUOTES, 'UTF-8'); ?>views/cursos.php">Cursos</a></li>
+                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($appUrl, ENT_QUOTES, 'UTF-8'); ?>views/riscos.php">Riscos</a></li>
+                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($appUrl, ENT_QUOTES, 'UTF-8'); ?>views/caracteristicas.php">Características</a></li>
+                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($appUrl, ENT_QUOTES, 'UTF-8'); ?>views/escolaridades.php">Escolaridades</a></li>
+                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($appUrl, ENT_QUOTES, 'UTF-8'); ?>views/cbos.php">CBOs e Família</a></li>
+                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($appUrl, ENT_QUOTES, 'UTF-8'); ?>views/recursos.php">Recursos e Grupos</a></li>
                         </ul>
                     </li>
 
@@ -157,9 +160,9 @@ $is_dashboard = $is_dashboard ?? false;
                             <i class="fas fa-cog me-1"></i> Administração
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navAdmin">
-                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>views/usuarios.php">Usuários</a></li>
-                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>views/roles.php">Papéis e Permissões</a></li>
-                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>views/auditoria.php">Logs de Auditoria</a></li>
+                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($appUrl, ENT_QUOTES, 'UTF-8'); ?>views/usuarios.php">Usuários</a></li>
+                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($appUrl, ENT_QUOTES, 'UTF-8'); ?>views/roles.php">Papéis e Permissões</a></li>
+                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($appUrl, ENT_QUOTES, 'UTF-8'); ?>views/auditoria.php">Logs de Auditoria</a></li>
                         </ul>
                     </li>
 
@@ -168,8 +171,8 @@ $is_dashboard = $is_dashboard ?? false;
                             <i class="fas fa-file-alt me-1"></i> Relatórios
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navRelatorios">
-                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($root_path); ?>relatorios/cargo_total.php">Relatório Consolidado</a></li>
-                            <li><a class="dropdown-item fw-bold" href="<?php echo htmlspecialchars($root_path); ?>relatorios/tabela_salarial_gerencial.php"><i class="fas fa-file-excel text-success me-1"></i> Tabela Salarial (Excel)</a></li>
+                            <li><a class="dropdown-item" href="<?php echo htmlspecialchars($appUrl, ENT_QUOTES, 'UTF-8'); ?>relatorios/cargo_total.php">Relatório Consolidado</a></li>
+                            <li><a class="dropdown-item fw-bold" href="<?php echo htmlspecialchars($appUrl, ENT_QUOTES, 'UTF-8'); ?>relatorios/tabela_salarial_gerencial.php"><i class="fas fa-file-excel text-success me-1"></i> Tabela Salarial (Excel)</a></li>
                             <li><a class="dropdown-item disabled" href="#">Organograma (em breve)</a></li>
                         </ul>
                     </li>
@@ -180,7 +183,7 @@ $is_dashboard = $is_dashboard ?? false;
     </nav>
     <?php endif; ?>
 
-</header> <main class="container mb-5 main-content">
+</header> <main class="<?php echo htmlspecialchars($main_container_class, ENT_QUOTES, 'UTF-8'); ?> mb-5 main-content">
 
     <?php if (isset($breadcrumb_items) && is_array($breadcrumb_items)): ?>
         <nav aria-label="breadcrumb" class="mb-3">
