@@ -76,7 +76,7 @@ class FamiliaCboRepository
         $tableName = 'familia_cbo';
         $id = (int)($data['familiaCboId'] ?? 0);
         $nome = trim($data['familiaCboNome'] ?? '');
-        $descricao = trim($data['familiaCboDescricao'] ?? null);
+        $descricao = trim($data['familiaCboDescricao'] ?? '');
         $isUpdating = $id > 0;
 
         $permissionNeeded = $isUpdating ? 'cbos:edit' : 'cbos:create';

@@ -217,10 +217,10 @@ class CargoRepository
             } else {
                 $sql_fields = implode(', ', $quotedFields);
                 $placeholders = implode(', ', array_fill(0, count($fields), '?'));
-                $sql = "INSERT INTO cargos ({$sql_fields}) VALUES ({$placeholders})";
+                $sql = "INSERT INTO cargos ({$sql_fields}) VALUES ({$placeholders}) RETURNING \"cargoId\"";
                 $stmt = $this->pdo->prepare($sql);
                 $stmt->execute($bindings);
-                $novoCargoId = (int)$this->pdo->lastInsertId('cargos_cargoId_seq');
+                $novoCargoId = (int)$stmt->fetchColumn();
                 
                 // --- 8. LOG DE AUDITORIA (CREATE) ---
                 $dadosLog = $postData;

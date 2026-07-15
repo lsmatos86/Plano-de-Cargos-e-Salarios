@@ -125,7 +125,7 @@ class GrupoRecursoRepository
     {
         $id = (int)($data[$this->idColumn] ?? 0);
         $nome = trim($data[$this->nameColumn] ?? '');
-        $descricao = trim($data['recursoGrupoDescricao'] ?? null);
+        $descricao = trim($data['recursoGrupoDescricao'] ?? '');
         $isUpdating = $id > 0;
 
         $permissionNeeded = $isUpdating ? 'cadastros:manage' : 'cadastros:create';
