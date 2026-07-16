@@ -57,6 +57,7 @@ class CursoRepository
         $id = (int)($data['cursoId'] ?? 0);
         $nome = trim($data['cursoNome'] ?? '');
         $descricao = trim($data['cursoDescricao'] ?? '');
+        $periodicidade = isset($data['cursoPeriodicidade']) && $data['cursoPeriodicidade'] !== '' ? (int)$data['cursoPeriodicidade'] : null;
         $isUpdating = $id > 0;
 
         $permissionNeeded = $isUpdating ? 'cadastros:manage' : 'cadastros:manage';
@@ -74,14 +75,14 @@ class CursoRepository
 
         try {
             if ($isUpdating) {
-                $sql = "UPDATE {$tableName} SET \"cursoNome\" = :nome, \"cursoDescricao\" = :descricao WHERE \"cursoId\" = :id";
+                $sql = "UPDATE {$tableName} SET \"cursoNome\" = :nome, \"cursoDescricao\" = :descricao, \"cursoPeriodicidade\" = :periodicidade WHERE \"cursoId\" = :id";
                 $params[':id'] = $id;
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = $id;
                 
                 $this->auditService->log('UPDATE', $tableName, $savedId, $data);
             } else {
-                $sql = "INSERT INTO {$tableName} (\"cursoNome\", \"cursoDescricao\") VALUES (:nome, :descricao)";
+                $sql = "INSERT INTO {$tableName} (\"cursoNome\", \"cursoDescricao\", \"cursoPeriodicidade\") VALUES (:nome, :descricao, :periodicidade)";
                 $this->pdo->prepare($sql)->execute($params);
                 $savedId = (int)$this->pdo->lastInsertId();
                 
@@ -185,7 +186,7 @@ class CursoRepository
         // Validação de Colunas de Ordenação
         $sort_col = $params['sort_col'] ?? 'cursoNome';
         $sort_dir = $params['sort_dir'] ?? 'ASC';
-        $validColumns = ['cursoId', 'cursoNome', 'cursoDataAtualizacao'];
+        $validColumns = ['cursoId', 'cursoNome', 'cursoPeriodicidade', 'cursoDataAtualizacao'];
         $orderBy = in_array($sort_col, $validColumns) ? $sort_col : 'cursoNome';
         $sortDir = in_array(strtoupper($sort_dir), ['ASC', 'DESC']) ? strtoupper($sort_dir) : 'ASC';
 
